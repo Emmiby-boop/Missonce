@@ -1,0 +1,10 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "waterfall": "../../components/waterfall/waterfall"
+  },
+  "onReachBottomDistance": 100,
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}
+

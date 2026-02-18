@@ -1,0 +1,7 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#fff",
+  "usingComponents": {
+    "poster-share": "../../components/poster-share/poster-share"
+  }
+}

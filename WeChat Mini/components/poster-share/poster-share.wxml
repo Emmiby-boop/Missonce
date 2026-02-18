@@ -1,0 +1,30 @@
+<page-container 
+  show="{{visible}}" 
+  overlay="{{false}}" 
+  position="center" 
+  custom-style="background: transparent; z-index: 10000;"
+  bind:clickoverlay="onClose"
+>
+  <view class="poster-modal" hidden="{{!visible}}" catchtouchmove="true">
+    <view class="poster-content" catchtap="noop">
+      <view class="canvas-box" style="width: {{width}}px; height: {{height}}px;">
+        <canvas type="2d" id="posterCanvas" class="poster-canvas" style="width: {{width}}px; height: {{height}}px;"></canvas>
+        
+        <!-- 加载动画 -->
+        <view class="loading-mask" wx:if="{{generating}}">
+          <view class="loading-spinner"></view>
+        </view>
+      </view>
+      
+      <view class="poster-actions">
+        <button class="action-btn share" bindtap="shareToFriend" wx:if="{{canShowShareMenu}}">发送给朋友</button>
+        <button class="action-btn save" bindtap="savePoster" loading="{{saving}}">保存海报</button>
+      </view>
+
+      <!-- 关闭按钮 (移到底部) -->
+      <view class="close-icon-container" bindtap="onClose">
+        <view class="close-icon"></view>
+      </view>
+    </view>
+  </view>
+</page-container>

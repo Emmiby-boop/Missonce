@@ -1,0 +1,9 @@
+{
+  "name": "analyzeResource",
+  "version": "1.0.0",
+  "description": "Async AI analysis for resources",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

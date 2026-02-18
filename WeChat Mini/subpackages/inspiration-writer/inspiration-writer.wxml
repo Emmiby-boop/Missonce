@@ -1,0 +1,99 @@
+<view class="container">
+  <view class="header">
+    <view class="header-top">
+      <view class="title">灵感文案</view>
+      <view class="subtitle">AI 帮你写文案</view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <view class="loading-text">加载中...</view>
+  </view>
+
+  <view wx:else class="content">
+    <view wx:if="{{!showResult}}" class="input-section">
+      <view class="scenes-title">热门场景</view>
+      <view class="scenes-list">
+        <view 
+          wx:for="{{scenes}}" 
+          wx:key="index"
+          class="scene-item {{currentScene && currentScene.name === item.name ? 'active' : ''}}"
+          bindtap="onSceneTap"
+          data-scene="{{item}}"
+        >
+          <view class="scene-emoji">{{item.emoji}}</view>
+          <view class="scene-name">{{item.name}}</view>
+        </view>
+      </view>
+
+      <view class="input-wrapper">
+        <textarea 
+          class="input-area"
+          placeholder="说说你想写什么..."
+          value="{{inputText}}"
+          bindinput="onInput"
+          maxlength="200"
+          auto-height
+        ></textarea>
+        <view class="input-footer">
+          <view class="char-count">{{inputText.length}}/200</view>
+        </view>
+      </view>
+
+      <button 
+        class="generate-btn {{isGenerating ? 'loading' : ''}}"
+        bindtap="onGenerate"
+        disabled="{{isGenerating}}"
+      >
+        <text wx:if="{{!isGenerating}}">生成文案</text>
+        <view wx:else class="btn-loading">
+          <view class="spinner"></view>
+          <text>正在生成...</text>
+        </view>
+      </button>
+
+      <view wx:if="{{featuredQuotes.length > 0}}" class="featured-section">
+        <view class="section-title">📜 精选文案</view>
+        <view class="quotes-list">
+          <view 
+            wx:for="{{featuredQuotes}}" 
+            wx:key="index"
+            class="quote-card"
+            bindtap="onQuoteTap"
+            data-quote="{{item}}"
+          >
+            <view class="quote-content">{{item.content}}</view>
+            <view wx:if="{{item.tags}}" class="quote-tags">
+              <view wx:for="{{item.tags.split(',')}}" wx:for-item="tag" wx:key="*this" class="quote-tag">{{tag}}</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="result-section">
+      <view class="result-header">
+        <view class="back-btn" bindtap="onBackToList">
+        </view>
+        <view class="result-title">生成结果</view>
+        <view class="actions">
+          <view class="action-btn" bindtap="onCopy">
+            <text>复制</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="result-content">
+        <view class="generated-text">{{displayText}}</view>
+        <view wx:if="{{displayText.length < generatedText.length}}" class="typing-cursor"></view>
+      </view>
+
+      <view class="result-footer">
+        <button class="regenerate-btn" bindtap="onRegenerate">
+          🔄 再生成一条
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+{
+  "name": "adminAuth",
+  "version": "1.0.0",
+  "description": "Admin QR code login authentication",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

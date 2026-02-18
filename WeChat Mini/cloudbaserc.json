@@ -1,0 +1,112 @@
+{
+  "envId": "missonce-99-1gfaff6n002f6ac1",
+  "functionRoot": "./cloudfunctions",
+  "projectName": "wallpaper-avatar-app",
+  "appId": "wx78c0b02bd2db5462",
+  "functions": [
+    {
+      "name": "getResources",
+      "runtime": "Nodejs18.15",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "uploadResource",
+      "runtime": "Nodejs20.19",
+      "timeout": 300,
+      "memorySize": 512
+    },
+    {
+      "name": "addAdmin",
+      "runtime": "Nodejs20.19",
+      "timeout": 10,
+      "memorySize": 256
+    },
+    {
+      "name": "initDB",
+      "runtime": "Nodejs18.15",
+      "timeout": 60,
+      "memorySize": 256
+    },
+    {
+      "name": "getBanners",
+      "runtime": "Nodejs20.19",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "getCategories",
+      "runtime": "Nodejs18.15",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "login",
+      "runtime": "Nodejs20.19",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "logEvent",
+      "timeout": 5,
+      "envVariables": {},
+      "runtime": "Nodejs20.19"
+    },
+    {
+      "name": "getTopics",
+      "timeout": 5,
+      "envVariables": {},
+      "runtime": "Nodejs20.19"
+    },
+    {
+      "name": "getHomeData",
+      "timeout": 5,
+      "envVariables": {},
+      "runtime": "Nodejs18.15",
+      "memorySize": 256,
+      "installDependency": false
+    },
+    {
+      "name": "proxyDownload",
+      "timeout": 20,
+      "envVariables": {},
+      "runtime": "Nodejs16.13",
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "adminAuth",
+      "runtime": "Nodejs16.13",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "sendEmail",
+      "runtime": "Nodejs16.13",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "manageTopicLayout",
+      "runtime": "Nodejs20.19",
+      "timeout": 10,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "clearDownloads",
+      "runtime": "Nodejs18.15",
+      "timeout": 10,
+      "memorySize": 256
+    },
+    {
+      "name": "toggleInteraction",
+      "runtime": "Nodejs20.19",
+      "timeout": 10,
+      "memorySize": 256,
+      "installDependency": true
+    }
+  ]
+}

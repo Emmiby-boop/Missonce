@@ -1,0 +1,19 @@
+<view class="container">
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{favorites.length === 0}}">
+    <text class="empty-icon">🤍</text>
+    <text class="empty-text">还没有收藏哦</text>
+    <text class="empty-tip">去首页看看喜欢的图片吧</text>
+  </view>
+
+  <!-- 收藏列表 -->
+  <view class="favorites-grid" wx:else>
+    <view class="favorite-item" wx:for="{{favorites}}" wx:key="url" bindtap="onFavoriteTap" data-url="{{item.url}}">
+      <image class="favorite-image {{item.type === 'avatar' ? 'circular' : ''}}" src="{{item.url}}" mode="aspectFill"></image>
+      <view class="favorite-delete" catchtap="onDeleteFavorite" data-url="{{item.url}}" data-index="{{index}}">
+        <text class="delete-icon">×</text>
+      </view>
+      <view class="favorite-type">{{item.type === 'avatar' ? '头像' : '壁纸'}}</view>
+    </view>
+  </view>
+</view>

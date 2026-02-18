@@ -1,0 +1,34 @@
+{
+  "envId": "missonce-99-1gfaff6n002f6ac1",
+  "region": "your-region",
+  "runtime": "Nodejs20.19",
+  "functions": {
+    "login": {
+      "handler": "index.main",
+      "timeout": 5,
+      "memorySize": 128,
+      "environment": {
+        "NODE_ENV": "development"
+      }
+    },
+    "updateUserInfo": {
+      "handler": "index.main",
+      "timeout": 5,
+      "memorySize": 128,
+      "environment": {
+        "NODE_ENV": "development"
+      }
+    }
+  },
+  "database": {
+    "collection": [
+      {
+        "name": "users",
+        "permissions": {
+          "read": true,
+          "write": true
+        }
+      }
+    ]
+  }
+}

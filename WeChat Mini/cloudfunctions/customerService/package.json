@@ -1,0 +1,10 @@
+{
+  "name": "customerService",
+  "version": "1.0.0",
+  "description": "Customer Service Message Handler",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  },
+  "private": true
+}

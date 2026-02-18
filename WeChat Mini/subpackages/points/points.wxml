@@ -1,0 +1,139 @@
+<view class="container">
+  <view class="header">
+    <view class="header-bg"></view>
+    <view class="header-content">
+      <view class="page-title">积分中心</view>
+    </view>
+    
+    <view class="points-card">
+      <view class="points-label">当前积分</view>
+      <view class="points-value">{{points}}</view>
+      <view class="points-total">累计获得 {{totalPoints}} 积分</view>
+    </view>
+  </view>
+
+  <view class="content">
+    <view class="tabs">
+      <view 
+        class="tab-item {{activeTab === 'records' ? 'active' : ''}}" 
+        bindtap="switchTab" 
+        data-tab="records"
+      >
+        积分记录
+      </view>
+      <view 
+        class="tab-item {{activeTab === 'rules' ? 'active' : ''}}" 
+        bindtap="switchTab" 
+        data-tab="rules"
+      >
+        积分规则
+      </view>
+    </view>
+
+    <view wx:if="{{activeTab === 'records'}}" class="records-section">
+      <view wx:if="{{loading}}" class="loading-container">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">加载中...</text>
+      </view>
+      
+      <view wx:elif="{{records.length === 0}}" class="empty-container">
+        <text class="empty-icon">📝</text>
+        <text class="empty-text">暂无积分记录</text>
+      </view>
+      
+      <view wx:else class="records-list">
+        <view 
+          wx:for="{{records}}" 
+          wx:key="_id"
+          class="record-item"
+        >
+          <view class="record-icon">
+            <text wx:if="{{item.type === 'checkIn'}}">📅</text>
+            <text wx:elif="{{item.type === 'deduct'}}">💎</text>
+            <text wx:elif="{{item.type === 'share'}}">📤</text>
+            <text wx:else>💰</text>
+          </view>
+          <view class="record-info">
+            <view class="record-desc">{{item.description}}</view>
+            <view class="record-time">{{formatTime(item.createdAt)}}</view>
+            <view wx:if="{{item.checkInDays}}" class="record-checkin">连续签到 {{item.checkInDays}} 天</view>
+          </view>
+          <view class="record-amount {{item.amount > 0 ? 'positive' : 'negative'}}">
+            {{item.amount > 0 ? '+' : ''}}{{item.amount}}
+          </view>
+        </view>
+        
+        <view wx:if="{{hasMore}}" class="load-more" bindtap="loadMore">
+          <text wx:if="{{!loadingMore}}">加载更多</text>
+          <text wx:else>加载中...</text>
+        </view>
+        
+        <view wx:if="{{!hasMore && records.length > 0}}" class="no-more">
+          没有更多了
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{activeTab === 'rules'}}" class="rules-section">
+      <view class="rule-card">
+        <view class="rule-title">📅 每日签到</view>
+        <view class="rule-content">
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">每日首次签到可获得 10 积分</text>
+          </view>
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">连续签到 7 天，额外奖励 30 积分</text>
+          </view>
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">连续签到 30 天，额外奖励 100 积分</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="rule-card">
+        <view class="rule-title">📤 分享奖励</view>
+        <view class="rule-content">
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">分享小程序给好友可获得 20 积分</text>
+          </view>
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">每日最多可获得 1 次分享奖励</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="rule-card">
+        <view class="rule-title">💎 积分用途</view>
+        <view class="rule-content">
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">使用积分可去除广告（开发中）</text>
+          </view>
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">更多积分权益即将上线</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="rule-card warning">
+        <view class="rule-title">⚠️ 注意事项</view>
+        <view class="rule-content">
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">积分仅限本小程序使用，不可转让</text>
+          </view>
+          <view class="rule-item">
+            <text class="rule-dot"></text>
+            <text class="rule-text">规则可能会根据运营情况调整</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

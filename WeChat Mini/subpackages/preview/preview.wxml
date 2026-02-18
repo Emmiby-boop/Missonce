@@ -1,0 +1,126 @@
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack">
+      <image class="back-icon" src="{{iconBack}}" mode="aspectFit" />
+    </view>
+    <text class="nav-title">头像预览</text>
+    <view class="nav-placeholder"></view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight}}px;"></view>
+
+<view class="container {{theme}}">
+  <!-- 主预览区域 -->
+  <view class="hero-wrapper">
+
+    <view class="hero-card">
+      <swiper class="hero-swiper"
+              current="{{currentIndex}}"
+              bindchange="onSwiperChange"
+              circular
+              duration="300"
+              bindtouchstart="onTouchStart"
+              bindtouchend="onTouchEnd">
+
+        <swiper-item wx:for="{{imageList}}" wx:key="index" wx:for-item="imageUrl" wx:for-index="index">
+          <view class="hero-inner">
+            <view class="photo-mask {{isCircular ? 'mask-circle' : 'mask-square'}}">
+              <image class="hero-image {{isCircular ? 'circular' : 'square'}} {{loadedImages[index] ? 'show' : ''}}"
+                     src="{{imageUrl}}"
+                     mode="aspectFill"
+                     lazy-load
+                     show-menu-by-longpress
+                     bindload="onImageLoad"
+                     data-index="{{index}}" />
+            </view>
+            <view class="img-loading" wx:if="{{!loadedImages[index]}}">
+              <view class="skeleton shimmer"></view>
+            </view>
+          </view>
+        </swiper-item>
+      </swiper>
+      <view class="page-indicator {{showPageIndicator ? 'show' : ''}}">
+        <text>{{currentIndex + 1}}/{{imageList.length}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="nav-item" bindtap="goHome">
+      <image class="nav-icon-img" src="{{iconHome}}" mode="aspectFit" />
+      <text class="nav-text">首页</text>
+    </view>
+    <view class="nav-item" bindtap="toggleFavorite">
+      <image class="nav-icon-img" src="{{isFavorite ? iconStarOn : iconStarOff}}" mode="aspectFit" />
+      <text class="nav-text">收藏</text>
+    </view>
+    <view class="nav-item nav-center" bindtap="toggleShape">
+      <image class="nav-icon-img" src="{{iconEdit}}" mode="aspectFit" />
+      <text class="nav-text active">预览</text>
+    </view>
+    <view class="nav-item" bindtap="downloadImage">
+      <image class="nav-icon-img" src="{{iconDownload}}" mode="aspectFit" />
+      <text class="nav-text">下载</text>
+    </view>
+    <view class="nav-item" bindtap="showPoster">
+      <image class="nav-icon-img" src="{{iconShare}}" mode="aspectFit" />
+      <text class="nav-text">分享</text>
+    </view>
+    <button class="nav-item share-btn" open-type="share" style="display:none">
+      <image class="nav-icon-img" src="{{iconShare}}" mode="aspectFit" />
+      <text class="nav-text">分享</text>
+    </button>
+
+  </view>
+
+
+  <!-- 头像标签 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">头像标签</text>
+    </view>
+    <view class="tag-list">
+      <block wx:for="{{tagList}}" wx:key="label">
+        <view class="tag-pill {{item.type}}" bindtap="onTagTap" data-tag="{{item.label}}">
+          <text>{{item.label}}</text>
+        </view>
+      </block>
+
+    </view>
+  </view>
+
+  <!-- 调试信息 -->
+  <view class="debug-info" style="display: none;">
+    <text>标签数据: {{tagList}}</text>
+  </view>
+
+  <!-- 相似头像 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">相似头像</text>
+    </view>
+    <view class="similar-grid">
+      <view class="similar-item" wx:for="{{similarList}}" wx:key="url" data-url="{{item.url}}" bindtap="onRecommendTap">
+        <image class="similar-img" src="{{item.url}}" mode="aspectFill" />
+        <view class="similar-label" wx:if="{{item.category}}">{{item.category}}</view>
+      </view>
+    </view>
+  </view>
+
+</view>
+
+<!-- 日签海报生成组件 -->
+<poster-share visible="{{showPosterModal}}" imageUrl="{{currentUrl}}" type="avatar" bind:close="hidePoster"></poster-share>
+
+<!-- 登录弹窗 -->
+<view class="login-modal-mask" wx:if="{{showLoginModal}}" bindtap="hideLoginModal">
+  <view class="login-modal-content" catchtap="true">
+    <view class="login-modal-title">请先登录</view>
+    <view class="login-modal-desc">收藏和下载功能需要登录才能使用</view>
+    <view class="login-modal-btns">
+      <button class="login-btn cancel" bindtap="hideLoginModal">先不了</button>
+      <button class="login-btn confirm" bindtap="handleLogin" loading="{{isLoginLoading}}" disabled="{{isLoginLoading}}">{{isLoginLoading ? '登录中...' : '去登录'}}</button>
+    </view>
+  </view>
+</view>

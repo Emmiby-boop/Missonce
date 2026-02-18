@@ -1,0 +1,66 @@
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="navigateBack">
+      <image class="back-icon" src="/images/preview-back.svg" mode="aspectFit" />
+    </view>
+    <text class="nav-title">{{pageTitle}}</text>
+    <view class="nav-placeholder"></view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
+
+<view class="container">
+  <!-- 标签导航 (当有标签数据时显示) -->
+  <scroll-view class="category-scroll" scroll-x enable-flex style="top: {{statusBarHeight + navBarHeight - 1}}px" wx:if="{{tagList.length > 0}}">
+    <view class="category-list">
+      <view class="category-item {{currentTag === item.id ? 'active' : ''}}" 
+            wx:for="{{tagList}}" 
+            wx:key="id" 
+            data-tag="{{item.id}}" 
+            bindtap="onTagChange">
+        {{item.name}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 排序按钮 (仅在有数据时显示且不是点赞列表时显示) -->
+  <view class="sort-bar" wx:if="{{(list.length > 0 || currentSort !== 'latest') && type !== 'likes'}}">
+    <view class="sort-item {{currentSort === 'hot' ? 'active' : ''}}" 
+          data-type="hot" 
+          bindtap="onSortChange">
+      <image class="chip-icon" src="/images/icon-fire.png" mode="widthFix"></image>
+      <text>热门</text>
+    </view>
+    <view class="sort-item {{currentSort === 'latest' ? 'active' : ''}}" 
+          data-type="latest" 
+          bindtap="onSortChange">
+      <image class="chip-icon" src="/images/icon-clock.png" mode="widthFix"></image>
+      <text>最新</text>
+    </view>
+  </view>
+
+  <!-- 资源列表 -->
+  <view class="{{type === 'avatar' ? 'avatar-grid' : 'wallpaper-grid'}}">
+    <view class="item" wx:for="{{list}}" wx:key="id" 
+          bindtap="previewImage" 
+          data-url="{{item.url}}" 
+          data-original-url="{{item.originalUrl}}" 
+          data-raw-url="{{item.rawUrl}}" 
+          data-raw-original-url="{{item.rawOriginalUrl}}"
+          data-categories="{{item.categories}}" 
+          data-tags="{{item.tags}}">
+      <image class="image" src="{{item.url}}" mode="aspectFill" lazy-load></image>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+  <view class="no-more" wx:if="{{!hasMore && list.length > 0}}">
+    <text>没有更多了</text>
+  </view>
+  <view class="empty" wx:if="{{!loading && list.length === 0}}">
+    <text class="empty-title">暂无数据</text>
+  </view>
+</view>

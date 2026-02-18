@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "openapi": [
+      "wxacode.getUnlimited"
+    ]
+  },
+  "envVariables": {},
+  "timeout": 10,
+  "memory": 128,
+  "triggers": []
+}

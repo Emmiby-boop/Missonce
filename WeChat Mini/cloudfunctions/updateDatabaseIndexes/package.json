@@ -1,0 +1,9 @@
+{
+  "name": "updateDatabaseIndexes",
+  "version": "1.0.0",
+  "description": "自动创建数据库索引",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

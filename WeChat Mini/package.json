@@ -1,0 +1,15 @@
+{
+  "name": "missonce-mini-program",
+  "version": "1.0.0",
+  "description": "Wallpaper and Avatar WeChat Mini Program",
+  "main": "app.js",
+  "dependencies": {
+    "@babel/runtime": "^7.21.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,66 @@
+.waterfall-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10rpx;
+  gap: 20rpx;
+}
+
+.waterfall-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.waterfall-item {
+  background: #f8fafc;
+  border-radius: 20rpx;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease;
+}
+
+.waterfall-item:active {
+  transform: scale(0.98);
+}
+
+.waterfall-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #f1f5f9;
+}
+
+.item-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12rpx;
+  background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+  display: flex;
+  align-items: center;
+}
+
+.item-tag {
+  font-size: 18rpx;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .waterfall-item {
+    background: #1f2937;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  }
+
+  .waterfall-image {
+    background: #374151;
+  }
+}

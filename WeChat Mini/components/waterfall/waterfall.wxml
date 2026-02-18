@@ -1,0 +1,38 @@
+<wxs module="utils">
+var optimizeUrl = function(url, type) {
+  if (!url) return '';
+  // 如果是云文件ID (cloud://)，直接返回，交给小程序原生组件处理
+  if (url.indexOf('cloud://') === 0) {
+    return url;
+  }
+  
+  // 简单判断是否为 HTTP 链接
+  if (url.indexOf('http') === 0) {
+    // 壁纸使用更大尺寸 (500px)，头像使用较小尺寸 (300px)
+    var size = type === 'wallpaper' ? '500x' : '300x';
+    
+    // 如果已经包含查询参数，使用 & 连接
+    if (url.indexOf('?') > -1) {
+      if (url.indexOf('imageMogr2') > -1) return url;
+      return url + '&imageMogr2/thumbnail/' + size;
+    }
+    return url + '?imageMogr2/thumbnail/' + size;
+  }
+  
+  return url;
+}
+module.exports = {
+  optimizeUrl: optimizeUrl
+};
+</wxs>
+
+<view class="waterfall-container">
+  <view class="waterfall-column" wx:for="{{columns}}" wx:key="index" wx:for-item="col">
+    <view class="waterfall-item" wx:for="{{col}}" wx:key="id" wx:for-item="item" bindtap="onItemTap" data-item="{{item}}">
+      <image class="waterfall-image" src="{{utils.optimizeUrl(item.coverUrl || item.url, type)}}" mode="widthFix" lazy-load></image>
+      <view class="item-info" wx:if="{{item.tags && item.tags.length > 0}}">
+        <view class="item-tag">{{item.tags[0]}}</view>
+      </view>
+    </view>
+  </view>
+</view>

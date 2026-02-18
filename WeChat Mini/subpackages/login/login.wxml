@@ -1,0 +1,25 @@
+<view class="login-wrapper">
+  <view class="login-card">
+    <view class="logo">
+      <image src="/images/default-avatar.png" mode="aspectFit"></image>
+    </view>
+    
+    <view class="title">微信登录</view>
+    
+    <button class="login-button" bindtap="handleLogin" hover-class="login-button-hover">
+      <view class="button-content">
+        <image src="/images/avatar.png" mode="aspectFit" class="wechat-logo"></image>
+        <text>使用微信登录</text>
+      </view>
+    </button>
+
+    
+    <view class="loading" wx:if="{{isLoading}}">
+      <text>登录中...</text>
+    </view>
+    
+    <view class="error" wx:if="{{error}}">
+      <text>{{error}}</text>
+    </view>
+  </view>
+</view>

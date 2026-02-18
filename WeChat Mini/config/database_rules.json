@@ -1,0 +1,14 @@
+{
+  "favorites": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "home_sections": {
+    "read": true,
+    "write": "doc._openid == auth.openid"
+  },
+  "downloads": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  }
+}

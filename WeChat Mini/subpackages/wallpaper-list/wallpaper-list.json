@@ -1,0 +1,6 @@
+{
+  "navigationStyle": "custom",
+  "navigationBarTitleText": "壁纸精选",
+  "enablePullDownRefresh": true,
+  "usingComponents": {}
+}
