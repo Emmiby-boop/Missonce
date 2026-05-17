@@ -1,9 +1,0 @@
-{
-  "name": "initInteractionCollections",
-  "version": "1.0.0",
-  "description": "初始化互动相关数据库集合",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

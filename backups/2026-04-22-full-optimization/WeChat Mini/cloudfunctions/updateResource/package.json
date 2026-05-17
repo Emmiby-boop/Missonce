@@ -1,9 +1,0 @@
-{
-  "name": "updateResource",
-  "version": "1.0.0",
-  "description": "Update resource",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

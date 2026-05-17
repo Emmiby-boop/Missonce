@@ -1,9 +1,0 @@
-{
-  "name": "manageTopicLayout",
-  "version": "1.0.0",
-  "description": "Topic layout management",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}

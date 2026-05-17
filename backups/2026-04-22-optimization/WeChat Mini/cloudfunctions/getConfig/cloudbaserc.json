@@ -1,8 +1,0 @@
-{
-  "name": "getConfig",
-  "type": "cloudfunction",
-  "trigger": {
-    "type": "http",
-    "config": "{\"timeout\":10,\"memorySize\":128,\"events\":[]}"
-  }
-}

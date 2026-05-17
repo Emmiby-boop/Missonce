@@ -1,9 +1,0 @@
-{
-  "name": "getHomeData",
-  "version": "1.0.0",
-  "description": "获取首页布局及数据",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}

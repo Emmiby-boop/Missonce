@@ -1,9 +1,0 @@
-{
-  "name": "getResourceList",
-  "version": "1.0.0",
-  "description": "通用资源列表获取",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "name": "prebuildHomepage",
-  "version": "1.0.0",
-  "description": "预渲染首页完整数据并写入缓存",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

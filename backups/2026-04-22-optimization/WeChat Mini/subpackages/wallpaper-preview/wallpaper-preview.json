@@ -1,8 +1,0 @@
-{
-  "navigationStyle": "custom",
-  "backgroundColor": "#000000",
-  "usingComponents": {
-    "poster-share": "../../components/poster-share/poster-share",
-    "ad-unit": "/components/ad-unit/ad-unit"
-  }
-}

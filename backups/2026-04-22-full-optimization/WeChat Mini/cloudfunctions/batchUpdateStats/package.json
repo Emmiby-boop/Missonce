@@ -1,9 +1,0 @@
-{
-  "name": "batchUpdateStats",
-  "version": "1.0.0",
-  "description": "批量更新资源统计数据",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}
