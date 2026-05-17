@@ -62,12 +62,13 @@ App({
     // 🔥 记录启动完成时间（此时应该 < 30ms）
     this.performanceMonitor('launch')
     
-    // 🔥 关键优化：开屏广告期间预热首页数据（立即开始，不等待）
-    // 广告约 5 秒，这段时间正好并行请求云函数
-    // 注意：这里调用 api.js 的 getHomeData，会命中本地缓存则直接返回
-    setTimeout(() => {
+    // 🔥 关键优化：立即预热首页数据（0ms延迟，与页面初始化并行）
+    // getHomeData 会先检查本地缓存（<1ms），无缓存时才走CDN网络
+    // 这样在页面 onLoad 准备请求时，网络已经在飞行中
+    if (!this.globalData._preheatStarted) {
+      this.globalData._preheatStarted = true
       this._preheatHomeData()
-    }, 800)
+    }
     
     // 🔥 P1 优化：所有非关键任务延迟到首屏渲染完成后执行
     setTimeout(() => {
