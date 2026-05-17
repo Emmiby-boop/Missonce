@@ -2,5 +2,7 @@
   "navigationStyle": "custom",
   "navigationBarTitleText": "壁纸精选",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "ad-unit": "/components/ad-unit/ad-unit"
+  }
 }

@@ -73,10 +73,20 @@ Page({
     ]
   },
 
+  _refreshPageCache() {
+    this._openid = getStorage('openid')
+    this._userInfo = getStorage('userInfo')
+    this._token = getStorage('token')
+    this._favorites = getStorage('favorites') || []
+    this._downloadHistory = getStorage('downloadHistory') || []
+  },
+
   onLoad() {
     performanceMonitor.startPageLoad('个人中心')
     this.initNavBar()
     performanceMonitor.markMilestone('个人中心', '初始化完成')
+    this._refreshPageCache()
+    performanceMonitor.markMilestone('个人中心', '缓存初始化完成')
     this.checkTodayCheckIn()
     performanceMonitor.markMilestone('个人中心', '签到检查完成')
     this.loadDownloadCount()
@@ -125,6 +135,7 @@ Page({
   },
 
   onShow() {
+    this._refreshPageCache()
     this.checkLoginStatus()
     this.loadFavoritesCount()
     this.syncUserInfo()
@@ -148,7 +159,7 @@ Page({
     }
 
     try {
-      const openid = getStorage('openid')
+      const openid = this._openid  // 🔥 优化：页面级缓存
       if (!openid) return
 
       const db = wx.cloud.database()
@@ -174,7 +185,7 @@ Page({
       console.error('加载统计数据失败:', e)
       // Fallback to local storage if cloud fails
       try {
-        const favorites = getStorage('favorites') || []
+        const favorites = this._favorites  // 🔥 优化：页面级缓存
         this.setData({ 
           'stats.favorites': favorites.length,
           favoriteCount: favorites.length 
@@ -185,7 +196,7 @@ Page({
 
   checkLoginStatus() {
     if (checkLoginStatus()) {
-      const userInfo = getStorage('userInfo')
+      const userInfo = this._userInfo  // 🔥 优化：页面级缓存
       // 格式化显示ID：优先使用userId，否则截取openid后6位
       if (userInfo) {
         userInfo.displayId = userInfo.userId || (userInfo.openid ? userInfo.openid.slice(-6).toUpperCase() : '')
@@ -373,7 +384,7 @@ Page({
 
   loadDownloadCount() {
     try {
-      const history = getStorage('downloadHistory') || []
+      const history = this._downloadHistory  // 🔥 优化：页面级缓存
       this.setData({ downloadCount: history.length })
     } catch (e) {
       this.setData({ downloadCount: 0 })
@@ -667,7 +678,7 @@ Page({
 
     try {
       const db = wx.cloud.database()
-      const openid = getStorage('openid')
+      const openid = this._openid  // 🔥 优化：页面级缓存
 
       // 1. 清空云端数据
       if (openid) {
@@ -795,7 +806,7 @@ Page({
           wx.showLoading({ title: '正在清空...' })
           try {
             const db = wx.cloud.database()
-            const openid = getStorage('openid')
+            const openid = this._openid  // 🔥 优化：页面级缓存
 
             // 1. 清空云端数据
             if (openid) {
@@ -836,7 +847,7 @@ Page({
   },
 
   onShareAppMessage() {
-    const userInfo = getStorage('userInfo')
+    const userInfo = this._userInfo  // 🔥 优化：页面级缓存
     const inviterParam = userInfo && userInfo.openid ? '?inviter=' + userInfo.openid : ''
     return {
       title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
@@ -846,7 +857,7 @@ Page({
   },
 
   onShareTimeline() {
-    const userInfo = getStorage('userInfo')
+    const userInfo = this._userInfo  // 🔥 优化：页面级缓存
     const inviterParam = userInfo && userInfo.openid ? 'inviter=' + userInfo.openid : ''
     return {
       title: '小辣椒动态头像壁纸，海量精美素材免费下载！',

@@ -7,6 +7,8 @@ let startupSyncFallbackDisabled = true
 let _windowInfo = null
 let _appBaseInfo = null
 let _deviceInfo = null
+// 🔥 优化：缓存 wx.getSystemInfoSync() 结果，避免多次同步调用阻塞线程
+let _cachedSystemInfo = null
 
 const DEFAULT_WINDOW_INFO = {
   statusBarHeight: 20,
@@ -73,8 +75,32 @@ setTimeout(() => {
   startupSyncFallbackDisabled = false
 }, 5000)
 
+// 🔥 优化：使用 wx.batchGetStorage 批量预加载（1次 API 调用 vs N次）
+// 首次调用时同步创建 Promise 的开销从 7 个降到 1 个
+const _batchPreloadStorage = (keys) => {
+  // wx.batchGetStorage 在基础库 2.21.0 以上可用
+  if (typeof wx.batchGetStorage === 'function') {
+    wx.batchGetStorage({
+      keyList: keys,
+      success: (res) => {
+        (res.dataList || []).forEach((item, i) => {
+          if (item !== undefined && item !== null) {
+            storageCache[keys[i]] = item
+          }
+        })
+      },
+      fail: () => {
+        // 降级：逐个读取
+        preloadStorageCache(keys)
+      }
+    })
+  } else {
+    preloadStorageCache(keys)
+  }
+}
+
 export const initStorageCache = () => {
-  preloadStorageCache(getDefaultStorageKeys())
+  _batchPreloadStorage(getDefaultStorageKeys())
 }
 
 export const preloadStorageCache = (keys = []) => {
@@ -87,6 +113,16 @@ export const getStorageAsync = (key) => {
   return readStorageAsync(key)
 }
 
+const _getSystemInfoCached = () => {
+  if (_cachedSystemInfo) return _cachedSystemInfo
+  try {
+    _cachedSystemInfo = wx.getSystemInfoSync()
+  } catch (e) {
+    _cachedSystemInfo = {}
+  }
+  return _cachedSystemInfo
+}
+
 export const getWindowInfo = () => {
   if (_windowInfo) return _windowInfo
 
@@ -94,7 +130,7 @@ export const getWindowInfo = () => {
     if (typeof wx.getWindowInfo === 'function') {
       _windowInfo = wx.getWindowInfo()
     } else {
-      const sysInfo = wx.getSystemInfoSync()
+      const sysInfo = _getSystemInfoCached()
       _windowInfo = {
         statusBarHeight: sysInfo.statusBarHeight,
         screenWidth: sysInfo.screenWidth,
@@ -118,7 +154,7 @@ export const getAppBaseInfo = () => {
     if (typeof wx.getAppBaseInfo === 'function') {
       _appBaseInfo = wx.getAppBaseInfo()
     } else {
-      const sysInfo = wx.getSystemInfoSync()
+      const sysInfo = _getSystemInfoCached()
       _appBaseInfo = {
         SDKVersion: sysInfo.SDKVersion || '',
         version: sysInfo.version || '',
@@ -139,7 +175,7 @@ export const getDeviceInfo = () => {
     if (typeof wx.getDeviceInfo === 'function') {
       _deviceInfo = wx.getDeviceInfo()
     } else {
-      const sysInfo = wx.getSystemInfoSync()
+      const sysInfo = _getSystemInfoCached()
       _deviceInfo = {
         model: sysInfo.model || '',
         system: sysInfo.system || '',
