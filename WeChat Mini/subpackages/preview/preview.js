@@ -1,4 +1,4 @@
-import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
+﻿import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
 import { loginWithProfile, checkLoginStatus } from '../../utils/auth.js'
 import { reportError } from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
@@ -231,6 +231,17 @@ Page({
     }))
   },
 
+  // 🔥 合并 initNavBar + syncTheme + getIconSet → 1 次 setData
+  _initViewData() {
+    const info = getWindowInfo()
+    const theme = getTheme()
+    this.setData(Object.assign({
+      statusBarHeight: info.statusBarHeight || 20,
+      navBarHeight: 44,
+      theme: theme === 'dark' ? 'dark' : 'light'
+    }, this.getIconSet()))
+  },
+
   initNavBar() {
     try {
       const info = getWindowInfo()
@@ -336,11 +347,10 @@ Page({
   },
 
   onLoad(options) {
-    this.initNavBar()
-    this.syncTheme()
+    // 🔥 合并 initNavBar + syncTheme + getIconSet → 1 次 setData（减少 2 次调用）
+    this._initViewData()
     this.handleThemeChange = this.handleThemeChange.bind(this)
     wx.onThemeChange(this.handleThemeChange)
-    this.setData(this.getIconSet())
     // 使用通用广告管理器初始化插屏广告
     interstitialAdManager.initInterstitialAd('/subpackages/preview/preview')
     console.log('[AD][Manager] preview onLoad: 插屏广告已初始化')
@@ -420,12 +430,8 @@ Page({
         }
       }
       
-      this.setData({ itemsList });
-      
-      // 直接使用当前头像的数据来设置标签列表
-      this.setData({
-        tagList: this.getAvatarTagList()
-      })
+      // 🔥 合并 itemsList + tagList → 1 次 setData（减少 1 次调用）
+      this.setData({ itemsList, tagList: this.getAvatarTagList() });
 
       // 如果当前项没有数据，或者数据中没有标签（例如从收藏/下载列表进入），尝试获取完整信息
       if ((!parsedAvatarData || !parsedAvatarData.tags || parsedAvatarData.tags.length === 0) && imageList[index]) {
@@ -682,12 +688,18 @@ Page({
     // 2. Item exists but has no tags (and we expect tags)
     const needsFetch = !currentItem || (!currentItem.tags || currentItem.tags.length === 0);
 
+    // 🔥 合并 stats 数据 + navigation 数据 → 1 次 setData（减少 1 次调用）
+    const patch = {
+      currentIndex: index,
+      currentUrl: this.data.imageList[index],
+      rawUrl: '',
+      showPageIndicator: true
+    }
+
     if (currentItem) {
-      // 始终计算并更新互动数据（即使没tag，热度值也可能不同）
       const url = currentItem.url || currentItem.coverUrl || ''
       const stats = this._computeInteractionData(currentItem, url)
-
-      this.setData({
+      Object.assign(patch, {
         currentAvatar: currentItem,
         viewCount: stats.viewCount,
         viewCountText: this._formatCount(stats.viewCount),
@@ -696,9 +708,8 @@ Page({
         hotScore: stats.hotScore,
         hotScoreText: this._formatCount(stats.hotScore),
         tagList: this.getAvatarTagList()
-      });
+      })
       
-      // 记录浏览历史 (带防抖逻辑，避免快速滑动频繁调用)
       if (this.browseTimer) clearTimeout(this.browseTimer)
       this.browseTimer = setTimeout(() => {
         if (currentItem && currentItem._id) {
@@ -706,8 +717,7 @@ Page({
         }
       }, 1000)
     } else {
-       // Reset if no item yet
-       this.setData({
+      Object.assign(patch, {
         tagList: [],
         currentAvatar: {},
         viewCount: 0,
@@ -716,8 +726,11 @@ Page({
         likeCountText: '0',
         hotScore: 0,
         hotScoreText: '0'
-      });
+      })
     }
+
+    this.setData(patch)
+    this.checkFavorite()
 
     if (needsFetch) {
       const currentUrl = this.data.imageList[index];
@@ -725,14 +738,6 @@ Page({
         this.fetchAvatarInfo(currentUrl, index);
       }
     }
-
-    this.setData({
-      currentIndex: index,
-      currentUrl: this.data.imageList[index],
-      rawUrl: '', // 切换后清除初始传入的 rawUrl，避免下载时一直使用第一张图的链接
-      showPageIndicator: true
-    })
-    this.checkFavorite()
 
     if (this.hideTimer) {
       clearTimeout(this.hideTimer)

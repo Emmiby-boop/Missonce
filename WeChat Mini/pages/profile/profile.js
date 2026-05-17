@@ -83,7 +83,7 @@ Page({
 
   onLoad() {
     performanceMonitor.startPageLoad('个人中心')
-    this.initNavBar()
+    this._initPageData()
     performanceMonitor.markMilestone('个人中心', '初始化完成')
     this._refreshPageCache()
     performanceMonitor.markMilestone('个人中心', '缓存初始化完成')
@@ -91,7 +91,6 @@ Page({
     performanceMonitor.markMilestone('个人中心', '签到检查完成')
     this.loadDownloadCount()
     performanceMonitor.markMilestone('个人中心', '下载数加载完成')
-    this.initVersion()
     performanceMonitor.endPageLoad('个人中心')
     
     const pageStats = performanceMonitor.getPageStats('个人中心')
@@ -104,34 +103,23 @@ Page({
     logger.logPageView('pages/profile/profile')
   },
 
-  initVersion() {
-    try {
-      const accountInfo = wx.getAccountInfoSync()
-      const { miniProgram } = accountInfo
-      
-      // miniProgram.version 仅在正式版有效
-      // miniProgram.envVersion 可能值为 develop, trial, release
-      if (miniProgram.version) {
-        this.setData({ version: miniProgram.version })
-      } else if (miniProgram.envVersion !== 'release') {
-        const envMap = {
-          'develop': '开发版',
-          'trial': '体验版'
-        }
-        this.setData({ version: envMap[miniProgram.envVersion] || miniProgram.envVersion })
-      }
-    } catch (e) {
-      console.error('获取版本信息失败', e)
-    }
-  },
-
-  initNavBar() {
-    // 🔥 优化：使用全局缓存的窗口信息，避免重复调用 wx.getWindowInfo/getSystemInfoSync
+  // 🔥 优化：合并 initNavBar + initVersion → 1 次 setData（减少 1 次调用）
+  _initPageData() {
     const windowInfo = getWindowInfo()
-    this.setData({
+    const patch = {
       statusBarHeight: windowInfo.statusBarHeight,
-      navBarHeight: 44 // 标准导航栏高度
-    })
+      navBarHeight: 44
+    }
+    try {
+      const { miniProgram } = wx.getAccountInfoSync()
+      if (miniProgram.version) {
+        patch.version = miniProgram.version
+      } else if (miniProgram.envVersion !== 'release') {
+        const envMap = { develop: '开发版', trial: '体验版' }
+        patch.version = envMap[miniProgram.envVersion] || miniProgram.envVersion
+      }
+    } catch (e) {}
+    this.setData(patch)
   },
 
   onShow() {
@@ -140,13 +128,7 @@ Page({
     this.loadFavoritesCount()
     this.syncUserInfo()
     this.checkTodayCheckIn()
-    this.syncTheme()
-  },
-
-  syncTheme() {
-    const theme = getTheme()
-    this.setData({ theme })
-    this.loadFavoritesCount()
+    this.setData({ theme: getTheme() })
   },
 
   async loadFavoritesCount() {
@@ -440,13 +422,11 @@ Page({
   },
 
   handleOfficialAccount() {
-    this.setData({ showContactMenu: false })
-    
+    // 🔥 合并 3 次 setData → 1 次
+    this.setData({ showContactMenu: false, showOfficialAccount: true, qrcodeLoaded: this.data.officialAccount ? this.data.qrcodeLoaded : false })
     if (!this.data.officialAccount) {
       this.loadOfficialAccountConfig()
     }
-    
-    this.setData({ showOfficialAccount: true })
   },
 
   closeOfficialAccount() {

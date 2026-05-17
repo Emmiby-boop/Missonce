@@ -1,4 +1,4 @@
-import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
+﻿import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
 import { loginWithProfile, checkLoginStatus } from '../../utils/auth.js'
 import { reportError } from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
@@ -254,14 +254,19 @@ Page({
     }))
   },
 
-  initNavBar() {
+  // 已废弃，由 _initViewData 替代
+  initNavBar() {}
+
+  // 合并 initNavBar + getIconSet -> 1 次 setData
+  _initViewData() {
     try {
       const info = getWindowInfo()
-      const statusBarHeight = info.statusBarHeight || 20
-      const navBarHeight = 44 // Fixed 44px
-      this.setData({ statusBarHeight, navBarHeight })
+      this.setData(Object.assign({
+        statusBarHeight: info.statusBarHeight || 20,
+        navBarHeight: 44
+      }, this.getIconSet()))
     } catch (e) {
-      console.error('获取系统信息失败:', e)
+      console.error(\"获取系统信息失败:\", e)
     }
   },
 
@@ -358,10 +363,10 @@ Page({
   },
 
   onLoad(options) {
-    this.initNavBar()
+    // 合并 initNavBar + getIconSet -> 1 次 setData
+    this._initViewData()
     this.handleThemeChange = this.handleThemeChange.bind(this)
     wx.onThemeChange(this.handleThemeChange)
-    this.setData(this.getIconSet())
     
     // 初始化插屏广告管理器
     interstitialAdManager.initInterstitialAd('/subpackages/wallpaper-preview/wallpaper-preview')
@@ -438,13 +443,11 @@ Page({
         }
       }
       
-      this.setData({ itemsList });
-      
-      // 直接使用当前壁纸的数据来设置标签列表
+      // 合并 itemsList + tagList -> 1 次 setData
       this.setData({
+        itemsList,
         tagList: this.getWallpaperTagList(parsedWallpaperData)
       })
-
       // 如果当前项没有数据，或者数据中没有标签（例如从收藏/下载列表进入），尝试获取
       if ((!parsedWallpaperData || !parsedWallpaperData.tags || parsedWallpaperData.tags.length === 0) && imageList[index]) {
         this.fetchWallpaperInfo(imageList[index], index);
@@ -826,16 +829,22 @@ Page({
     // 2. Item exists but has no tags (and we expect tags)
     const needsFetch = !currentItem || (!currentItem.tags || currentItem.tags.length === 0);
 
+    // 合并 stats + navigation -> 1 次 setData
+    const patch = {
+      currentIndex: index,
+      currentUrl: this.data.imageList[index],
+      rawUrl: '',
+      showPageIndicator: true
+    }
+
     if (currentItem) {
-      // 始终计算并更新互动数据（即使没tag，热度值也可能不同）
       const url = currentItem.url || currentItem.coverUrl || ''
       const stats = this._computeInteractionData(currentItem, url)
 
-      // 🔥 强制重播动画
       const loadedImages = { ...this.data.loadedImages }
       loadedImages[index] = false
       
-      this.setData({
+      Object.assign(patch, {
         currentWallpaper: currentItem,
         viewCount: stats.viewCount,
         viewCountText: this._formatCount(stats.viewCount),
@@ -845,16 +854,14 @@ Page({
         hotScoreText: this._formatCount(stats.hotScore),
         tagList: this.getWallpaperTagList(currentItem),
         loadedImages
-      });
+      })
       
-      // 延迟后显示，触发动画
       setTimeout(() => {
         this.setData({
           [`loadedImages.${index}`]: true
         })
       }, 50)
       
-      // 记录浏览历史 (带防抖)
       if (this.browseTimer) clearTimeout(this.browseTimer)
       this.browseTimer = setTimeout(() => {
         if (currentItem && currentItem._id) {
@@ -862,7 +869,7 @@ Page({
         }
       }, 1000)
     } else {
-      this.setData({
+      Object.assign(patch, {
         tagList: [],
         currentWallpaper: {},
         viewCount: 0,
@@ -871,8 +878,10 @@ Page({
         likeCountText: '0',
         hotScore: 0,
         hotScoreText: '0'
-      });
+      })
     }
+
+    this.setData(patch)
 
     if (needsFetch) {
       const currentUrl = this.data.imageList[index];
@@ -880,13 +889,6 @@ Page({
         this.fetchWallpaperInfo(currentUrl, index);
       }
     }
-
-    this.setData({
-      currentIndex: index,
-      currentUrl: this.data.imageList[index],
-      rawUrl: '', // 切换后清除初始传入的 rawUrl，避免下载时一直使用第一张图的链接
-      showPageIndicator: true
-    })
     this.checkFavorite()
 
     if (this.hideTimer) clearTimeout(this.hideTimer)
