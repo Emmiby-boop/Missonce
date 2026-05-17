@@ -28,7 +28,21 @@
     }
   ],
   "lazyCodeLoading": "requiredComponents",
-  
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["subpackages"]
+    },
+    "pages/avatar/avatar": {
+      "network": "all",
+      "packages": ["subpackages"]
+    },
+    "pages/wallpaper/wallpaper": {
+      "network": "all",
+      "packages": ["subpackages"]
+    }
+  },
+
   "cloud": true,
   "darkmode": true,
   "themeLocation": "config/theme.json",

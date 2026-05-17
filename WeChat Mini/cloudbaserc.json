@@ -41,6 +41,12 @@
       "memorySize": 256
     },
     {
+      "name": "getTags",
+      "runtime": "Nodejs18.15",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
       "name": "login",
       "runtime": "Nodejs20.19",
       "timeout": 5,
