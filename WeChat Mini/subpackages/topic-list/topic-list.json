@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "精选专题",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "ad-unit": "/components/ad-unit/ad-unit"
+  }
 }

@@ -1,5 +1,6 @@
-import { logger } from './logger'
+import logger from './logger'
 import { STORAGE_KEYS } from '../config/constants'
+import { getAppBaseInfo, getDeviceInfo as getCachedDeviceInfo, getStorage, setStorage, removeStorage } from './storageManager'
 
 /**
  * 统一认证管理模块
@@ -9,8 +10,8 @@ import { STORAGE_KEYS } from '../config/constants'
  * 检查登录状态
  */
 export const checkLoginStatus = () => {
-  const token = wx.getStorageSync(STORAGE_KEYS.TOKEN)
-  const user = wx.getStorageSync(STORAGE_KEYS.USER)
+  const token = getStorage(STORAGE_KEYS.TOKEN)
+  const user = getStorage(STORAGE_KEYS.USER)
   
   // 同步全局状态
   const app = getApp()
@@ -35,24 +36,24 @@ export const checkLoginStatus = () => {
  * 获取用户信息
  */
 export const getUserInfo = () => {
-  return wx.getStorageSync(STORAGE_KEYS.USER) || wx.getStorageSync(STORAGE_KEYS.USER_INFO) || null
+  return getStorage(STORAGE_KEYS.USER) || getStorage(STORAGE_KEYS.USER_INFO) || null
 }
 
 /**
  * 获取 Token
  */
 export const getToken = () => {
-  return wx.getStorageSync(STORAGE_KEYS.TOKEN) || null
+  return getStorage(STORAGE_KEYS.TOKEN) || null
 }
 
 /**
  * 登出
  */
 export const logout = () => {
-  wx.removeStorageSync(STORAGE_KEYS.TOKEN)
-  wx.removeStorageSync(STORAGE_KEYS.OPENID)
-  wx.removeStorageSync(STORAGE_KEYS.USER)
-  wx.removeStorageSync(STORAGE_KEYS.USER_INFO)
+  removeStorage(STORAGE_KEYS.TOKEN)
+  removeStorage(STORAGE_KEYS.OPENID)
+  removeStorage(STORAGE_KEYS.USER)
+  removeStorage(STORAGE_KEYS.USER_INFO)
   
   const app = getApp()
   if (app) {
@@ -76,34 +77,51 @@ const getLoginCode = () => {
   })
 }
 
+function getDeviceInfo() {
+  try {
+    const deviceInfo = getCachedDeviceInfo()
+    const appBaseInfo = getAppBaseInfo()
+    
+    return {
+      model: deviceInfo.model || '',
+      system: deviceInfo.system || '',
+      platform: deviceInfo.platform || '',
+      SDKVersion: appBaseInfo.SDKVersion || '',
+      version: appBaseInfo.version || ''
+    }
+  } catch (e) {
+    return {}
+  }
+}
+
 /**
- * 完整的登录流程：获取用户信息 -> 获取Code -> 云函数登录 -> 保存状态
+ * 完整的登录流程：获取Code -> 云函数登录 -> 保存状态
+ * @param {Object} userInfo - 用户提供的头像昵称信息
  * @returns {Promise<Object>} 用户信息对象
  */
-export const loginWithProfile = async () => {
+export const loginWithProfile = async (userInfo = {}) => {
   try {
-    // 1. 获取用户信息 (需要用户授权)
-    const profileRes = await wx.getUserProfile({ desc: '用于完善用户资料' })
-    const userInfo = profileRes.userInfo || {}
-    
-    // 2. 准备用户数据
+    // 1. 准备用户数据
     const safeNick = userInfo.nickName || `用户${Math.floor(100000 + Math.random() * 900000)}`
     const safeAvatar = userInfo.avatarUrl || '/images/default-avatar.png'
     const mergedUser = { ...userInfo, nickName: safeNick, avatarUrl: safeAvatar }
 
-    // 3. 获取 Code
+    // 3. 获取设备信息
+    const deviceInfo = getDeviceInfo()
+
+    // 4. 获取 Code
     const codeRes = await getLoginCode()
     if (!codeRes.code) {
       throw new Error('获取登录凭证失败')
     }
 
-    // 4. 调用云函数登录
+    // 5. 调用云函数登录
     const loginRes = await wx.cloud.callFunction({
       name: 'login',
       data: { 
         code: codeRes.code, 
-        // appid: APPID, // 云函数通常能自动获取，不需要传
-        userInfo: mergedUser 
+        userInfo: mergedUser,
+        deviceInfo: deviceInfo
       }
     })
 
@@ -127,10 +145,10 @@ export const loginWithProfile = async () => {
       }
       
       // 6. 保存到本地存储
-      wx.setStorageSync(STORAGE_KEYS.TOKEN, result.token)
-      wx.setStorageSync(STORAGE_KEYS.OPENID, result.openid)
-      wx.setStorageSync(STORAGE_KEYS.USER, finalUser)
-      wx.setStorageSync(STORAGE_KEYS.USER_INFO, finalUser)
+      setStorage(STORAGE_KEYS.TOKEN, result.token)
+      setStorage(STORAGE_KEYS.OPENID, result.openid)
+      setStorage(STORAGE_KEYS.USER, finalUser)
+      setStorage(STORAGE_KEYS.USER_INFO, finalUser)
       
       // 7. 更新全局状态
       const app = getApp()
@@ -174,8 +192,8 @@ export const updateUserProfile = async (userInfo) => {
       const currentUser = getUserInfo() || {}
       const newUser = { ...currentUser, ...res.result.user }
       
-      wx.setStorageSync(STORAGE_KEYS.USER, newUser)
-      wx.setStorageSync(STORAGE_KEYS.USER_INFO, newUser)
+      setStorage(STORAGE_KEYS.USER, newUser)
+      setStorage(STORAGE_KEYS.USER_INFO, newUser)
       
       const app = getApp()
       if (app) {
@@ -203,14 +221,14 @@ export const navigateToLogin = () => {
  */
 export const saveUserToDB = async (userInfo) => {
   const db = wx.cloud.database()
-  const openid = userInfo.openid || wx.getStorageSync(STORAGE_KEYS.OPENID)
+  const openid = userInfo.openid || getStorage(STORAGE_KEYS.OPENID)
   if (!openid) return
 
   const now = db.serverDate()
   
   // 获取最新的签到数据 (保留本地签到进度)
-  const checkInDays = wx.getStorageSync(STORAGE_KEYS.CHECK_IN_DAYS) || 0
-  const lastCheckInDate = wx.getStorageSync(STORAGE_KEYS.LAST_CHECK_IN_DATE) || ''
+  const checkInDays = getStorage(STORAGE_KEYS.CHECK_IN_DAYS) || 0
+  const lastCheckInDate = getStorage(STORAGE_KEYS.LAST_CHECK_IN_DATE) || ''
 
   const data = {
     nickName: userInfo.nickName,
@@ -250,14 +268,14 @@ const SYNC_INTERVAL = 5 * 60 * 1000 // 5分钟内不重复同步
  * @param {Boolean} force - 是否强制同步
  */
 export const syncUserFromCloud = async (force = false) => {
-  const openid = wx.getStorageSync(STORAGE_KEYS.OPENID)
+  const openid = getStorage(STORAGE_KEYS.OPENID)
   if (!openid) return null
 
   // 频率限制
   const now = Date.now()
   if (!force && (now - lastSyncTime < SYNC_INTERVAL)) {
     // console.log('距离上次同步不足5分钟，使用本地缓存')
-    return wx.getStorageSync(STORAGE_KEYS.USER_INFO)
+    return getStorage(STORAGE_KEYS.USER_INFO)
   }
 
   try {
@@ -267,7 +285,7 @@ export const syncUserFromCloud = async (force = false) => {
     
     if (dbUser) {
       lastSyncTime = now // 更新同步时间
-      const localUserInfo = wx.getStorageSync(STORAGE_KEYS.USER_INFO) || {}
+      const localUserInfo = getStorage(STORAGE_KEYS.USER_INFO) || {}
       
       // 1. 同步基础信息
       // 即使数据一样，也强制更新一次本地存储，防止字段缺失
@@ -279,8 +297,8 @@ export const syncUserFromCloud = async (force = false) => {
           avatarUrl: dbUser.avatarUrl || localUserInfo.avatarUrl
       }
       
-      wx.setStorageSync(STORAGE_KEYS.USER_INFO, newUserInfo)
-      wx.setStorageSync(STORAGE_KEYS.USER, newUserInfo) // 保持一致
+      setStorage(STORAGE_KEYS.USER_INFO, newUserInfo)
+      setStorage(STORAGE_KEYS.USER, newUserInfo) // 保持一致
       
       const app = getApp()
       if (app) {
@@ -289,17 +307,28 @@ export const syncUserFromCloud = async (force = false) => {
       }
 
       // 2. 强制同步签到数据 (防止本地缓存丢失)
-      if (dbUser.checkInDays && dbUser.checkInDays !== wx.getStorageSync(STORAGE_KEYS.CHECK_IN_DAYS)) {
-        wx.setStorageSync(STORAGE_KEYS.CHECK_IN_DAYS, dbUser.checkInDays)
+      if (dbUser.checkInDays && dbUser.checkInDays !== getStorage(STORAGE_KEYS.CHECK_IN_DAYS)) {
+        setStorage(STORAGE_KEYS.CHECK_IN_DAYS, dbUser.checkInDays)
       }
-      if (dbUser.lastCheckInDate && dbUser.lastCheckInDate !== wx.getStorageSync(STORAGE_KEYS.LAST_CHECK_IN_DATE)) {
-        wx.setStorageSync(STORAGE_KEYS.LAST_CHECK_IN_DATE, dbUser.lastCheckInDate)
+      if (dbUser.lastCheckInDate && dbUser.lastCheckInDate !== getStorage(STORAGE_KEYS.LAST_CHECK_IN_DATE)) {
+        setStorage(STORAGE_KEYS.LAST_CHECK_IN_DATE, dbUser.lastCheckInDate)
       }
       
       return dbUser
     }
   } catch (e) {
-    logger.warn('同步用户信息失败:', e)
+    // 用户文档不存在是正常情况（新用户），不记录为错误
+    if (e.errCode === -1 && e.message && e.message.includes('cannot find document')) {
+      logger.log('用户文档不存在，可能是新用户:', openid)
+      // 尝试使用本地缓存数据
+      const localUserInfo = getStorage(STORAGE_KEYS.USER_INFO)
+      if (localUserInfo) {
+        logger.log('使用本地缓存的用户信息')
+        return localUserInfo
+      }
+    } else {
+      logger.warn('同步用户信息失败:', e)
+    }
   }
   return null
 }
@@ -315,7 +344,7 @@ export const uploadUserAvatar = async (filePath, openid) => {
   if (filePath.startsWith('cloud://')) return filePath
   if (filePath === '/images/default-avatar.png') return filePath
 
-  const finalOpenid = openid || wx.getStorageSync(STORAGE_KEYS.OPENID)
+  const finalOpenid = openid || getStorage(STORAGE_KEYS.OPENID)
   if (!finalOpenid) throw new Error('未获取到OpenID')
 
   const cloudPath = `user-avatars/${finalOpenid}-${Date.now()}.png`

@@ -1,0 +1,75 @@
+<view class="container">
+  <view class="header">
+    <view class="header-left">
+      <view class="header-indicator"></view>
+      <text class="header-title">消息中心</text>
+    </view>
+    <view class="header-right" bindtap="markAllAsRead" wx:if="{{notifications.length > 0}}">
+      <text class="mark-all-btn">全部已读</text>
+    </view>
+  </view>
+
+  <view class="content">
+    <view wx:if="{{loading}}" class="loading-container">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="error-container">
+      <text class="error-icon">😔</text>
+      <text class="error-text">{{error}}</text>
+      <view class="retry-btn" bindtap="retry">
+        <text>重新加载</text>
+      </view>
+    </view>
+
+    <view wx:elif="{{notifications.length === 0}}" class="empty-container">
+      <text class="empty-icon">📭</text>
+      <text class="empty-text">暂无消息</text>
+    </view>
+
+    <view wx:else class="notification-list">
+      <view 
+        class="notification-item {{readIds.includes(item._id) ? 'read' : ''}}" 
+        wx:for="{{notifications}}" 
+        wx:key="_id"
+        bindtap="handleNotificationTap"
+        data-item="{{item}}"
+      >
+        <view class="notification-icon">{{getPriorityIcon(item.priority)}}</view>
+        <view class="notification-content">
+          <view class="notification-header">
+            <text class="notification-type">{{getTypeText(item.type)}}</text>
+            <text class="notification-time">{{formatDate(item.createdAt)}}</text>
+          </view>
+          <text class="notification-title">{{item.title}}</text>
+          <text class="notification-desc" wx:if="{{item.content}}">{{item.content}}</text>
+        </view>
+        <view class="notification-badge" wx:if="{{!readIds.includes(item._id)}}"></view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="modal-overlay" wx:if="{{showModal}}" bindtap="closeModal">
+  <view class="modal-content" catchtap="preventBubble">
+    <view class="modal-header">
+      <text class="modal-title">{{currentNotification.title}}</text>
+      <view class="modal-close" bindtap="closeModal">
+        <text class="modal-close-icon">×</text>
+      </view>
+    </view>
+    <view class="modal-meta">
+      <text class="modal-type">{{getTypeText(currentNotification.type)}}</text>
+      <text class="modal-time">{{formatFullDate(currentNotification.createdAt)}}</text>
+    </view>
+    <view class="modal-body">
+      <text class="modal-text">{{currentNotification.content}}</text>
+    </view>
+    <view class="modal-footer">
+      <view class="modal-btn" bindtap="closeModal">
+        <text>我已知晓</text>
+      </view>
+    </view>
+  </view>
+</view>

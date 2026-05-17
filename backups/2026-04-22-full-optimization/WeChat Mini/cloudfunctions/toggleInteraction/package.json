@@ -1,0 +1,10 @@
+{
+  "name": "toggleInteraction",
+  "version": "1.0.0",
+  "description": "Transactional interaction handler",
+  "main": "index.js",
+  "type": "commonjs",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

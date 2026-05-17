@@ -10,8 +10,11 @@
 <view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
 
 <view class="container">
-  <!-- 标签导航 (当有标签数据时显示) -->
-  <scroll-view class="category-scroll" scroll-x enable-flex style="top: {{statusBarHeight + navBarHeight - 1}}px" wx:if="{{tagList.length > 0}}">
+  <ad-unit kind="interstitial" page-path="/subpackages/resource-list/resource-list"></ad-unit>
+  <ad-unit position="top" custom-class="native-top-ad" page-path="/subpackages/resource-list/resource-list" threshold="200" ext-style="top: {{statusBarHeight + navBarHeight - 1}}px;"></ad-unit>
+  <ad-unit position="middle" custom-class="native-video-mid-ad" page-path="/subpackages/resource-list/resource-list"></ad-unit>
+  <!-- 标签导航 (当有标签数据且非搜索模式时显示) -->
+  <scroll-view class="category-scroll" scroll-x enable-flex style="top: {{statusBarHeight + navBarHeight - 1}}px" wx:if="{{tagList.length > 0 && !keyword && !color}}" bindscrolltolower="onTagScrollToLower">
     <view class="category-list">
       <view class="category-item {{currentTag === item.id ? 'active' : ''}}" 
             wx:for="{{tagList}}" 
@@ -23,38 +26,26 @@
     </view>
   </scroll-view>
 
-  <!-- 排序按钮 (仅在有数据时显示且不是点赞列表时显示) -->
-  <view class="sort-bar" wx:if="{{(list.length > 0 || currentSort !== 'latest') && type !== 'likes'}}">
-    <view class="sort-item {{currentSort === 'hot' ? 'active' : ''}}" 
-          data-type="hot" 
-          bindtap="onSortChange">
-      <image class="chip-icon" src="/images/icon-fire.png" mode="widthFix"></image>
-      <text>热门</text>
-    </view>
-    <view class="sort-item {{currentSort === 'latest' ? 'active' : ''}}" 
-          data-type="latest" 
-          bindtap="onSortChange">
-      <image class="chip-icon" src="/images/icon-clock.png" mode="widthFix"></image>
-      <text>最新</text>
+  <!-- 骨架屏 - 首次加载时显示 -->
+  <view class="skeleton-container" wx:if="{{loading && list.length === 0}}">
+    <view class="skeleton-grid">
+      <view class="skeleton-item" wx:for="{{9}}" wx:key="index">
+        <view class="skeleton-image"></view>
+      </view>
     </view>
   </view>
 
-  <!-- 资源列表 -->
-  <view class="{{type === 'avatar' ? 'avatar-grid' : 'wallpaper-grid'}}">
-    <view class="item" wx:for="{{list}}" wx:key="id" 
-          bindtap="previewImage" 
-          data-url="{{item.url}}" 
-          data-original-url="{{item.originalUrl}}" 
-          data-raw-url="{{item.rawUrl}}" 
-          data-raw-original-url="{{item.rawOriginalUrl}}"
-          data-categories="{{item.categories}}" 
-          data-tags="{{item.tags}}">
-      <image class="image" src="{{item.url}}" mode="aspectFill" lazy-load></image>
-    </view>
+  <!-- 资源列表 - 3列瀑布流 -->
+  <view class="waterfall-container" wx:if="{{list.length > 0}}">
+    <waterfall 
+      list="{{list}}" 
+      columnCount="3" 
+      bind:itemtap="onWaterfallItemTap"
+    />
   </view>
 
   <!-- 加载状态 -->
-  <view class="loading" wx:if="{{loading}}">
+  <view class="loading" wx:if="{{loading && list.length > 0}}">
     <text>加载中...</text>
   </view>
   <view class="no-more" wx:if="{{!hasMore && list.length > 0}}">

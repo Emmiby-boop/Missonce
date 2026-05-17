@@ -1,4 +1,6 @@
 import { getResources, getCategories } from '../../utils/api.js'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import { getStorage, getTheme, setStorage } from '../../utils/storageManager.js'
 
 Page({
   data: {
@@ -30,12 +32,16 @@ Page({
       { name: '黑色', value: '#262626' },
       { name: '白色', value: '#FFFFFF' }
     ],
-    filterStyles: ['简约', '小清新', '插画', '二次元', '治愈系', '高级感', '极简', '唯美']
+    filterStyles: ['简约', '小清新', '插画', '二次元', '治愈系', '高级感', '极简', '唯美'],
+    bottomNativeVideoAd: null,
+    showBottomNativeAd: false
   },
 
   onLoad(options) {
     this.loadCategories()
     this.loadHistory()
+    this.loadPageAds()
+    
     if (options) {
       const updates = {}
       if (options.type) {
@@ -53,9 +59,29 @@ Page({
       }
     }
   },
+  
+  async loadPageAds() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'subpackages/search/search'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      const nativeBottom = pickByType(list, 'native_bottom')[0] || null
+      const bottomNativeVideo = (list || []).find(it => it.type === 'native_video' && (it.position === 'bottom' || !it.position) && it.isEnable) || null
+      const chosenBottom = nativeBottom || bottomNativeVideo
+      // 确保广告显示
+      this.setData({ 
+        bottomNativeVideoAd: chosenBottom || {}, 
+        showBottomNativeAd: true 
+      })
+    } catch (e) {
+      // 即使出错也显示广告
+      this.setData({ showBottomNativeAd: true })
+    }
+  },
 
   loadHistory() {
-    const history = wx.getStorageSync('searchHistory') || []
+    const history = getStorage('searchHistory') || []
     this.setData({ historyTags: history })
   },
 
@@ -70,7 +96,7 @@ Page({
       history = history.slice(0, 10)
     }
     this.setData({ historyTags: history })
-    wx.setStorageSync('searchHistory', history)
+    setStorage('searchHistory', history)
   },
 
   clearHistory() {
@@ -97,7 +123,7 @@ Page({
   },
 
   syncTheme() {
-    const theme = wx.getAppBaseInfo().theme || 'light'
+    const theme = getTheme()
     this.setData({ theme })
   },
 
@@ -150,60 +176,49 @@ Page({
   },
 
   async performSearch(keyword) {
-    if (!keyword || !keyword.trim()) return
-    const cleanKeyword = keyword.trim()
+    const cleanKeyword = (keyword || this.data.searchValue || '').trim()
     
-    // 保存搜索历史
-    this.saveHistory(cleanKeyword)
+    if (!cleanKeyword && !this.data.activeColor && !this.data.activeStyle) {
+      return
+    }
+    
+    // 保存搜索历史（只有有关键词时才保存）
+    if (cleanKeyword) {
+      this.saveHistory(cleanKeyword)
+    }
 
     // 埋点统计
     getApp().logEvent('search', { 
       keyword: cleanKeyword, 
-      type: this.data.searchType 
+      type: this.data.searchType,
+      color: this.data.activeColor,
+      style: this.data.activeStyle
     })
 
-    wx.showLoading({
-      title: '搜索中...'
-    })
-
-    try {
-      const params = {
-        type: this.data.searchType,
-        keyword: cleanKeyword,
-        page: 1,
-        pageSize: this.data.pageSize
-      }
-      this.setData({
-        page: 1,
-        hasMore: true,
-        loading: true,
-        lastParams: params,
-        searchResult: []
-      })
-
-      const res = await getResources(params)
-      
-      if (res.result.success) {
-        await this.appendSearchData(res)
-        wx.hideLoading()
-      } else {
-        this.setData({ showResult: true })
-        wx.hideLoading()
-        wx.showToast({
-          title: '搜索失败',
-          icon: 'none'
-        })
-      }
-      
-    } catch (error) {
-      console.error('搜索失败:', error)
-      this.setData({ showResult: true })
-      wx.hideLoading()
-      wx.showToast({
-        title: '搜索失败',
-        icon: 'none'
-      })
+    // 跳转到资源列表页面
+    let url = `/subpackages/resource-list/resource-list?type=${this.data.searchType}`
+    if (cleanKeyword) {
+      url += `&keyword=${encodeURIComponent(cleanKeyword)}`
     }
+    if (this.data.activeColor) {
+      const colorMap = {
+        '#FF4D4F': '红色',
+        '#FFA940': '橙色',
+        '#FFC53D': '黄色',
+        '#73D13D': '绿色',
+        '#36CFC9': '青色',
+        '#40A9FF': '蓝色',
+        '#9254DE': '紫色',
+        '#F759AB': '粉色',
+        '#262626': '黑色',
+        '#FFFFFF': '白色'
+      }
+      url += `&color=${encodeURIComponent(colorMap[this.data.activeColor])}`
+    }
+    if (this.data.activeStyle && !cleanKeyword) {
+      url += `&keyword=${encodeURIComponent(this.data.activeStyle)}`
+    }
+    wx.navigateTo({ url })
   },
 
   async appendSearchData(res) {
@@ -321,6 +336,12 @@ Page({
   onReachBottom() {
     if (this.data.showResult) {
       this.loadMore()
+    }
+  },
+  
+  onNativeAdError() {
+    if (this.data.showBottomNativeAd) {
+      this.setData({ showBottomNativeAd: false })
     }
   }
 })

@@ -4,8 +4,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const CACHE_TTL = 5 * 60 * 1000
-const userCache = new Map()
+const CACHE_TTL = 10 * 60 * 1000
+const globalUserCache = {}
 
 class RecommendationEngine {
   constructor() {
@@ -131,7 +131,7 @@ class RecommendationEngine {
         .slice(0, 10)
         .map(([tag]) => tag)
 
-      const conditions = []
+      const conditions = [{ status: 'published' }]
       
       if (categories.length > 0) {
         conditions.push({ categories: _.in(categories) })
@@ -231,7 +231,10 @@ class RecommendationEngine {
       if (candidateIds.length === 0) return []
 
       const resourcesRes = await db.collection('resources')
-        .where({ _id: _.in(candidateIds) })
+        .where({ 
+          _id: _.in(candidateIds),
+          status: 'published'
+        })
         .get()
 
       return resourcesRes.data.map(resource => ({
@@ -251,7 +254,7 @@ class RecommendationEngine {
 
       const excludedIds = [...profile.viewedResources]
       
-      const conditions = [{ type: preferredType }]
+      const conditions = [{ status: 'published' }, { type: preferredType }]
       if (excludedIds.length > 0) {
         conditions.push({ _id: _.nin(excludedIds) })
       }
@@ -271,7 +274,7 @@ class RecommendationEngine {
 
   async getRecommendations(openid, limit = 10) {
     const cacheKey = `rec_${openid}`
-    const cached = userCache.get(cacheKey)
+    const cached = globalUserCache[cacheKey]
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.data
     }
@@ -279,37 +282,34 @@ class RecommendationEngine {
     try {
       const profile = await this.getUserProfile(openid)
       
+      let hotRecs
       if (!profile || profile.viewedResources.size < this.MIN_INTERACTIONS) {
-        const hotRecs = await this.getHotRecommendations({
+        hotRecs = await this.getHotRecommendations({
           typePreferences: { avatar: 1, wallpaper: 1 },
           viewedResources: new Set()
         }, limit)
-        
-        userCache.set(cacheKey, { data: hotRecs, timestamp: Date.now() })
-        return hotRecs
+      } else {
+        const [contentRecs, cfRecs] = await Promise.all([
+          this.getContentBasedRecommendations(profile, Math.ceil(limit * 0.6)),
+          this.getCollaborativeFilteringRecommendations(profile, Math.ceil(limit * 0.4))
+        ])
+
+        const seenIds = new Set()
+        const recommendations = []
+
+        const allCandidates = [...contentRecs, ...cfRecs]
+        allCandidates.forEach(resource => {
+          if (!seenIds.has(resource._id)) {
+            seenIds.add(resource._id)
+            recommendations.push(resource)
+          }
+        })
+
+        hotRecs = recommendations.slice(0, limit)
       }
-
-      const [contentRecs, cfRecs, hotRecs] = await Promise.all([
-        this.getContentBasedRecommendations(profile, Math.ceil(limit * 0.5)),
-        this.getCollaborativeFilteringRecommendations(profile, Math.ceil(limit * 0.3)),
-        this.getHotRecommendations(profile, Math.ceil(limit * 0.2))
-      ])
-
-      const seenIds = new Set()
-      const recommendations = []
-
-      const allCandidates = [...contentRecs, ...cfRecs, ...hotRecs]
-      allCandidates.forEach(resource => {
-        if (!seenIds.has(resource._id)) {
-          seenIds.add(resource._id)
-          recommendations.push(resource)
-        }
-      })
-
-      const finalRecs = recommendations.slice(0, limit)
       
-      userCache.set(cacheKey, { data: finalRecs, timestamp: Date.now() })
-      return finalRecs
+      globalUserCache[cacheKey] = { data: hotRecs, timestamp: Date.now() }
+      return hotRecs
     } catch (error) {
       console.error('推荐失败:', error)
       return []
@@ -367,8 +367,10 @@ exports.main = async (event, context) => {
         type: item.type,
         coverUrl: item.coverUrl,
         originUrl: item.originUrl || item.coverUrl,
+        url: item.url || item.coverUrl,
         categories: item.categories || [item.category].filter(Boolean),
         tags: item.tags || [],
+        views: item.views || 0,
         hotScore: item.hotScore || 0,
         downloads: item.downloads || 0,
         favorites: item.favorites || 0,
@@ -392,8 +394,10 @@ exports.main = async (event, context) => {
         type: item.type,
         coverUrl: item.coverUrl,
         originUrl: item.originUrl || item.coverUrl,
+        url: item.url || item.coverUrl,
         categories: item.categories || [item.category].filter(Boolean),
         tags: item.tags || [],
+        views: item.views || 0,
         hotScore: item.hotScore || 0,
         downloads: item.downloads || 0,
         favorites: item.favorites || 0,

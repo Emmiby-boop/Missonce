@@ -40,6 +40,19 @@ page {
   height: 100%;
 }
 
+.nav-more {
+  width: 80rpx;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.more-icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+
 .back-icon {
   width: 38rpx;
   height: 38rpx;
@@ -180,6 +193,85 @@ swiper-item {
 .section {
   margin-top: 36rpx;
   padding: 0 6rpx;
+}
+
+/* 互动数据展示区 */
+.interaction-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin: 24rpx 0;
+  padding: 28rpx 20rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+}
+
+.interaction-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 12rpx 24rpx;
+  border-radius: 12rpx;
+  transition: all 0.25s ease;
+}
+
+.interaction-item:active {
+  background: rgba(0, 0, 0, 0.04);
+  transform: scale(0.97);
+}
+
+.interaction-item.liked .interaction-icon-wrapper {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+}
+
+.interaction-item.liked .interaction-icon {
+  filter: brightness(0) invert(1);
+}
+
+.interaction-item.liked .interaction-count {
+  color: #ff6b6b;
+}
+
+.interaction-icon-wrapper {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  border-radius: 50%;
+  transition: all 0.25s ease;
+}
+
+.interaction-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.interaction-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.interaction-count {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.interaction-label {
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.2;
+}
+
+.interaction-divider {
+  width: 1rpx;
+  height: 60rpx;
+  background: #eee;
 }
 
 .section-header {
@@ -413,8 +505,59 @@ swiper-item {
   font-size: 28rpx;
   color: #666;
   text-align: center;
-  margin-bottom: 48rpx;
+  margin-bottom: 36rpx;
   line-height: 1.5;
+}
+
+.login-modal-avatar {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 32rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.modal-avatar-button {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  line-height: 1;
+}
+
+.modal-avatar-button::after {
+  border: none;
+}
+
+.modal-avatar-button image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.login-modal-nickname {
+  width: 100%;
+  margin-bottom: 36rpx;
+}
+
+.modal-nickname-input {
+  width: 100%;
+  height: 88rpx;
+  background-color: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 30rpx;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.login-modal-error {
+  margin-top: 24rpx;
+  color: #fa5151;
+  font-size: 26rpx;
 }
 
 .login-modal-btns {
@@ -456,7 +599,7 @@ swiper-item {
 /* 深色模式适配 */
 @media (prefers-color-scheme: dark) {
   .container {
-    background: #111827;
+    background: #121212;
     color: #f3f4f6;
   }
 
@@ -512,4 +655,81 @@ swiper-item {
     background: #374151;
     color: #9ca3af;
   }
+
+  .modal-nickname-input {
+    background-color: #374151;
+    color: #f3f4f6;
+  }
+
+  /* 深色模式下图标变白 */
+  .nav-icon-img,
+  .back-icon,
+  .more-icon,
+  .interaction-icon {
+    filter: brightness(0) invert(1);
+  }
+
+  /* 互动区域深色模式适配 */
+  .interaction-bar {
+    background: #1f2937;
+    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
+  }
+
+  .interaction-item {
+    color: #f3f4f6;
+  }
+
+  .interaction-icon-wrapper {
+    background: #374151;
+  }
+
+  .interaction-info {
+    color: #f3f4f6;
+  }
+
+  .interaction-count {
+    color: #f3f4f6;
+  }
+
+  .interaction-label {
+    color: #9ca3af;
+  }
+
+  .interaction-divider {
+    background: #374151;
+  }
+
+  .nav-text {
+    color: #ffffff;
+  }
+}
+
+/* 广告加载动画 */
+.ad-loading-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ad-loading-text {
+  margin-top: 18rpx;
+  color: #fff;
+  font-size: 28rpx;
+}
+.ad-loading-sub {
+  margin-top: 8rpx;
+  color: rgba(255,255,255,0.8);
+  font-size: 22rpx;
+}
+.ad-loading-safearea {
+  position: absolute;
+  inset: 0;
+}
+
+.native-video-bottom-ad {
+  padding: 20rpx 24rpx;
 }

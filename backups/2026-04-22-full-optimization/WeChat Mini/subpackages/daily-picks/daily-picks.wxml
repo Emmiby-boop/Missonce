@@ -1,0 +1,140 @@
+<wxs module="utils">
+function getTypeIcon(type) {
+  if (type === 'avatar') return '👤'
+  return '🖼️'
+}
+module.exports = {
+  getTypeIcon: getTypeIcon
+}
+</wxs>
+
+<!-- 自定义导航栏 -->
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="navigateBack">
+      <image class="back-icon" src="/images/preview-back.svg" mode="aspectFit" />
+    </view>
+    <text class="nav-title">每日推荐</text>
+    <view class="nav-placeholder"></view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
+
+<!-- 顶部原生广告 - 固定在顶部导航栏下方 -->
+<ad-unit position="top" custom-class="native-top-ad" page-path="/subpackages/daily-picks/daily-picks" threshold="200" ext-style="top: {{statusBarHeight + navBarHeight - 1}}px;"></ad-unit>
+
+<view class="page-container" wx:if="{{!loading && !hasError}}">
+  <ad-unit kind="interstitial" page-path="/subpackages/daily-picks/daily-picks"></ad-unit>
+  <!-- 每日推荐大标题卡片 -->
+  <view class="daily-header">
+    <view class="header-card">
+      <!-- 装饰背景 -->
+      <view class="header-bg-deco"></view>
+
+      <!-- 主内容区 -->
+      <view class="header-main">
+        <!-- 左侧：大日期 -->
+        <view class="header-date">
+          <text class="date-num">{{dayNum}}</text>
+          <text class="date-unit">{{monthText}}</text>
+        </view>
+
+        <!-- 分隔线 -->
+        <view class="header-divider"></view>
+
+        <!-- 右侧：标题信息 -->
+        <view class="header-info">
+          <view class="info-title-row">
+            <text class="info-label">每日推荐</text>
+            <view class="info-badge">{{weekDay}}</view>
+          </view>
+          <text class="info-desc">{{subtitle}}</text>
+        </view>
+      </view>
+
+      <!-- 底部提示 -->
+      <view class="header-footer">
+        <text class="footer-text">🎯 每日0点准时更新</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="waterfall-container">
+    <view class="waterfall-column left-column">
+      <view 
+        wx:for="{{leftColumn}}" 
+        wx:key="id" 
+        class="waterfall-item"
+        bindtap="onWaterfallItemTap"
+        data-id="{{item.id}}"
+        data-url="{{item.url}}"
+        data-originalurl="{{item.originalUrl}}"
+        data-rawurl="{{item.rawUrl}}"
+        data-type="{{item.resourceType}}"
+        data-index="{{index}}"
+        data-column="left"
+      >
+        <image 
+          class="item-image" 
+          src="{{item.url}}" 
+          mode="widthFix" 
+          lazy-load
+        ></image>
+        <view class="item-tag" wx:if="{{item.resourceType === 'avatar'}}">头像</view>
+      </view>
+    </view>
+
+    <view class="waterfall-column right-column">
+      <view 
+        wx:for="{{rightColumn}}" 
+        wx:key="id" 
+        class="waterfall-item"
+        bindtap="onWaterfallItemTap"
+        data-id="{{item.id}}"
+        data-url="{{item.url}}"
+        data-originalurl="{{item.originalUrl}}"
+        data-rawurl="{{item.rawUrl}}"
+        data-type="{{item.resourceType}}"
+        data-index="{{index}}"
+        data-column="right"
+      >
+        <image 
+          class="item-image" 
+          src="{{item.url}}" 
+          mode="widthFix" 
+          lazy-load
+        ></image>
+        <view class="item-tag" wx:if="{{item.resourceType === 'avatar'}}">头像</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-tip">
+    <text>已经到底啦 ~ 明日再来</text>
+  </view>
+</view>
+
+<view class="loading-page" wx:if="{{loading}}">
+  <view class="loading-container">
+    <view class="loading-header">
+      <view class="skeleton skeleton-title"></view>
+      <view class="skeleton skeleton-subtitle"></view>
+    </view>
+    <view class="waterfall-skeleton">
+      <view class="skeleton-column">
+        <view class="skeleton-item" wx:for="{{6}}" wx:key="*this"></view>
+      </view>
+      <view class="skeleton-column">
+        <view class="skeleton-item" wx:for="{{6}}" wx:key="*this"></view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="error-page" wx:if="{{hasError}}">
+  <view class="error-container">
+    <view class="error-icon">😢</view>
+    <view class="error-text">{{errorMsg}}</view>
+    <button class="retry-btn" bindtap="loadDailyPicks">重新加载</button>
+  </view>
+</view>

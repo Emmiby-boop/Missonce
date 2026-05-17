@@ -1,0 +1,13 @@
+{
+  "name": "getConfig",
+  "version": "1.0.0",
+  "description": "获取应用配置",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "deploy": "tcb fn deploy getConfig"
+  },
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

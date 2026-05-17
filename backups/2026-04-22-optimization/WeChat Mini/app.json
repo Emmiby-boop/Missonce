@@ -1,0 +1,81 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/wallpaper/wallpaper",
+    "pages/avatar/avatar",
+    "pages/profile/profile",
+    "pages/demo/component-demo"
+  ],
+  "subPackages": [
+    {
+      "root": "subpackages",
+      "pages": [
+        "daily-picks/daily-picks",
+        "search/search",
+        "profile-edit/profile-edit",
+        "favorites/favorites",
+        "preview/preview",
+        "wallpaper-preview/wallpaper-preview",
+        "topic/topic",
+        "topic-list/topic-list",
+        "login/login",
+        "webview/webview",
+        "wallpaper-list/wallpaper-list",
+        "resource-list/resource-list",
+        "inspiration-writer/inspiration-writer",
+        "points/points",
+        "notifications/notifications"
+      ]
+    }
+  ],
+  "lazyCodeLoading": "requiredComponents",
+  
+  "cloud": true,
+  "darkmode": true,
+  "themeLocation": "config/theme.json",
+
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "@navBgColor",
+    "navigationBarTitleText": "小辣椒动态头像壁纸",
+    "navigationBarTextStyle": "@navTextStyle",
+    "backgroundColorTop": "@navBgColor",
+    "backgroundColorBottom": "@pageBgColor"
+  },
+
+  "tabBar": {
+    "color": "@tabBarColor",
+    "selectedColor": "@tabBarSelectedColor",
+    "backgroundColor": "@tabBarBgColor",
+    "borderStyle": "@tabBarBorderStyle",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home-active.png"
+      },
+      {
+        "pagePath": "pages/avatar/avatar",
+        "text": "头像",
+        "iconPath": "images/avatar.png",
+        "selectedIconPath": "images/avatar-active.png"
+      },
+      {
+        "pagePath": "pages/wallpaper/wallpaper",
+        "text": "壁纸",
+        "iconPath": "images/wallpaper.png",
+        "selectedIconPath": "images/wallpaper-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/profile.png",
+        "selectedIconPath": "images/profile-active.png"
+      }
+    ]
+  },
+
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

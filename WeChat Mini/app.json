@@ -9,6 +9,7 @@
     {
       "root": "subpackages",
       "pages": [
+        "daily-picks/daily-picks",
         "search/search",
         "profile-edit/profile-edit",
         "favorites/favorites",
@@ -21,7 +22,8 @@
         "wallpaper-list/wallpaper-list",
         "resource-list/resource-list",
         "inspiration-writer/inspiration-writer",
-        "points/points"
+        "points/points",
+        "notifications/notifications"
       ]
     }
   ],

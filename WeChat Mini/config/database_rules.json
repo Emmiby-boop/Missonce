@@ -10,5 +10,89 @@
   "downloads": {
     "read": "doc._openid == auth.openid",
     "write": "doc._openid == auth.openid"
+  },
+  "banners": {
+    "read": true,
+    "write": false
+  },
+  "notifications": {
+    "read": true,
+    "write": false
+  },
+  "user_notifications": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "resources": {
+    "read": true,
+    "write": false
+  },
+  "users": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "categories": {
+    "read": true,
+    "write": false
+  },
+  "tags": {
+    "read": true,
+    "write": false
+  },
+  "browse_history": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "likes": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "admins": {
+    "read": false,
+    "write": false
+  },
+  "config": {
+    "read": true,
+    "write": false
+  },
+  "sys_config": {
+    "read": true,
+    "write": false
+  },
+  "events": {
+    "read": false,
+    "write": "doc._openid == auth.openid"
+  },
+  "verify_codes": {
+    "read": false,
+    "write": false
+  },
+  "sys_user": {
+    "read": false,
+    "write": false
+  },
+  "comments": {
+    "read": true,
+    "write": "doc._openid == auth.openid"
+  },
+  "views": {
+    "read": false,
+    "write": "doc._openid == auth.openid"
+  },
+  "points_records": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "adConfig": {
+    "read": true,
+    "write": false
+  },
+  "user_points": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
+  },
+  "download_records": {
+    "read": "doc._openid == auth.openid",
+    "write": "doc._openid == auth.openid"
   }
 }

@@ -1,5 +1,6 @@
 import { getFavorites, removeFavorite } from '../../utils/api.js'
 import { checkLoginStatus, navigateToLogin } from '../../utils/auth.js'
+import { getStorage, setStorage } from '../../utils/storageManager.js'
 
 Page({
   data: {
@@ -23,7 +24,7 @@ Page({
 
     // Local Cache First
     try {
-      const favorites = wx.getStorageSync('favorites') || []
+      const favorites = getStorage('favorites') || []
       this.setData({ favorites })
     } catch (e) {
       console.error('加载本地收藏失败:', e)
@@ -38,7 +39,7 @@ Page({
           timestamp: item.createTime ? new Date(item.createTime).getTime() : Date.now()
         }))
         this.setData({ favorites: cloudFavorites })
-        wx.setStorageSync('favorites', cloudFavorites)
+        setStorage('favorites', cloudFavorites)
       }
     }).catch(err => {
       console.error('加载云端收藏失败:', err)
@@ -102,7 +103,7 @@ Page({
           })
 
           // 保存到本地存储
-          wx.setStorageSync('favorites', newFavorites)
+          setStorage('favorites', newFavorites)
 
           // Cloud Remove
           removeFavorite(url, type).then(res => {
@@ -125,6 +126,70 @@ Page({
 
   updateStats(count) {
     // 更新profile页面的收藏数量（通过本地存储传递）
-    wx.setStorageSync('favoriteCount', count)
+    setStorage('favoriteCount', count)
+  },
+
+  onClearAll() {
+    if (this.data.favorites.length === 0) return
+
+    wx.showModal({
+      title: '确认清空',
+      content: `确定要清空全部 ${this.data.favorites.length} 条收藏吗？此操作不可恢复。`,
+      confirmText: '确定清空',
+      confirmColor: '#ff4d4f',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          this.clearAllFavorites()
+        }
+      }
+    })
+  },
+
+  async clearAllFavorites() {
+    wx.showLoading({ title: '清空中...', mask: true })
+
+    try {
+      const db = wx.cloud.database()
+      const openid = getStorage('openid')
+
+      // 1. 清空云端数据
+      if (openid) {
+        // 分批删除，避免一次删除太多
+        const batchDelete = async () => {
+          const res = await db.collection('favorites').where({
+            _openid: openid
+          }).limit(100).get()
+          
+          if (res.data.length > 0) {
+            const deletePromises = res.data.map(item => 
+              db.collection('favorites').doc(item._id).remove()
+            )
+            await Promise.all(deletePromises)
+            // 继续删除下一批
+            await batchDelete()
+          }
+        }
+        await batchDelete()
+      }
+
+      // 2. 清空本地数据
+      this.setData({ favorites: [] })
+      setStorage('favorites', [])
+      this.updateStats(0)
+
+      wx.hideLoading()
+      wx.showToast({
+        title: '已清空全部收藏',
+        icon: 'success'
+      })
+    } catch (err) {
+      console.error('清空收藏失败:', err)
+      wx.hideLoading()
+      wx.showToast({
+        title: '清空失败，请重试',
+        icon: 'none'
+      })
+    }
   }
 })

@@ -1,0 +1,14 @@
+{
+  "envId": "missonce-99-1gfaff6n002f6ac1",
+  "functionRoot": "./",
+  "functions": [
+    {
+      "name": "getHomeData",
+      "timeout": 20,
+      "memorySize": 512,
+      "envVariables": {},
+      "runtime": "Nodejs20.19",
+      "installDependency": false
+    }
+  ]
+}

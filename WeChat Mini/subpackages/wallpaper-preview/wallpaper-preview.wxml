@@ -11,7 +11,7 @@
 <!-- 登录弹窗 -->
 <view class="login-modal-mask" wx:if="{{showLoginModal}}" bindtap="hideLoginModal">
   <view class="login-modal-content" catchtap="true">
-    <view class="login-modal-title">请先登录</view>
+    <view class="login-modal-title">登录</view>
     <view class="login-modal-desc">收藏和下载功能需要登录才能使用</view>
     <view class="login-modal-btns">
       <button class="login-btn cancel" bindtap="hideLoginModal">先不了</button>
@@ -36,14 +36,16 @@
 
         <swiper-item wx:for="{{imageList}}" wx:key="index" wx:for-item="imageUrl" wx:for-index="index">
           <view class="hero-inner">
-            <image class="hero-image {{loadedImages[index] ? 'show' : ''}}"
-                   src="{{imageUrl}}"
-                   mode="aspectFit"
-                   lazy-load
-                   show-menu-by-longpress
-                   bindload="onImageLoad"
-                   bindtap="onImageTap"
-                   data-index="{{index}}" />
+            <view class="photo-mask mask-9-16">
+              <image class="hero-image {{loadedImages[index] ? 'show' : ''}}" 
+                     src="{{imageUrl}}" 
+                     mode="aspectFill" 
+                     lazy-load 
+                     show-menu-by-longpress 
+                     bindload="onImageLoad" 
+                     bindtap="onImageTap" 
+                     data-index="{{index}}" />
+            </view>
 
             <view class="img-loading" wx:if="{{!loadedImages[index]}}">
               <view class="skeleton shimmer"></view>
@@ -79,10 +81,39 @@
       <image class="nav-icon-img" src="{{iconShare}}" mode="aspectFit" />
       <text class="nav-text">分享</text>
     </view>
-    <button class="nav-item share-btn" open-type="share" style="display:none">
-      <image class="nav-icon-img" src="{{iconShare}}" mode="aspectFit" />
-      <text class="nav-text">分享</text>
-    </button>
+  </view>
+
+  <!-- 互动数据展示区 -->
+  <view class="interaction-bar">
+    <view class="interaction-item {{isLiked ? 'liked' : ''}}" bindtap="toggleLike">
+      <view class="interaction-icon-wrapper">
+        <image class="interaction-icon" src="{{isLiked ? iconLikeActive : iconLike}}" mode="aspectFit" />
+      </view>
+      <view class="interaction-info">
+        <text class="interaction-count">{{likeCountText}}</text>
+        <text class="interaction-label">喜欢</text>
+      </view>
+    </view>
+    <view class="interaction-divider"></view>
+    <view class="interaction-item">
+      <view class="interaction-icon-wrapper">
+        <image class="interaction-icon" src="{{iconView}}" mode="aspectFit" />
+      </view>
+      <view class="interaction-info">
+        <text class="interaction-count">{{viewCountText}}</text>
+        <text class="interaction-label">浏览</text>
+      </view>
+    </view>
+    <view class="interaction-divider"></view>
+    <view class="interaction-item">
+      <view class="interaction-icon-wrapper">
+        <image class="interaction-icon" src="{{iconHot}}" mode="aspectFit" />
+      </view>
+      <view class="interaction-info">
+        <text class="interaction-count">{{hotScoreText || 0}}</text>
+        <text class="interaction-label">热度</text>
+      </view>
+    </view>
   </view>
 
   <!-- 全屏预览模拟器 -->
@@ -155,6 +186,9 @@
     </view>
   </view>
 </view>
+
+<ad-unit position="bottom" custom-class="native-video-bottom-ad" page-path="/subpackages/wallpaper-preview/wallpaper-preview"></ad-unit>
+<ad-unit id="rewardedAd" kind="rewarded" show-button="{{false}}" page-path="/subpackages/wallpaper-preview/wallpaper-preview" bind:rewarded="onRewarded"></ad-unit>
 
 <!-- 日签海报生成组件 -->
 <poster-share visible="{{showPosterModal}}" imageUrl="{{currentUrl}}" type="wallpaper" bind:close="hidePoster"></poster-share>

@@ -3,28 +3,32 @@
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": "cloudfunctions"
+        "value": "cloudfunctions",
+        "type": "folder"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": "userdata",
+        "type": "folder"
+      },
+      {
+        "value": "tmp",
+        "type": "folder"
+      },
+      {
+        "value": "cloudfunctionTemplate",
+        "type": "folder"
+      },
+      {
+        "value": "**/*.md",
+        "type": "file"
       },
       {
         "type": "folder",
-        "value": "node_modules"
-      },
-      {
-        "type": "folder",
-        "value": "userdata"
-      },
-      {
-        "type": "folder",
-        "value": "tmp"
-      },
-      {
-        "type": "folder",
-        "value": "cloudfunctionTemplate"
-      },
-      {
-        "type": "file",
-        "value": "**/*.md"
+        "value": "/minitest"
       }
     ],
     "include": []
@@ -78,7 +82,7 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.13.2",
+  "libVersion": "3.14.2",
   "appid": "wx78c0b02bd2db5462",
   "projectname": "wallpaper-avatar-app",
   "isGameTourist": false,

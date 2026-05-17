@@ -1,182 +1,231 @@
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import { getStorage, getWindowInfo, setStorage } from '../../utils/storageManager.js'
+
+const CACHE_KEY = 'quotes_cache'
+const CACHE_EXPIRE = 15 * 60 * 1000 // 15分钟缓存
+
 Page({
   data: {
+    statusBarHeight: 20,
+    navBarHeight: 44,
     loading: true,
-    scenes: [],
-    featuredQuotes: [],
-    inputText: '',
-    isGenerating: false,
-    generatedText: '',
-    displayText: '',
-    typingIndex: 0,
-    typingTimer: null,
-    showResult: false,
-    currentScene: null
+    quotes: [],
+    categories: [
+      { id: '', name: '全部' },
+      { id: '朋友圈', name: '朋友圈' },
+      { id: '个性签名', name: '个性签名' },
+      { id: '表白文案', name: '表白文案' },
+      { id: '励志文案', name: '励志文案' },
+      { id: '治愈文案', name: '治愈文案' },
+      { id: '伤感文案', name: '伤感文案' },
+      { id: '生日文案', name: '生日文案' },
+      { id: '节日文案', name: '节日文案' }
+    ],
+    currentCategory: '',
+    keyword: '',
+    page: 1,
+    pageSize: 20,
+    hasMore: true,
+    total: 0,
+    showTopAd: false,
+    topAdClosed: false,
+    bottomNativeVideoAd: null,
+    showBottomNativeAd: false
   },
 
-  _isPageActive: false,
+  _isLoading: false,
 
   onLoad() {
-    this._isPageActive = true
-    this.loadConfig()
+    this.initNavBar()
+    // 先尝试从缓存渲染
+    this.tryRenderFromCache()
+    this.loadPageAds()
   },
 
-  onShow() {
-    this._isPageActive = true
-  },
-
-  onHide() {
-    this._isPageActive = false
-    this.clearTypingTimer()
-  },
-
-  async loadConfig() {
+  // 尝试从缓存快速渲染
+  tryRenderFromCache() {
+    const cacheKey = `${CACHE_KEY}_${this.data.currentCategory}`
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'aiGenerateText',
-        data: { action: 'getConfig' }
-      })
-
-      if (!this._isPageActive) return
-
-      if (res.result.success) {
+      const cached = getStorage(cacheKey)
+      const now = Date.now()
+      if (cached && cached.expire > now && cached.data && cached.data.length > 0) {
         this.setData({
-          scenes: res.result.config.scenes || [],
-          featuredQuotes: res.result.config.featuredQuotes || [],
-          loading: false
+          loading: false,
+          quotes: cached.data,
+          total: cached.total,
+          hasMore: cached.data.length >= this.data.pageSize,
+          page: cached.page || 1
         })
-      } else {
-        this.setData({ loading: false })
+        console.log('[inspiration-writer] 使用缓存渲染')
+        return
       }
     } catch (e) {
-      console.error('加载配置失败:', e)
-      if (this._isPageActive) {
-        this.setData({ loading: false })
-      }
+      console.warn('[inspiration-writer] 读取缓存失败:', e)
+    }
+    // 无缓存，加载新数据
+    this.loadQuotes(true)
+  },
+
+  initNavBar() {
+    try {
+      const info = getWindowInfo()
+      const statusBarHeight = info.statusBarHeight || 20
+      const navBarHeight = 44
+      this.setData({ statusBarHeight, navBarHeight })
+    } catch (e) {
+      console.error('获取系统信息失败:', e)
     }
   },
 
-  onInput(e) {
-    this.setData({ inputText: e.detail.value })
+  navigateBack() {
+    wx.navigateBack()
   },
 
-  onSceneTap(e) {
-    const scene = e.currentTarget.dataset.scene
-    this.setData({
-      currentScene: scene,
-      inputText: scene.prompt
+  onPullDownRefresh() {
+    this.loadQuotes(true).then(() => {
+      wx.stopPullDownRefresh()
     })
+  },
+
+  onReachBottom() {
+    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
+      this.setData({ showBottomNativeAd: true })
+    }
+    this.loadQuotes()
+  },
+
+  async loadQuotes(reset = false) {
+    console.log('[inspiration-writer] loadQuotes 被调用, reset:', reset)
+    
+    if (this._isLoading) {
+      console.log('[inspiration-writer] 正在加载中，跳过')
+      return
+    }
+    
+    if (reset) {
+      this.setData({
+        page: 1,
+        quotes: [],
+        hasMore: true
+      })
+    }
+
+    if (!reset && !this.data.hasMore) {
+      console.log('[inspiration-writer] 没有更多数据，跳过')
+      return
+    }
+
+    this._isLoading = true
+    console.log('[inspiration-writer] 开始加载...')
+    this.setData({ loading: true })
+
+    try {
+      console.log('[inspiration-writer] 准备调用 getQuotes 云函数')
+      const res = await wx.cloud.callFunction({
+        name: 'getQuotes',
+        data: {
+          page: this.data.page,
+          pageSize: this.data.pageSize,
+          category: this.data.currentCategory,
+          keyword: this.data.keyword
+        }
+      })
+
+      console.log('[inspiration-writer] 云函数返回结果:', res)
+
+      if (res.result.success) {
+        const newQuotes = res.result.data || []
+        console.log('[inspiration-writer] 解析到的文案:', newQuotes)
+        const quotes = reset ? newQuotes : [...this.data.quotes, ...newQuotes]
+        this.setData({
+          quotes,
+          total: res.result.total,
+          hasMore: newQuotes.length === this.data.pageSize,
+          page: this.data.page + 1
+        })
+
+        // 缓存首页数据
+        if (reset && newQuotes.length > 0) {
+          const cacheKey = `${CACHE_KEY}_${this.data.currentCategory}`
+          setStorage(cacheKey, {
+            data: newQuotes,
+            total: res.result.total,
+            page: 2,
+            expire: Date.now() + CACHE_EXPIRE
+          })
+        }
+      } else {
+        console.error('[inspiration-writer] 云函数返回失败:', res.result)
+      }
+    } catch (error) {
+      console.error('[inspiration-writer] 加载文案失败:', error)
+      wx.showToast({ title: '加载失败', icon: 'none' })
+    } finally {
+      this._isLoading = false
+      this.setData({ loading: false })
+      console.log('[inspiration-writer] 加载完成, loading:', this.data.loading)
+    }
+  },
+
+  onCategoryTap(e) {
+    const category = e.currentTarget.dataset.category
+    this.setData({ currentCategory: category }, () => {
+      this.loadQuotes(true)
+    })
+  },
+
+  onSearchInput(e) {
+    this.setData({ keyword: e.detail.value })
+  },
+
+  onSearch() {
+    this.loadQuotes(true)
   },
 
   onQuoteTap(e) {
     const quote = e.currentTarget.dataset.quote
-    this.setData({
-      generatedText: quote.content,
-      displayText: '',
-      showResult: true
-    })
-    this.startTyping(quote.content)
-  },
-
-  async onGenerate() {
-    const { inputText, isGenerating } = this.data
-    if (!inputText.trim()) {
-      wx.showToast({ title: '请输入你的想法', icon: 'none' })
-      return
-    }
-    if (isGenerating) return
-
-    this.setData({ isGenerating: true })
-    
-    try {
-      const res = await wx.cloud.callFunction({
-        name: 'aiGenerateText',
-        data: {
-          action: 'generate',
-          prompt: inputText
-        }
-      })
-
-      if (!this._isPageActive) return
-
-      if (res.result.success) {
-        this.setData({
-          generatedText: res.result.text,
-          displayText: '',
-          showResult: true
-        })
-        this.startTyping(res.result.text)
-      } else {
-        wx.showToast({ title: res.result.error || '生成失败', icon: 'none' })
-      }
-    } catch (e) {
-      console.error('生成失败:', e)
-      if (this._isPageActive) {
-        wx.showToast({ title: '生成失败', icon: 'none' })
-      }
-    } finally {
-      if (this._isPageActive) {
-        this.setData({ isGenerating: false })
-      }
-    }
-  },
-
-  clearTypingTimer() {
-    if (this.data.typingTimer) {
-      clearInterval(this.data.typingTimer)
-      this.setData({ typingTimer: null })
-    }
-  },
-
-  startTyping(text) {
-    this.clearTypingTimer()
-    
-    if (!text || !this._isPageActive) return
-    
-    let index = 0
-    const timer = setInterval(() => {
-      if (!this._isPageActive) {
-        clearInterval(timer)
-        return
-      }
-      
-      if (index < text.length) {
-        const displayText = text.substring(0, index + 1)
-        this.setData({ displayText })
-        index++
-      } else {
-        clearInterval(timer)
-        this.setData({ typingTimer: null })
-      }
-    }, 50)
-    
-    this.setData({ typingTimer: timer })
-  },
-
-  onCopy() {
     wx.setClipboardData({
-      data: this.data.generatedText,
+      data: quote.content,
       success: () => {
         wx.showToast({ title: '已复制', icon: 'success' })
       }
     })
   },
 
-  onRegenerate() {
-    this.onGenerate()
+  onPageScroll(e) {
+    if (this.data.topAdClosed) return
+    
+    const scrollTop = e.scrollTop
+    const shouldShow = scrollTop > 200
+    
+    if (shouldShow !== this.data.showTopAd) {
+      this.setData({ showTopAd: shouldShow })
+    }
   },
 
-  onBackToList() {
-    this.clearTypingTimer()
-    this.setData({
-      showResult: false,
-      displayText: '',
-      generatedText: '',
-      currentScene: null
+  closeTopAd() {
+    this.setData({ 
+      showTopAd: false,
+      topAdClosed: true
     })
   },
-
-  onUnload() {
-    this._isPageActive = false
-    this.clearTypingTimer()
+  
+  async loadPageAds() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'subpackages/inspiration-writer/inspiration-writer'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      const nativeBottom = pickByType(list, 'native_bottom')[0] || null
+      const bottomNativeVideo = (list || []).find(it => it.type === 'native_video' && (it.position === 'bottom' || !it.position) && it.isEnable) || null
+      const chosenBottom = nativeBottom || bottomNativeVideo
+      if (chosenBottom) this.setData({ bottomNativeVideoAd: chosenBottom })
+    } catch (e) {}
+  },
+  
+  onNativeAdError() {
+    if (this.data.showBottomNativeAd) {
+      this.setData({ showBottomNativeAd: false })
+    }
   }
 })

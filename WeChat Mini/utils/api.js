@@ -1,4 +1,5 @@
-import { logger } from './logger'
+import logger from './logger'
+import { getStorage, setStorage, getStorageAsync } from './storageManager'
 
 // 云函数调用工具
 // 小程序客户端不需要引入wx-server-sdk，直接使用wx.cloud
@@ -14,30 +15,31 @@ import { logger } from './logger'
  * @param {Number} params.pageSize - 每页数量,默认20
  * @param {String} params.keyword - 搜索关键词
  */
-export const getResources = (params = {}) => {
-  // 只有第一页才缓存（后续分页不缓存）
-  if (params.page === 1) {
+export const getResources = async (params = {}) => {
+  // 如果有搜索关键词或颜色，不使用缓存
+  if (params.page === 1 && !params.keyword && !params.color) {
     const cacheKey = `resources_cache_${params.type}_${params.tag || 'all'}_${params.sort || 'latest'}`
     const now = Date.now()
-    try {
-      const cached = wx.getStorageSync(cacheKey)
-      if (cached && cached.expire > now) {
-        return Promise.resolve(cached.data)
-      }
-    } catch (e) {}
     
-    return wx.cloud.callFunction({
+    // 异步读取缓存
+    const cached = await getStorageAsync(cacheKey)
+    if (cached && cached.expire > now) {
+      return cached.data
+    }
+    
+    const res = await wx.cloud.callFunction({
       name: 'getResources',
       data: params
-    }).then(res => {
-      if (res.result && res.result.success) {
-        wx.setStorageSync(cacheKey, {
-          data: res,
-          expire: now + 5 * 60 * 1000
-        })
-      }
-      return res
     })
+    
+    if (res.result && res.result.success) {
+      // 异步写入缓存
+      setStorage(cacheKey, {
+        data: res,
+        expire: now + 5 * 60 * 1000
+      })
+    }
+    return res
   }
   
   // 非第一页不缓存
@@ -53,7 +55,7 @@ export const getResources = (params = {}) => {
  * @param {String} params.type - 类型: wallpaper | avatar | all
  * @param {String} params.source - 数据源: categories | tags
  */
-export const getCategories = (params = {}) => {
+export const getCategories = async (params = {}) => {
   const data = typeof params === 'string' ? { type: params } : params;
   const type = data.type || 'all'
   const source = data.source || 'categories'
@@ -62,25 +64,23 @@ export const getCategories = (params = {}) => {
   const cacheKey = `categories_cache_${type}_${source}`
   const now = Date.now()
   
-  // 优先读取缓存
-  try {
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && cached.expire > now) {
-      return Promise.resolve(cached.data)
-    }
-  } catch (e) {}
+  // 异步读取缓存
+  const cached = await getStorageAsync(cacheKey)
+  if (cached && cached.expire > now) {
+    return cached.data
+  }
   
-  return wx.cloud.callFunction({
+  const res = await wx.cloud.callFunction({
     name: 'getCategories',
     data: { type, source }
-  }).then(res => {
-    // 缓存结果（分类标签变化较少，缓存时间可以长一些）
-    wx.setStorageSync(cacheKey, {
-      data: res,
-      expire: now + 10 * 60 * 1000
-    })
-    return res
   })
+  
+  // 异步写入缓存（分类标签变化较少，缓存时间可以长一些）
+  setStorage(cacheKey, {
+    data: res,
+    expire: now + 10 * 60 * 1000
+  })
+  return res
 }
 
 /**
@@ -116,24 +116,29 @@ export const downloadFile = (fileId) => {
  * @param {String} title - 资源标题 (可选)
  */
 export const addFavorite = async (resourceId, type, url, title) => {
+  const db = wx.cloud.database()
+  
+  // 先尝试使用云函数（如果有资源ID）
   if (resourceId && !resourceId.startsWith('http') && !resourceId.startsWith('cloud:')) {
-    // 推荐：使用事务云函数 (原子操作)
-    return wx.cloud.callFunction({
-      name: 'toggleInteraction',
-      data: {
-        interactionType: 'favorite',
-        action: 'add',
-        resourceId,
-        payload: { type, url, title }
-      }
-    }).then(res => {
-        if (!res.result.success) throw new Error(res.result.message)
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'toggleInteraction',
+        data: {
+          interactionType: 'favorite',
+          action: 'add',
+          resourceId,
+          payload: { type, url, title }
+        }
+      })
+      if (res.result && res.result.success) {
         return res.result
-    })
+      }
+    } catch (e) {
+      console.warn('云函数调用失败，降级使用直接数据库操作:', e)
+    }
   }
 
-  // 降级兼容：如果是纯URL资源 (无 resourceId)，只能走老逻辑
-  const db = wx.cloud.database()
+  // 降级方案：直接操作数据库
   const data = {
     type,
     url,
@@ -141,6 +146,24 @@ export const addFavorite = async (resourceId, type, url, title) => {
   }
   if (resourceId) data.resourceId = resourceId
   if (title) data.title = title
+  
+  // 先检查是否已存在
+  const openid = await getStorageAsync('openid')
+  if (openid) {
+    try {
+      const checkRes = await db.collection('favorites').where({
+        _openid: openid,
+        url: url
+      }).count()
+      
+      if (checkRes.total > 0) {
+        return { success: true, message: '已存在' }
+      }
+    } catch (e) {
+      console.warn('检查收藏状态失败:', e)
+    }
+  }
+  
   return db.collection('favorites').add({ data })
 }
 
@@ -150,28 +173,32 @@ export const addFavorite = async (resourceId, type, url, title) => {
  * @param {String} [type] - 资源类型 (如果identifier是URL，则必填)
  */
 export const removeFavorite = async (identifier, type) => {
+  const db = wx.cloud.database()
+  const openid = await getStorageAsync('openid')
+  
   // 1. 尝试识别是否为 resourceId
   const isResourceId = !identifier.startsWith('http') && !identifier.startsWith('cloud:') && !type
   
   if (isResourceId) {
-     // 推荐：使用事务云函数
-     return wx.cloud.callFunction({
-      name: 'toggleInteraction',
-      data: {
-        interactionType: 'favorite',
-        action: 'remove',
-        resourceId: identifier
-      }
-    }).then(res => {
-        if (!res.result.success) throw new Error(res.result.message)
+    try {
+      // 推荐：使用事务云函数
+      const res = await wx.cloud.callFunction({
+        name: 'toggleInteraction',
+        data: {
+          interactionType: 'favorite',
+          action: 'remove',
+          resourceId: identifier
+        }
+      })
+      if (res.result && res.result.success) {
         return res.result
-    })
+      }
+    } catch (e) {
+      console.warn('云函数调用失败，降级使用直接数据库操作:', e)
+    }
   }
 
   // 降级：根据 URL 删除 (旧逻辑)
-  const db = wx.cloud.database()
-  const openid = wx.getStorageSync('openid')
-  
   const where = {
     _openid: openid
   }
@@ -191,9 +218,9 @@ export const removeFavorite = async (identifier, type) => {
  * @param {String} identifier - 资源ID 或 资源URL
  * @param {String} [type] - 资源类型 (如果identifier是URL，则必填)
  */
-export const checkFavorite = (identifier, type) => {
+export const checkFavorite = async (identifier, type) => {
   const db = wx.cloud.database()
-  const openid = wx.getStorageSync('openid')
+  const openid = await getStorageAsync('openid')
   
   const where = {
     _openid: openid
@@ -212,10 +239,10 @@ export const checkFavorite = (identifier, type) => {
 /**
  * 获取收藏总数
  */
-export const getFavoritesCount = () => {
+export const getFavoritesCount = async () => {
   const db = wx.cloud.database()
-  const openid = wx.getStorageSync('openid')
-  if (!openid) return Promise.resolve({ total: 0 })
+  const openid = await getStorageAsync('openid')
+  if (!openid) return { total: 0 }
   return db.collection('favorites').where({ _openid: openid }).count()
 }
 
@@ -227,7 +254,7 @@ export const getFavoritesCount = () => {
 export const toggleLike = async (resourceId, isLiked) => {
   if (!resourceId) return { liked: isLiked }
   
-  const openid = wx.getStorageSync('openid')
+  const openid = await getStorageAsync('openid')
   if (!openid) throw new Error('请先登录')
 
   // 使用事务云函数
@@ -254,7 +281,7 @@ export const toggleLike = async (resourceId, isLiked) => {
  */
 export const checkIsLiked = async (resourceId) => {
   const db = wx.cloud.database()
-  const openid = wx.getStorageSync('openid')
+  const openid = await getStorageAsync('openid')
   
   if (!openid) return false
   
@@ -275,7 +302,7 @@ export const checkIsLiked = async (resourceId) => {
  */
 export const recordBrowseHistory = async (resource) => {
   const db = wx.cloud.database()
-  const openid = wx.getStorageSync('openid')
+  const openid = await getStorageAsync('openid')
   console.log('[浏览记录] openid:', openid, 'resource:', resource)
 
   try {
@@ -286,43 +313,46 @@ export const recordBrowseHistory = async (resource) => {
       return
     }
 
-    // 只有登录用户才记录浏览历史
+    const promises = []
+
     if (openid) {
-      await db.collection('browse_history').add({
-        data: {
-          resourceId,
-          type: resource.type,
-          categories: resource.categories || [],
-          tags: resource.tags || [],
-          createTime: db.serverDate()
-        }
-      })
-      console.log('[浏览记录] 写入browse_history成功')
+      promises.push(
+        db.collection('browse_history').add({
+          data: {
+            resourceId,
+            type: resource.type,
+            categories: resource.categories || [],
+            tags: resource.tags || [],
+            createTime: db.serverDate()
+          }
+        }).then(() => {
+          console.log('[浏览记录] 写入browse_history成功')
+        }).catch(err => {
+          console.error('[浏览记录] 写入browse_history失败:', err)
+        })
+      )
     } else {
       console.log('[浏览记录] 未登录，跳过浏览历史记录')
     }
 
-    // 浏览量统计不依赖登录状态
-    const viewRes = await wx.cloud.callFunction({
-      name: 'updateResourceStats',
-      data: {
-        resourceId,
-        field: 'views',
-        value: 1
-      }
-    })
-    console.log('[浏览记录] 更新views结果:', viewRes)
+    promises.push(
+      wx.cloud.callFunction({
+        name: 'batchUpdateStats',
+        data: {
+          resourceId,
+          actions: [
+            { field: 'views', value: 1 },
+            { field: 'hotScore', value: 1 }
+          ]
+        }
+      }).then(res => {
+        console.log('[浏览记录] 批量更新统计成功:', res)
+      }).catch(err => {
+        console.error('[浏览记录] 批量更新统计失败:', err)
+      })
+    )
 
-    // 热度值统计不依赖登录状态
-    const hotRes = await wx.cloud.callFunction({
-      name: 'updateResourceStats',
-      data: {
-        resourceId,
-        field: 'hotScore',
-        value: 1
-      }
-    })
-    console.log('[浏览记录] 更新hotScore结果:', hotRes)
+    await Promise.all(promises)
   } catch (e) {
     console.error('记录浏览历史失败:', e)
   }
@@ -358,6 +388,27 @@ export const getPersonalizedRecommendations = async (limit = 10) => {
     } catch (err) {
       return []
     }
+  }
+}
+
+/**
+ * 获取每日精选
+ * @param {String} date - 日期字符串 (可选，默认当天)
+ */
+export const getDailyPicks = async (date = '') => {
+  try {
+    const res = await wx.cloud.callFunction({
+      name: 'getDailyPicks',
+      data: { date }
+    })
+    
+    if (res.result && res.result.success) {
+      return res.result.data
+    }
+    throw new Error(res.result?.error || '获取每日精选失败')
+  } catch (e) {
+    console.error('获取每日精选失败:', e)
+    return null
   }
 }
 
@@ -429,9 +480,9 @@ export const getSimilarResources = async ({ type, tags = [], excludeId, limit = 
  * @param {Number} page - 页码
  * @param {Number} pageSize - 每页数量
  */
-export const getFavorites = (type = 'all', page = 1, pageSize = 20) => {
+export const getFavorites = async (type = 'all', page = 1, pageSize = 20) => {
   const db = wx.cloud.database()
-  const openid = wx.getStorageSync('openid')
+  const openid = await getStorageAsync('openid')
   
   const where = {
     _openid: openid
@@ -463,14 +514,7 @@ export const getUserDownloads = (page = 0, pageSize = 20) => {
     .get()
 }
 
-/**
- * 清空下载记录
- */
-export const clearUserDownloads = () => {
-  return wx.cloud.callFunction({
-    name: 'clearDownloads'
-  })
-}
+
 
 
 /**
@@ -481,38 +525,40 @@ export const clearUserDownloads = () => {
 export const recordDownload = (resource, type) => {
   const db = wx.cloud.database()
   
-  // 1. 解析资源ID
   const resourceId = typeof resource === 'string' ? resource : (resource.id || resource._id || 'unknown')
   
-  // 2. 埋点统计 (Client Side logEvent Call)
   getApp().logEvent('download', {
     type: type,
     resourceId: resourceId,
     url: typeof resource === 'object' ? resource.url : ''
   })
 
-  // 3. 更新资源下载数统计 (仅当 resourceId 有效且不是 URL 时)
+  wx.cloud.callFunction({
+    name: 'userPoints',
+    data: {
+      action: 'recordDownload',
+      resourceId: resourceId,
+      resourceType: type,
+      downloadMethod: 'free'
+    }
+  }).then(res => {
+    console.log('记录下载成功:', res)
+  }).catch(err => {
+    console.error('记录下载失败:', err)
+  })
+
   if (resourceId && resourceId !== 'unknown' && !resourceId.startsWith('http') && !resourceId.startsWith('cloud:')) {
     wx.cloud.callFunction({
-      name: 'updateResourceStats',
+      name: 'batchUpdateStats',
       data: {
         resourceId,
-        field: 'downloads',
-        value: 1
+        actions: [
+          { field: 'downloads', value: 1 },
+          { field: 'hotScore', value: 5 },
+          { field: 'views', value: 1 }
+        ]
       }
-    }).then(() => console.log('更新下载数成功')).catch(err => console.error('更新下载数失败:', err))
-    
-    // 同时增加热度分 (下载权重较高，例如+5)
-    // 另外，下载行为本质上也算一次浏览，所以这里同时增加 viewCount +1 (为了数据对齐)
-    // 聚合更新逻辑：下载=5分热度，浏览=1分热度，收藏=3分热度
-    wx.cloud.callFunction({
-      name: 'updateResourceStats',
-      data: {
-        resourceId,
-        field: 'hotScore',
-        value: 5
-      }
-    }).then(() => console.log('更新热度分成功')).catch(err => console.error('更新热度分失败:', err))
+    }).then(() => console.log('批量更新统计成功')).catch(err => console.error('批量更新统计失败:', err))
   } else {
     console.warn('Invalid resourceId for stats update:', resourceId, 'resource object:', resource)
   }
@@ -525,9 +571,7 @@ export const recordDownload = (resource, type) => {
   if (typeof resource === 'string') {
     data.resourceId = resource
   } else if (typeof resource === 'object') {
-    // 如果传入的是对象，混合进来 (例如包含 url, title 等)
     data = { ...data, ...resource }
-    // 确保 createTime 不被覆盖（如果传入对象里有的话，不过通常是新的）
     data.createTime = db.serverDate()
   }
   
@@ -559,62 +603,126 @@ export const uploadResource = (params) => {
 /**
  * 获取首页数据（Banners + 动态布局）
  */
-export const getHomeData = () => {
+let _homeDataRefreshCallback = null
+
+export const onHomeDataRefresh = (callback) => {
+  _homeDataRefreshCallback = callback
+  return () => {
+    _homeDataRefreshCallback = null
+  }
+}
+
+const _fetchHomeDataFromCloud = () => {
+  return new Promise((resolve) => {
+    wx.cloud.getTempFileURL({
+      fileList: ['cloud://missonce-99-1gfaff6n002f6ac1.6d69-missonce-99-1gfaff6n002f6ac1-1318542519/miniprogram/home/home_prebuilt_v1.json']
+    }).then(res => {
+      if (res.fileList && res.fileList[0] && res.fileList[0].tempFileURL) {
+        const tempUrl = res.fileList[0].tempFileURL
+        console.log('[API] 云存储 CDN 链接获取成功:', tempUrl)
+        wx.request({
+          url: tempUrl,
+          dataType: 'json',
+          success: (reqRes) => {
+            if (reqRes.data && reqRes.data.success) {
+              console.log('[API] 云存储直连成功，跳过 callFunction 链路')
+              resolve({ result: reqRes.data })
+            } else {
+              console.warn('[API] 云存储返回数据异常')
+              resolve(null)
+            }
+          },
+          fail: (err) => {
+            console.warn('[API] 云存储 wx.request 失败:', err)
+            resolve(null)
+          }
+        })
+      } else {
+        console.warn('[API] 云存储文件不存在，降级')
+        resolve(null)
+      }
+    }).catch((err) => {
+      console.warn('[API] getTempFileURL 失败，降级:', err)
+      resolve(null)
+    })
+  })
+}
+
+export const getHomeData = async () => {
   const cacheKey = 'home_data_api_cache'
   const now = Date.now()
-  
-  // 1. 优先读取本地缓存
-  try {
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && cached.expire > now) {
-      console.log('[API] 使用本地缓存: getHomeData')
-      return Promise.resolve(cached.data)
-    }
-  } catch (e) {}
-  
-  // 2. 调用云函数
-  return wx.cloud.callFunction({
-    name: 'getHomeData'
-  }).then(res => {
-    // 缓存结果（延长缓存时间到10分钟，首页数据不需要太频繁更新）
+
+  // 异步读取缓存
+  const cached = await getStorageAsync(cacheKey)
+  if (cached && cached.expire > now) {
+    console.log('[API] 使用本地缓存: getHomeData')
+    return cached.data
+  }
+
+  const res = await _fetchHomeDataFromCloud()
+  if (res) {
+    // 异步写入缓存
     if (res.result && res.result.success) {
-      wx.setStorageSync(cacheKey, {
+      setStorage(cacheKey, {
         data: res,
         expire: now + 10 * 60 * 1000
       })
       console.log('[API] 已缓存: getHomeData')
+      if (_homeDataRefreshCallback) {
+        _homeDataRefreshCallback(res)
+      }
     }
     return res
+  }
+
+  console.log('[API] 云存储直连失败，降级使用云函数 getHomeData')
+  const funcRes = await wx.cloud.callFunction({
+    name: 'getHomeData'
   })
+  
+  if (!funcRes) {
+    return { result: { success: false, message: '获取首页数据失败' } }
+  }
+  console.log('[API] getHomeData 返回结果:', funcRes)
+  if (funcRes.result && funcRes.result.success) {
+    // 异步写入缓存
+    setStorage(cacheKey, {
+      data: funcRes,
+      expire: now + 10 * 60 * 1000
+    })
+    console.log('[API] 已缓存: getHomeData')
+    if (_homeDataRefreshCallback) {
+      _homeDataRefreshCallback(funcRes)
+    }
+  }
+  return funcRes
 }
 
 /**
  * 获取页面板块配置（通用）
  * @param {String} page - 页面名称: home | avatar | wallpaper
  */
-export const getPageSections = (page = 'home') => {
+export const getPageSections = async (page = 'home') => {
   const cacheKey = `page_sections_cache_${page}`
   const now = Date.now()
   
-  // 优先读取缓存
-  try {
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && cached.expire > now) {
-      return Promise.resolve(cached.data)
-    }
-  } catch (e) {}
+  // 异步读取缓存
+  const cached = await getStorageAsync(cacheKey)
+  if (cached && cached.expire > now) {
+    return cached.data
+  }
   
-  return wx.cloud.callFunction({
+  const res = await wx.cloud.callFunction({
     name: 'getPageSections',
     data: { page }
-  }).then(res => {
-    // 缓存 10 分钟
-    wx.setStorageSync(cacheKey, {
-      data: res,
-      expire: now + 10 * 60 * 1000
-    })
-    return res
   })
+  
+  // 异步写入缓存（10 分钟）
+  setStorage(cacheKey, {
+    data: res,
+    expire: now + 10 * 60 * 1000
+  })
+  return res
 }
 
 /**
@@ -636,14 +744,10 @@ export const getBanners = async (status = 'active') => {
   const cacheKey = `banners_cache_${status}`
   const now = Date.now()
   
-  // 1. 优先读取本地缓存
-  try {
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && cached.data && cached.expire > now) {
-      return cached.data
-    }
-  } catch (e) {
-    // 忽略缓存读取错误
+  // 1. 异步读取本地缓存
+  const cached = await getStorageAsync(cacheKey)
+  if (cached && cached.data && cached.expire > now) {
+    return cached.data
   }
 
   try {
@@ -654,8 +758,8 @@ export const getBanners = async (status = 'active') => {
     })
     if (res.result && res.result.success) {
       const data = res.result.data
-      // 缓存 5 分钟
-      wx.setStorageSync(cacheKey, {
+      // 异步缓存 5 分钟
+      setStorage(cacheKey, {
         data,
         expire: now + 5 * 60 * 1000
       })
@@ -671,8 +775,8 @@ export const getBanners = async (status = 'active') => {
       .orderBy('sort', 'asc')
       .get()
     const data = res.data
-    // 缓存降级数据（时间短一些）
-    wx.setStorageSync(cacheKey, {
+    // 异步缓存降级数据（时间短一些）
+    setStorage(cacheKey, {
       data,
       expire: now + 2 * 60 * 1000
     })
@@ -742,14 +846,15 @@ export default {
   toggleLike,
   checkIsLiked,
   getUserDownloads,
-  clearUserDownloads,
   recordDownload,
   uploadResource,
   getHomeData,
+  onHomeDataRefresh,
   getPageSections,
   getResourceList,
   getBanners,
   findResourceByUrl,
   getPersonalizedRecommendations,
-  getRelatedRecommendations
+  getRelatedRecommendations,
+  getDailyPicks
 }

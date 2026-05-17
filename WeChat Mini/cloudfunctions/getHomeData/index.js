@@ -1,4 +1,4 @@
-const cloud = require('wx-server-sdk')
+﻿const cloud = require('wx-server-sdk')
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -108,7 +108,15 @@ class CloudCache {
   }
 }
 
-const cache = new CloudCache({ defaultTTL: 5 * 60 * 1000 })
+const cache = new CloudCache({ defaultTTL: 45 * 60 * 1000 })
+
+// 精简返回字段，减少网络传输量
+const slimItem = (item) => ({
+  _id: item._id,
+  title: item.title,
+  type: item.type,
+  coverUrl: item.coverUrl
+})
 
 exports.main = async (event, context) => {
   const perf = new CloudFunctionPerformance()
@@ -116,12 +124,29 @@ exports.main = async (event, context) => {
   try {
     perf.markMilestone('初始化完成')
 
+    // 🔥 优化：优先使用预渲染缓存（prebuildHomepage 生成）
+    const prebuiltCacheKey = 'home_prebuilt_v1'
+    const prebuiltData = await cache.get(prebuiltCacheKey)
+    
+    if (prebuiltData) {
+      perf.markMilestone('预渲染缓存命中')
+      perf.logSummary()
+      console.log('[getHomeData] ✅ 使用预渲染缓存，跳过数据库查询')
+      return prebuiltData
+    }
+
+    // 降级：使用本地缓存
     const cacheKey = 'home_data_v1'
     const cachedData = await cache.get(cacheKey)
     
     if (cachedData) {
-      perf.markMilestone('缓存命中')
+      perf.markMilestone('本地缓存命中')
       perf.logSummary()
+      // 🔥 异步预热预渲染缓存（不阻塞当前请求）
+      cloud.callFunction({
+        name: 'prebuildHomepage',
+        data: {}
+      }).catch(err => console.log('[预热缓存] 失败:', err))
       return cachedData
     }
     
@@ -131,7 +156,7 @@ exports.main = async (event, context) => {
       db.collection('banners')
         .orderBy('sort', 'asc')
         .where({ status: 'active' })
-        .field({ _id: true, title: true, image: true, link: true, sort: true })
+        .field({ _id: true, title: true, image: true, link: true })
         .get(),
       db.collection('home_sections')
         .where({ enable: true })
@@ -172,16 +197,13 @@ exports.main = async (event, context) => {
             _id: _.in(dataSource.manualItems),
             status: 'published'
           })
-          .field({
-            _id: true, title: true, type: true, coverUrl: true,
-            originUrl: true, categories: true, tags: true,
-            hotScore: true, downloads: true, favorites: true, createdAt: true
-          })
+          .field({ _id: true, title: true, type: true, coverUrl: true })
           .get()
         
         items = dataSource.manualItems
           .map(id => manualRes.data.find(item => item._id === id))
           .filter(item => item)
+          .map(slimItem)
       }
       
       else if (sourceType === 'ai_personalized') {
@@ -208,7 +230,7 @@ exports.main = async (event, context) => {
                 aiItems = aiItems.filter(item => item.type === recResourceType)
               }
               
-              items = aiItems.slice(0, aiLimit)
+              items = aiItems.slice(0, aiLimit).map(slimItem)
             }
           }
         } catch (aiErr) {
@@ -226,14 +248,10 @@ exports.main = async (event, context) => {
           const fallbackRes = await db.collection('resources')
             .where(matchStage)
             .orderBy('hotScore', 'desc')
-            .field({
-              _id: true, title: true, type: true, coverUrl: true,
-              originUrl: true, categories: true, tags: true,
-              hotScore: true, downloads: true, favorites: true, createdAt: true
-            })
+            .field({ _id: true, title: true, type: true, coverUrl: true })
             .limit(aiLimit)
             .get()
-          items = fallbackRes.data
+          items = fallbackRes.data.map(slimItem)
         }
       }
       
@@ -253,26 +271,18 @@ exports.main = async (event, context) => {
              .aggregate()
              .match(matchStage)
              .sample({ size: limit })
-             .project({
-               _id: true, title: true, type: true, coverUrl: true,
-               originUrl: true, categories: true, tags: true,
-               hotScore: true, downloads: true, favorites: true, createdAt: true
-             })
+             .project({ _id: true, title: true, type: true, coverUrl: true })
              .end()
-           items = sampleRes.list
+           items = sampleRes.list.map(slimItem)
         } else {
            const trendRes = await db.collection('resources')
              .where(matchStage)
              .orderBy('hotScore', 'desc')
              .orderBy('createdAt', 'desc')
-             .field({
-               _id: true, title: true, type: true, coverUrl: true,
-               originUrl: true, categories: true, tags: true,
-               hotScore: true, downloads: true, favorites: true, createdAt: true
-             })
+             .field({ _id: true, title: true, type: true, coverUrl: true })
              .limit(limit)
              .get()
-           items = trendRes.data
+           items = trendRes.data.map(slimItem)
         }
       }
       
@@ -338,34 +348,18 @@ exports.main = async (event, context) => {
             db.collection('resources')
               .where({ ...queryConditions, type: 'wallpaper' })
               .orderBy(sortFieldName, 'desc')
-              .field({
-                _id: true, title: true, type: true, coverUrl: true,
-                originUrl: true, categories: true, tags: true,
-                hotScore: true, downloads: true, favorites: true, createdAt: true
-              })
+              .field({ _id: true, title: true, type: true, coverUrl: true })
               .limit(totalLimit)
               .get(),
             db.collection('resources')
               .where({ ...queryConditions, type: 'avatar' })
               .orderBy(sortFieldName, 'desc')
-              .field({
-                _id: true, title: true, type: true, coverUrl: true,
-                originUrl: true, categories: true, tags: true,
-                hotScore: true, downloads: true, favorites: true, createdAt: true
-              })
+              .field({ _id: true, title: true, type: true, coverUrl: true })
               .limit(totalLimit)
               .get()
           ])
           
-          const wallpaperItems = wallpaperRes.data
-          const wallpaperCount = wallpaperItems.length
-          const usedSlots = wallpaperCount * 2
-          let neededAvatars = totalLimit - usedSlots
-          if (neededAvatars < 0) neededAvatars = 0
-          
-          const avatarItems = avatarRes.data.slice(0, neededAvatars)
-          console.log('=== 混合内容处理 ===', 'totalLimit:', totalLimit, 'wallpaperCount:', wallpaperItems.length, 'avatarCount:', avatarItems.length)
-          items = [...wallpaperItems, ...avatarItems]
+          items = [...wallpaperRes.data, ...avatarRes.data.slice(0, Math.max(0, totalLimit - wallpaperRes.data.length * 2))].map(slimItem)
         } else {
           let query = db.collection('resources').where(queryConditions)
           
@@ -380,14 +374,10 @@ exports.main = async (event, context) => {
           }
           
           const result = await query
-            .field({
-              _id: true, title: true, type: true, coverUrl: true,
-              originUrl: true, categories: true, tags: true,
-              hotScore: true, downloads: true, favorites: true, createdAt: true
-            })
+            .field({ _id: true, title: true, type: true, coverUrl: true })
             .limit(totalLimit)
             .get()
-          items = result.data
+          items = result.data.map(slimItem)
         }
       }
       
@@ -424,7 +414,7 @@ exports.main = async (event, context) => {
       }
     }
     
-    await cache.set(cacheKey, result, 5 * 60 * 1000)
+    await cache.set(cacheKey, result, 45 * 60 * 1000)
     perf.markMilestone('缓存写入完成')
     perf.logSummary()
     

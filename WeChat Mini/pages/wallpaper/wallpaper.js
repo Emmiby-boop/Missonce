@@ -3,6 +3,10 @@ import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js
 import { cacheManager } from '../../utils/cache.js'
 import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
+import logger from '../../utils/logger.js'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
+import { getWindowInfo, getStorage, getTheme } from '../../utils/storageManager'
 
 Page({
   data: {
@@ -12,7 +16,9 @@ Page({
     currentTag: 'all',
     sortType: 'hot', // 默认按 hotScore 排序
     tagList: [],
+    _allTags: [], // 所有标签（内部）
     tagsLoading: true,
+    tagBatchSize: 30, // 首屏渲染标签数量
     wallpapers: [],
     page: 1,
     loading: true, // 🔥 优化：初始值为 true，显示骨架屏
@@ -23,7 +29,12 @@ Page({
     // 🔥 新增：动态布局支持
     sections: [],
     useDynamicLayout: false,
-    isSectionMode: false
+    isSectionMode: false,
+    nativeTopAd: null,
+    showNativeTopAd: false,
+    midNativeVideoAd: null,
+    bottomNativeVideoAd: null,
+    showBottomNativeAd: false
   },
   
   _isLoadingData: false, // 🔥 防止重复请求
@@ -35,8 +46,10 @@ Page({
     this.initNavBar()
     performanceMonitor.markMilestone('壁纸页', '初始化完成')
     
+    
+    
     // 1. 优先尝试加载缓存
-    const cachedWallpapers = wx.getStorageSync('wallpaper_list_cache')
+    const cachedWallpapers = getStorage('wallpaper_list_cache')
     if (cachedWallpapers) {
       this.setData({ wallpapers: cachedWallpapers })
       performanceMonitor.markMilestone('壁纸页', '缓存加载完成')
@@ -48,6 +61,8 @@ Page({
 
     // 🔥 优化：同时启动默认布局加载，不等待板块
     this.loadNavTags()
+    this.loadPageAds()
+    
     if (options) {
       const { category, tag } = options
       const updates = {}
@@ -72,7 +87,52 @@ Page({
           this.setData({ showBackToTop })
         }
       })
+    
     performanceMonitor.endPageLoad('壁纸页')
+  },
+  
+  async loadPageAds() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'pages/wallpaper/wallpaper'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      let nativeTop = pickByType(list, 'native_top')[0] || null
+      if (!nativeTop) {
+        const topNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'top' && it.isEnable)
+        if (topNativeVideo) nativeTop = topNativeVideo
+      }
+      if (nativeTop) this.setData({ nativeTopAd: nativeTop })
+      const midNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'middle' && it.isEnable)
+      const nativeBottom = pickByType(list, 'native_bottom')[0] || null
+      const bottomNativeVideo = (list || []).find(it => it.type === 'native_video' && (it.position === 'bottom' || !it.position) && it.isEnable)
+      const chosenBottom = nativeBottom || bottomNativeVideo
+      if (midNativeVideo) this.setData({ midNativeVideoAd: midNativeVideo })
+      if (chosenBottom) this.setData({ bottomNativeVideoAd: chosenBottom })
+    } catch (e) {}
+  },
+  
+  
+  
+  onReachBottom() {
+    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
+      this.setData({ showBottomNativeAd: true })
+    }
+  },
+
+  onPageScroll(e) {
+    const ad = this.data.nativeTopAd
+    const threshold = (ad && ad.scrollThreshold) || 200
+    const shouldShow = e.scrollTop >= threshold
+    if (shouldShow !== this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: shouldShow })
+    }
+  },
+
+  onNativeAdError() {
+    if (this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: false })
+    }
   },
 
   // 🔥 新增：加载页面板块配置
@@ -184,10 +244,12 @@ Page({
   onShow() {
     getApp().logEvent('pv', { page: 'wallpaper' })
     this.syncTheme()
+    // 页面显示时智能触发插屏广告（带冷却时间检查）
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
   },
 
   syncTheme() {
-    const theme = wx.getAppBaseInfo().theme || 'light'
+    const theme = getTheme()
     this.setData({ theme })
   },
 
@@ -197,11 +259,14 @@ Page({
       
       if (res.result.success) {
         // 过滤掉 'all' 或 '全部'，避免重复
-        const tags = res.result.data.filter(t => t.id !== 'all' && t.name !== '全部')
+        const allTags = res.result.data.filter(t => t.id !== 'all' && t.name !== '全部')
+        // 分批渲染：首屏只渲染前 30 个
+        const batchSize = this.data.tagBatchSize || 30
+        const initialTags = allTags.slice(0, batchSize)
 
         this.setData({
-          tagList: tags,
-          // navTagList: tags.slice(0, 10), // 不再截断
+          tagList: initialTags,
+          _allTags: allTags,
           tagsLoading: false
         })
         // console.log('成功从资源库实时加载壁纸标签:', res.result.data)
@@ -211,6 +276,21 @@ Page({
     } catch (error) {
       console.error('加载标签失败:', error)
       this.setData({ tagsLoading: false })
+    }
+  },
+  
+  // 滚动加载更多标签
+  onTagScrollToLower() {
+    const allTags = this.data._allTags
+    const currentLen = this.data.tagList.length
+    if (currentLen >= allTags.length) return // 已全部加载
+    
+    const batchSize = this.data.tagBatchSize || 30
+    const nextBatch = allTags.slice(currentLen, currentLen + batchSize)
+    if (nextBatch.length > 0) {
+      this.setData({
+        tagList: [...this.data.tagList, ...nextBatch]
+      })
     }
   },
 
@@ -260,15 +340,11 @@ Page({
   },
 
   initNavBar() {
-    try {
-      const info = wx.getWindowInfo()
-      const statusBarHeight = info.statusBarHeight || 20
-      const navBarHeight = 44 // Fixed 44px
-      this.setData({ statusBarHeight, navBarHeight })
-
-    } catch (e) {
-      console.error('获取系统信息失败:', e)
-    }
+    // 🔥 优化：使用全局缓存的窗口信息，避免重复调用 wx.getWindowInfo
+    const info = getWindowInfo()
+    const statusBarHeight = info.statusBarHeight || 20
+    const navBarHeight = 44 // Fixed 44px
+    this.setData({ statusBarHeight, navBarHeight })
   },
 
   async loadWallpapers() {
@@ -326,15 +402,27 @@ Page({
         }, () => {
           this._isLoadingData = false
           wx.stopPullDownRefresh()
-          // 缓存第一页数据
+          
+          if (params.page === 1) {
+            const pageLoadTime = performanceMonitor.getPageLoadTime('壁纸页')
+            if (pageLoadTime) {
+              logger.logPerformance('page_load', {
+                loadTime: pageLoadTime,
+                wallpaperCount: newWallpapers.length
+              }, 'pages/wallpaper/wallpaper')
+            }
+            
+            logger.logPageView('pages/wallpaper/wallpaper')
+          }
+          
           if (params.page === 1 && params.tag === 'all') {
-            wx.setStorageSync('wallpaper_list_cache', newWallpapers)
+            wx.setStorage({ key: 'wallpaper_list_cache', data: newWallpapers })
           }
         })
       } else {
         // 尝试使用缓存
         if (this.data.page === 1) {
-          const cached = wx.getStorageSync('wallpaper_list_cache')
+          const cached = getStorage('wallpaper_list_cache')
           if (cached) {
             this.setData({ wallpapers: cached, loading: false })
             this._isLoadingData = false
@@ -359,7 +447,7 @@ Page({
       console.error('加载壁纸失败:', error)
       // 尝试使用缓存
       if (this.data.page === 1) {
-        const cached = wx.getStorageSync('wallpaper_list_cache')
+        const cached = getStorage('wallpaper_list_cache')
         if (cached) {
           this.setData({ wallpapers: cached, loading: false })
           this._isLoadingData = false
@@ -450,5 +538,21 @@ Page({
     wx.navigateTo({
       url: '/subpackages/search/search?type=wallpaper'
     })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '小辣椒动态头像壁纸，海量精美壁纸免费下载！',
+      path: '/pages/wallpaper/wallpaper',
+      imageUrl: ''
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: '小辣椒动态头像壁纸，海量精美壁纸免费下载！',
+      query: '',
+      imageUrl: ''
+    }
   }
 })

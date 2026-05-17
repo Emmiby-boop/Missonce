@@ -1,0 +1,11 @@
+{
+  "name": "logError",
+  "version": "1.0.0",
+  "description": "记录客户端错误日志",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

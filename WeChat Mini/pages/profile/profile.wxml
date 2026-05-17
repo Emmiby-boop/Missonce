@@ -5,7 +5,7 @@
 </view>
 <view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
 
-<view class="container">
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
   <!-- 用户信息区域 -->
 
   <view class="user-section">
@@ -13,7 +13,13 @@
       <view class="user-split-left">
         <view class="user-avatar" bindtap="handleLogin" wx:if="{{!isLoggingIn}}">
           <block wx:if="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}">
-            <image class="avatar-img" src="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}" mode="aspectFill"></image>
+            <!-- 🔥 新增：图片加载失败时显示默认图 -->
+            <image 
+              class="avatar-img" 
+              src="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}" 
+              mode="aspectFill"
+              binderror="onAvatarImageError"
+            ></image>
           </block>
           <block wx:else>
             <view class="avatar-placeholder">
@@ -29,7 +35,13 @@
 
       <view class="user-split-right">
         <view class="user-info" wx:if="{{userInfo}}">
-          <text class="user-name">{{userInfo.nickName}}</text>
+          <view class="user-name-row">
+            <text class="user-name">{{userInfo.nickName}}</text>
+            <view class="member-badge {{memberStatus.memberLevel}}" wx:if="{{memberStatus.isMember}}">
+              <text class="member-badge-icon">💎</text>
+              <text class="member-badge-text">{{memberStatus.memberName || 'VIP'}}</text>
+            </view>
+          </view>
           <text class="user-id">{{userInfo.displayId ? 'ID: ' + userInfo.displayId : ''}}</text>
           <view class="edit-link" bindtap="goEditProfile">编辑资料</view>
         </view>
@@ -42,6 +54,7 @@
     </view>
   </view>
 
+  <!-- 签到和积分区域 -->
   <view class="action-card" wx:if="{{userInfo}}">
     <view class="checkin-area">
       <view class="checkin-btn {{isCheckedIn ? 'checked' : ''}}" catchtap="handleCheckIn">
@@ -51,7 +64,7 @@
         <text class="checkin-text">{{isCheckedIn ? '已签到 ' + checkInDays + ' 天' : '每日签到'}}</text>
       </view>
       <view class="points-entry" bindtap="goToPoints">
-        <view class="points-entry-icon">💰</view>
+        <view class="points-entry-icon">💎</view>
         <view class="points-entry-info">
           <text class="points-entry-value">{{points}}</text>
           <text class="points-entry-label">积分</text>
@@ -133,6 +146,7 @@
     <view class="download-header">
       <text class="download-title">我的收藏</text>
       <view class="download-actions">
+        <text class="download-action" bindtap="clearFavorites">清空</text>
         <text class="download-action" bindtap="closeFavoritesPanel">关闭</text>
       </view>
     </view>
@@ -177,6 +191,7 @@
     </scroll-view>
   </view>
 </view>
+
 <view class="login-hint" wx:if="{{!userInfo && showDownload}}">
   <text>请先登录查看下载记录</text>
 </view>
@@ -201,17 +216,14 @@
 <view class="action-sheet-mask" wx:if="{{showContactMenu}}" bindtap="closeContactMenu">
   <view class="action-sheet-panel" catchtap="noop">
     <view class="action-sheet-header">
-      <text class="action-sheet-title">联系与反馈</text>
+      <text class="action-sheet-title">联系我们</text>
     </view>
     <view class="action-sheet-body">
       <button class="action-btn-item" hover-class="none" open-type="contact">
         <text>在线客服</text>
       </button>
       <button class="action-btn-item" hover-class="none" bindtap="handleOfficialAccount">
-        <text>关注公众号</text>
-      </button>
-      <button class="action-btn-item" hover-class="none" bindtap="handleShowContactInfo">
-        <text>商务合作</text>
+        <text>官方账号</text>
       </button>
     </view>
     <view class="action-sheet-footer">
@@ -219,4 +231,37 @@
     </view>
   </view>
 </view>
+
+<!-- 公众号二维码弹窗 -->
+<view class="action-sheet-mask" wx:if="{{showOfficialAccount}}" bindtap="closeOfficialAccount">
+  <view class="action-sheet-panel" catchtap="noop">
+    <view class="action-sheet-header">
+      <text class="action-sheet-title">{{officialAccount.title || '官方账号'}}</text>
+    </view>
+    <view class="action-sheet-body official-account-body" wx:if="{{officialAccount && officialAccount.qrcodeUrl}}">
+      <view class="qrcode-loading" wx:if="{{!qrcodeLoaded}}">
+        <view class="loading-spinner"></view>
+        <text class="qrcode-loading-text">加载中...</text>
+      </view>
+      <image 
+        class="qrcode-img {{qrcodeLoaded ? '' : 'hidden'}}"
+        src="{{officialAccount.qrcodeUrl}}" 
+        mode="aspectFit"
+        show-menu-by-longpress="{{true}}"
+        bindload="onQrcodeLoad"
+        binderror="onQrcodeError"
+      ></image>
+      <text class="qrcode-desc">{{officialAccount.description || '长按二维码识别关注'}}</text>
+    </view>
+    <view class="action-sheet-body official-account-body" wx:else>
+      <text class="qrcode-desc">暂无公众号配置</text>
+    </view>
+    <view class="action-sheet-footer">
+      <view class="action-btn-cancel" bindtap="closeOfficialAccount">关闭</view>
+    </view>
+  </view>
+</view>
+
+<!-- 悬浮消息按钮 -->
+<floating-notification></floating-notification>
 

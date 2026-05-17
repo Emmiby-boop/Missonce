@@ -1,4 +1,20 @@
+<!-- 自定义导航栏（对应 navigationStyle: custom） -->
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="navigateBack">
+      <image class="back-icon" src="/images/preview-back.svg" mode="aspectFit" />
+    </view>
+    <text class="nav-title">精选专题</text>
+    <view class="nav-placeholder"></view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
+
+<!-- 顶部悬浮广告 -->
+<ad-unit position="top" custom-class="native-top-ad" page-path="/subpackages/topic-list/topic-list" threshold="200" ext-style="top: {{statusBarHeight + navBarHeight - 1}}px;"></ad-unit>
+
 <view class="container">
+  <ad-unit kind="interstitial" page-path="/subpackages/topic-list/topic-list"></ad-unit>
   <!-- Skeleton Loading -->
   <view class="skeleton-list" wx:if="{{loading && topics.length === 0}}">
     <view class="skeleton-item shimmer" wx:for="{{[1,2,3,4]}}" wx:key="*this"></view>

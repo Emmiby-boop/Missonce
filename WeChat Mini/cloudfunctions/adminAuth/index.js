@@ -1,9 +1,51 @@
 const cloud = require('wx-server-sdk')
-const crypto = require('crypto')
+const bcrypt = require('bcryptjs')
+const CryptoJS = require('crypto-js') // ⚠️ 保留用于向后兼容旧密码，迁移完成后可移除
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
 })
+
+const SALT_ROUNDS = 12
+
+/**
+ * 使用 bcrypt 哈希密码（新密码）
+ */
+const hashPassword = async (pwd) => {
+  return bcrypt.hash(pwd, SALT_ROUNDS)
+}
+
+/**
+ * 验证密码 - 兼容 bcrypt 和旧版 SHA256
+ * 如果存储的哈希是旧版 SHA256，验证通过后会自动升级为 bcrypt
+ */
+const verifyPassword = async (pwd, storedHash, upgradeCallback) => {
+  // 1. 判断是否为 bcrypt 哈希（以 $2a$ 或 $2b$ 开头）
+  const isBcrypt = storedHash && (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$'))
+
+  if (isBcrypt) {
+    // bcrypt 验证
+    return await bcrypt.compare(pwd, storedHash)
+  }
+
+  // 2. 旧版 SHA256 兼容验证
+  const oldHash = CryptoJS.SHA256(pwd).toString()
+  if (oldHash === storedHash) {
+    // 自动升级：将旧哈希迁移为 bcrypt
+    if (upgradeCallback) {
+      try {
+        const newHash = await bcrypt.hash(pwd, SALT_ROUNDS)
+        await upgradeCallback(newHash)
+        console.log('密码哈希已从 SHA256 升级为 bcrypt')
+      } catch (e) {
+        console.warn('密码哈希自动升级失败（不影响登录）:', e.message)
+      }
+    }
+    return true
+  }
+
+  return false
+}
 
 exports.main = async (event, context) => {
   const db = cloud.database()
@@ -18,16 +60,29 @@ exports.main = async (event, context) => {
       return { success: false, message: '账号或密码不能为空' }
     }
 
-    // SHA256 Hash the password
-    const hashedPassword = crypto.createHash('sha256').update(password).digest('hex')
-
+    // 查找管理员账号
     const res = await db.collection('admins').where({
-      username: username,
-      password: hashedPassword
+      username: username
     }).get()
 
-    if (res.data.length > 0) {
-      const admin = res.data[0]
+    if (res.data.length === 0) {
+      return { success: false, message: '账号或密码错误' }
+    }
+
+    const admin = res.data[0]
+
+    // 使用升级版验证（兼容 SHA256 旧密码并自动迁移）
+    const isPasswordValid = await verifyPassword(password, admin.password, async (newHash) => {
+      // 自动升级密码哈希
+      await db.collection('admins').doc(admin._id).update({
+        data: {
+          password: newHash,
+          updateTime: db.serverDate()
+        }
+      })
+    })
+
+    if (isPasswordValid) {
       return {
         success: true,
         message: '登录成功',
@@ -52,22 +107,33 @@ exports.main = async (event, context) => {
       return { success: false, message: '参数不完整' }
     }
 
-    // Verify old password
-    const oldHashed = crypto.createHash('sha256').update(oldPassword).digest('hex')
+    // 查找管理员账号
     const res = await db.collection('admins').where({
-      username: username,
-      password: oldHashed
+      username: username
     }).get()
 
     if (res.data.length === 0) {
+      return { success: false, message: '账号不存在' }
+    }
+
+    const admin = res.data[0]
+
+    // 验证旧密码（兼容 SHA256 旧密码）
+    const isOldPasswordValid = await verifyPassword(oldPassword, admin.password, async (newHash) => {
+      // 自动升级密码哈希
+      await db.collection('admins').doc(admin._id).update({
+        data: { password: newHash, updateTime: db.serverDate() }
+      })
+    })
+
+    if (!isOldPasswordValid) {
       return { success: false, message: '旧密码错误' }
     }
 
-    // Update new password
-    const newHashed = crypto.createHash('sha256').update(newPassword).digest('hex')
-    const adminId = res.data[0]._id
+    // 使用 bcrypt 哈希新密码
+    const newHashed = await hashPassword(newPassword)
 
-    await db.collection('admins').doc(adminId).update({
+    await db.collection('admins').doc(admin._id).update({
       data: {
         password: newHashed,
         updateTime: db.serverDate()
@@ -78,106 +144,24 @@ exports.main = async (event, context) => {
   }
 
   // --------------------------------------------------
-  // 场景 1：Web 端请求获取二维码 UUID
-  // --------------------------------------------------
-  if (action === 'getUUID') {
-    const newUuid = 'admin-qr-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6)
-    
-    await db.collection('login_sessions').add({
-      data: {
-        uuid: newUuid,
-        status: 'pending', // pending -> scanned -> confirmed -> expired
-        createdAt: db.serverDate(),
-        expireAt: Date.now() + 5 * 60 * 1000 // 5分钟有效期
-      }
-    })
-    
-    return { success: true, uuid: newUuid }
-  }
-
-  // --------------------------------------------------
-  // 场景 2：Web 端轮询检查登录状态
-  // --------------------------------------------------
-  if (action === 'checkStatus') {
-    if (!uuid) return { success: false, message: '缺少 uuid' }
-    
-    const res = await db.collection('login_sessions').where({
-      uuid: uuid
-    }).get()
-    
-    if (res.data.length === 0) {
-      return { success: false, status: 'invalid', message: '二维码无效或已过期' }
-    }
-    
-    const session = res.data[0]
-    if (Date.now() > session.expireAt) {
-      return { success: false, status: 'expired', message: '二维码已过期' }
-    }
-    
-    if (session.status === 'confirmed') {
-      // 登录成功！返回管理员信息（注意脱敏）
-      // 此时可以生成一个自定义 Token 返回给 Web 端，或者直接返回用户信息
-      return { 
-        success: true, 
-        status: 'confirmed', 
-        admin: session.adminInfo 
-      }
-    }
-    
-    return { success: true, status: session.status } // pending 或 scanned
-  }
-
-  // --------------------------------------------------
-  // 场景 3：小程序端 -> 确认登录 (扫码后点击确认)
-  // --------------------------------------------------
-  if (action === 'confirmLogin') {
-    if (!uuid) return { success: false, message: '缺少 uuid' }
-    
-    // 1. 验证当前小程序用户是否是管理员
-    const openid = wxContext.OPENID
-    // 优先查 admins 集合 (根据用户截图确认存在 admins 且字段为 _openid)
-    let adminRes = await db.collection('admins').where({ _openid: openid }).get()
-    
-    // 如果 admins 没查到，尝试兼容 sys_user (CMS)
-    if (adminRes.data.length === 0) {
-       adminRes = await db.collection('sys_user').where({ _openid: openid }).get()
-    }
-
-    if (adminRes.data.length === 0) {
-       // 尝试用 openid 字段查 (以防万一)
-       adminRes = await db.collection('admins').where({ openid: openid }).get()
-    }
-    
-    if (adminRes.data.length === 0) {
-      return { success: false, message: '您不是管理员，无权登录后台' }
-    }
-    
-    const adminInfo = adminRes.data[0]
-    
-    // 2. 更新 session 状态为 confirmed
-    await db.collection('login_sessions').where({
-      uuid: uuid
-    }).update({
-      data: {
-        status: 'confirmed',
-        adminInfo: {
-          _id: adminInfo._id,
-          username: adminInfo.username || adminInfo.nickName,
-          role: 'admin',
-          openid: openid
-        },
-        confirmedAt: db.serverDate()
-      }
-    })
-    
-    return { success: true, message: '授权登录成功' }
-  }
-
-  // --------------------------------------------------
   // 场景 4：邮箱验证码登录验证 (Web 端提交验证码)
   // --------------------------------------------------
   if (action === 'verifyEmail') {
     if (!email || !code) return { success: false, message: '参数不全' }
+    
+    // 🔒 频率限制：同一邮箱 5 分钟内最多尝试 5 次
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000
+    const failedAttempts = await db.collection('verify_codes')
+      .where({
+        email: email,
+        used: true,
+        createdAt: db.command.gte(new Date(fiveMinAgo))
+      })
+      .count()
+    
+    if (failedAttempts.total >= 5) {
+      return { success: false, message: '验证失败次数过多，请 5 分钟后再试' }
+    }
     
     // 1. 查找验证码记录
     const codeRes = await db.collection('verify_codes').where({

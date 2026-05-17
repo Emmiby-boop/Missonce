@@ -4,6 +4,7 @@
   "description": "Admin QR code login authentication",
   "main": "index.js",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "wx-server-sdk": "latest"
   }
 }

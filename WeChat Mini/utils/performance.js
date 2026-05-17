@@ -41,6 +41,13 @@ export const performanceMonitor = {
     return null
   },
 
+  getPageLoadTime(pageName) {
+    const stats = pageLoadTimes[pageName]
+    if (!stats) return null
+    const endTime = stats.endTime || Date.now()
+    return endTime - stats.startTime
+  },
+
   getPageStats(pageName) {
     return pageLoadTimes[pageName] || null
   },

@@ -1,0 +1,111 @@
+{
+  "resources": [
+    {
+      "name": "idx_createdAt",
+      "fields": [
+        { "name": "createdAt", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_createTime",
+      "fields": [
+        { "name": "createTime", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_type_createTime",
+      "fields": [
+        { "name": "type", "direction": "asc" },
+        { "name": "createTime", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_type_hotScore",
+      "fields": [
+        { "name": "type", "direction": "asc" },
+        { "name": "hotScore", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_status_type_hotScore",
+      "fields": [
+        { "name": "status", "direction": "asc" },
+        { "name": "type", "direction": "asc" },
+        { "name": "hotScore", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_categories",
+      "fields": [
+        { "name": "categories", "direction": "asc" }
+      ]
+    },
+    {
+      "name": "idx_tags",
+      "fields": [
+        { "name": "tags", "direction": "asc" }
+      ]
+    },
+    {
+      "name": "idx_hotScore",
+      "fields": [
+        { "name": "hotScore", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_favorites",
+      "fields": [
+        { "name": "favorites", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_downloads",
+      "fields": [
+        { "name": "downloads", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_viewCount",
+      "fields": [
+        { "name": "viewCount", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_likeCount",
+      "fields": [
+        { "name": "likeCount", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_downloadCount",
+      "fields": [
+        { "name": "downloadCount", "direction": "desc" }
+      ]
+    },
+    {
+      "name": "idx_status_type",
+      "fields": [
+        { "name": "status", "direction": "asc" },
+        { "name": "type", "direction": "asc" }
+      ]
+    }
+  ],
+  "home_sections": [
+    {
+      "name": "idx_enable_sort",
+      "fields": [
+        { "name": "enable", "direction": "asc" },
+        { "name": "sort", "direction": "asc" }
+      ]
+    }
+  ],
+  "banners": [
+    {
+      "name": "idx_status_sort",
+      "fields": [
+        { "name": "status", "direction": "asc" },
+        { "name": "sort", "direction": "asc" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+<view class="container">
+  <!-- 顶部背景装饰 -->
+  <view class="bg-decoration"></view>
+
+  <view class="content-wrapper">
+    <!-- 头像区域 -->
+    <view class="avatar-section">
+      <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+        <image class="avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
+        <view class="edit-badge">
+          <image class="camera-icon" src="/images/icon-camera.svg" wx:if="{{false}}"></image> <!-- 预留图标位置，暂时用纯CSS绘制相机 -->
+          <view class="camera-shape">
+            <view class="camera-lens"></view>
+          </view>
+        </view>
+      </button>
+      <view class="avatar-tip">点击头像更换</view>
+    </view>
+
+    <!-- 表单区域 -->
+    <view class="form-card">
+      <view class="input-group">
+        <view class="label">昵称</view>
+        <input 
+          type="nickname" 
+          class="nickname-input" 
+          value="{{nickName}}" 
+          placeholder="请输入你的昵称" 
+          placeholder-class="placeholder" 
+          bindchange="onNickChange" 
+          bindinput="onNickInput"
+          maxlength="20"
+        />
+        <view class="clear-icon" wx:if="{{nickName.length > 0}}" bindtap="clearNickName"></view>
+      </view>
+    </view>
+
+    <!-- 操作区域 -->
+    <view class="action-section">
+      <button class="save-btn" bindtap="saveProfile" loading="{{saving}}" hover-class="save-btn-hover">
+        保存并更新
+      </button>
+    </view>
+  </view>
+</view>

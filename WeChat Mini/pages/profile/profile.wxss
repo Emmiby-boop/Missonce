@@ -33,7 +33,7 @@ page {
 }
 
 .container {
-  padding: 24rpx;
+  padding: 0 0 120rpx 0;
 }
 
 /* User Profile Section */
@@ -41,7 +41,7 @@ page {
   background: var(--card-bg);
   border-radius: 24rpx;
   padding: 40rpx 30rpx;
-  margin-bottom: 24rpx;
+  margin: 0 24rpx 24rpx;
   box-shadow: 0 8rpx 24rpx var(--shadow-color);
 }
 
@@ -141,6 +141,51 @@ page {
   margin-bottom: 8rpx;
 }
 
+.user-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.member-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.member-badge.bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
+  color: #fff;
+}
+
+.member-badge.silver {
+  background: linear-gradient(135deg, #c0c0c0 0%, #808080 100%);
+  color: #fff;
+}
+
+.member-badge.gold {
+  background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
+  color: #5c4008;
+}
+
+.member-badge.diamond {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.member-badge-icon {
+  font-size: 20rpx;
+  margin-right: 4rpx;
+}
+
+.member-badge-text {
+  font-size: 20rpx;
+}
+
 .user-id {
   font-size: 24rpx;
   color: var(--text-sub);
@@ -151,7 +196,7 @@ page {
   background: var(--card-bg);
   border-radius: 24rpx;
   padding: 30rpx;
-  margin-bottom: 24rpx;
+  margin: 0 24rpx 24rpx;
   box-shadow: 0 4rpx 16rpx var(--shadow-color);
 }
 
@@ -207,27 +252,14 @@ page {
   background: #f0f0f0;
 }
 
-.loading-spinner {
-  width: 40rpx;
-  height: 40rpx;
-  border: 4rpx solid #e0e0e0;
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 /* Stats Card */
 .stats-card {
   display: flex;
   align-items: center;
   padding: 40rpx 0;
-  margin-bottom: 24rpx;
+  margin: 0 24rpx 24rpx;
   background: var(--card-bg);
   border-radius: 24rpx;
   box-shadow: 0 4rpx 16rpx var(--shadow-color);
@@ -269,7 +301,9 @@ page {
   padding: 20rpx;
   font-size: 26rpx;
   color: var(--text-sub);
-  margin-bottom: 20rpx;
+  margin: 0 24rpx 20rpx;
+  background: var(--card-bg);
+  border-radius: 16rpx;
 }
 
 /* Menu Section */
@@ -277,6 +311,7 @@ page {
   background: var(--card-bg);
   border-radius: 20rpx;
   padding: 0 24rpx;
+  margin: 0 24rpx;
   box-shadow: 0 4rpx 16rpx var(--shadow-color);
 }
 
@@ -317,7 +352,7 @@ page {
 .logout-link {
   text-align: center;
   padding: 40rpx 0;
-  margin-top: 20rpx;
+  margin: 20rpx 24rpx;
 }
 
 .logout-link text {
@@ -341,15 +376,16 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 88rpx;
   background: linear-gradient(135deg, #ffd89b 0%, #ffd1dc 100%);
-  padding: 16rpx 20rpx;
+  padding: 0 20rpx;
   border-radius: 24rpx;
   box-shadow: 0 4rpx 10rpx rgba(255, 216, 155, 0.3);
   transition: all 0.3s ease;
 }
 
 .checkin-btn.checked {
-  background: #f0f2f5;
+  background: var(--bg-color);
   box-shadow: none;
 }
 
@@ -388,8 +424,9 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f2f5;
-  padding: 16rpx 20rpx;
+  height: 88rpx;
+  background: var(--bg-color);
+  padding: 0 20rpx;
   border-radius: 24rpx;
   box-shadow: none;
 }
@@ -429,7 +466,7 @@ page {
 /* About Panel */
 .about-panel {
   width: 600rpx;
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 24rpx;
   padding: 40rpx;
   display: flex;
@@ -448,26 +485,26 @@ page {
   width: 120rpx;
   height: 120rpx;
   margin-bottom: 20rpx;
-  background: #f5f5f5;
+  background: var(--bg-color);
   border-radius: 24rpx;
 }
 
 .about-name {
   font-size: 36rpx;
   font-weight: 600;
-  color: #333;
+  color: var(--text-main);
   margin-bottom: 10rpx;
 }
 
 .about-version {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-sub);
   margin-bottom: 30rpx;
 }
 
 .about-desc {
   font-size: 28rpx;
-  color: #666;
+  color: var(--text-sub);
   text-align: center;
   line-height: 1.6;
 }
@@ -484,8 +521,8 @@ page {
   font-size: 30rpx;
   font-weight: 500;
   padding: 20rpx 0;
-  background: #f5f7fa;
-  color: #666;
+  background: var(--bg-color);
+  color: var(--text-sub);
   border-radius: 40rpx;
 }
 
@@ -494,7 +531,7 @@ page {
 }
 
 .about-btn.primary {
-  background: #07c160;
+  background: var(--primary-color);
   color: #fff;
 }
 
@@ -506,7 +543,7 @@ page {
   padding: 32rpx 0;
   background: transparent !important;
   border: none !important;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--border-color);
   text-align: left;
   line-height: normal;
 }
@@ -545,13 +582,13 @@ page {
 
 .menu-title {
   font-size: 30rpx;
-  color: #333;
+  color: var(--text-main);
   margin-bottom: 4rpx;
 }
 
 .menu-desc {
   font-size: 22rpx;
-  color: #999;
+  color: var(--text-sub);
 }
 
 .menu-arrow {
@@ -581,7 +618,7 @@ page {
 .download-panel {
   width: 85%;
   height: 70vh;
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 24rpx;
   display: flex;
   flex-direction: column;
@@ -593,12 +630,13 @@ page {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1rpx solid #eee;
+  border-bottom: 1rpx solid var(--border-color);
 }
 
 .download-title {
   font-size: 32rpx;
   font-weight: 500;
+  color: var(--text-main);
 }
 
 .download-actions {
@@ -608,7 +646,7 @@ page {
 
 .download-action {
   font-size: 28rpx;
-  color: #666;
+  color: var(--text-sub);
 }
 
 .download-list {
@@ -631,7 +669,7 @@ page {
   aspect-ratio: 1;
   border-radius: 12rpx;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--bg-color);
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
 }
 
@@ -664,7 +702,7 @@ page {
 .download-empty {
   padding: 100rpx 0;
   text-align: center;
-  color: #999;
+  color: var(--text-sub);
   font-size: 28rpx;
   display: flex;
   flex-direction: column;
@@ -686,7 +724,7 @@ page {
 }
 
 .action-sheet-panel {
-  background: #f7f8fa;
+  background: var(--bg-color);
   border-radius: 24rpx 24rpx 0 0;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
@@ -695,28 +733,77 @@ page {
 .action-sheet-header {
   padding: 30rpx;
   text-align: center;
-  background: #fff;
-  border-bottom: 1rpx solid #eee;
+  background: var(--card-bg);
+  border-bottom: 1rpx solid var(--border-color);
 }
 
 .action-sheet-title {
   font-size: 28rpx;
-  color: #999;
+  color: var(--text-sub);
 }
 
 .action-sheet-body {
-  background: #fff;
+  background: var(--card-bg);
+}
+
+/* 公众号二维码样式 */
+.official-account-body {
+  padding: 30rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.qrcode-img {
+  width: 400rpx;
+  height: 400rpx;
+  margin: 0 auto 24rpx;
+  border-radius: 16rpx;
+  display: block;
+}
+
+.qrcode-img.hidden {
+  display: none;
+}
+
+.qrcode-loading {
+  width: 400rpx;
+  height: 400rpx;
+  margin: 0 auto 24rpx;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+}
+
+.qrcode-loading-text {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: var(--text-sub);
+}
+
+.qrcode-desc {
+  font-size: 28rpx;
+  color: var(--text-sub);
+  line-height: 1.5;
+  text-align: center;
+  width: 100%;
 }
 
 .action-btn-item {
   width: 100%;
-  background: #fff !important;
+  background: var(--card-bg) !important;
   border-radius: 0;
   padding: 30rpx 0;
   font-size: 34rpx;
-  color: #333;
+  color: var(--text-main);
   line-height: 1.4;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--border-color);
   font-weight: 400;
 }
 
@@ -726,13 +813,15 @@ page {
 
 .action-sheet-footer {
   margin-top: 16rpx;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .action-btn-cancel {
   padding: 30rpx 0;
   text-align: center;
   font-size: 34rpx;
-  color: #333;
+  color: var(--text-main);
   font-weight: 500;
 }
+
+/* 深色模式由 app.wxss 全局 @media (prefers-color-scheme: dark) 统一管理，此处无需额外覆盖 */

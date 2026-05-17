@@ -1,3 +1,5 @@
+import { getWindowInfo } from '../../utils/storageManager.js'
+
 Component({
   properties: {
     visible: {
@@ -47,7 +49,7 @@ Component({
 
     async initPoster() {
       // 1. 计算尺寸
-      const sysInfo = wx.getWindowInfo()
+      const sysInfo = getWindowInfo()
       const screenWidth = sysInfo.windowWidth
       const maxPosterWidth = screenWidth * 0.8 // 屏幕宽度的 80%
       

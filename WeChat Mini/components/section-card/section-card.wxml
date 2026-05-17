@@ -1,0 +1,18 @@
+<view class="section-card" wx:if="{{visible && items && items.length > 0}}">
+  <view class="section-header" wx:if="{{title}}">
+    <text class="section-title">{{title}}</text>
+    <text class="section-more" wx:if="{{showMore && moreUrl}}" bindtap="onMoreTap">
+      {{moreText}} <text class="arrow-right">→</text>
+    </text>
+  </view>
+  <slot>
+    <!-- 默认内容 -->
+  </slot>
+  <view class="section-content" wx:else>
+    <view wx:for="{{items}}" wx:key="index" class="card-item" data-index="{{index}}" bindtap="onItemTap">
+      <slot name="item" data-item="{{item}}" data-index="{{index}}">
+        <!-- 项目默认内容 -->
+      </slot>
+    </view>
+  </view>
+</view>

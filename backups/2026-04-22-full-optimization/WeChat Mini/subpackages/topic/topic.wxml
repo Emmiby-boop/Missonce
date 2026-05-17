@@ -1,0 +1,70 @@
+<!-- 顶部悬浮广告 - 放在 container 外面，确保固定在顶部 -->
+<ad-unit position="top" custom-class="native-top-ad" page-path="/subpackages/topic/topic" threshold="200" ext-style="top: 0px;"></ad-unit>
+
+<view class="container" style="{{layout ? 'background-color:' + layout.backgroundColor + '; padding:' + layout.padding + 'px;' : ''}}">
+  <ad-unit kind="interstitial" page-path="/subpackages/topic/topic"></ad-unit>
+  <!-- New Dynamic Layout -->
+  <block wx:if="{{layout}}">
+    <block wx:for="{{layout.modules}}" wx:key="id">
+      
+      <!-- Header Module -->
+      <view wx:if="{{item.type === 'header'}}" class="module-header" style="height: {{item.config.height}}rpx; margin-bottom: {{item.marginBottom}}px; position: relative; overflow: hidden;">
+        <image class="topic-cover" src="{{cover}}" mode="aspectFill" style="width: 100%; height: 100%;"></image>
+        <view class="topic-mask" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);"></view>
+        <view class="topic-info" style="position: absolute; bottom: 20rpx; left: 20rpx; right: 20rpx; color: white;">
+          <view class="topic-title" wx:if="{{item.config.showTitle}}" style="font-size: 36rpx; font-weight: bold; margin-bottom: 10rpx;">{{title}}</view>
+          <view class="topic-desc" wx:if="{{item.config.showDescription}}" style="font-size: 24rpx; opacity: 0.8;">{{description}}</view>
+        </view>
+      </view>
+
+      <!-- Resource Grid Module -->
+      <view wx:elif="{{item.type === 'resource-grid'}}" class="module-grid" style="margin-bottom: {{item.marginBottom}}px;">
+        <view class="grid-container" style="display: grid; grid-template-columns: repeat({{item.config.columns || 3}}, 1fr); gap: {{item.config.gap}}px;">
+          <view class="grid-item" wx:for="{{list}}" wx:for-item="resource" wx:key="id" bindtap="previewImage" data-index="{{index}}" style="border-radius: {{item.config.radius}}px; overflow: hidden; position: relative; padding-bottom: {{type === 'avatar' ? '100%' : (type === 'wallpaper' ? '177.77%' : (item.config.aspectRatio || '133.33%'))}}; cursor: pointer; -webkit-tap-highlight-color: transparent;">
+            <image class="grid-img" src="{{resource.url}}" mode="aspectFill" lazy-load style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;"></image>
+          </view>
+        </view>
+      </view>
+
+    </block>
+    
+    <view class="loading-state" wx:if="{{loading}}" style="text-align: center; padding: 20rpx; color: #999;">
+      <text>加载中...</text>
+    </view>
+    <view class="no-more" wx:if="{{!loading && list.length > 0 && noMore}}" style="text-align: center; padding: 20rpx; color: #999;">
+      <text>没有更多了</text>
+    </view>
+  </block>
+
+  <!-- Legacy Layout -->
+  <block wx:else>
+    <view class="topic-header" wx:if="{{cover}}">
+      <image class="topic-cover" src="{{cover}}" mode="aspectFill"></image>
+      <view class="topic-mask"></view>
+      <view class="topic-info">
+        <view class="topic-title">{{title}}</view>
+        <view class="topic-desc" wx:if="{{description}}">{{description}}</view>
+      </view>
+    </view>
+
+    <view class="content-body" style="{{!cover ? 'padding-top: 20rpx;' : ''}}">
+      <view class="grid-list">
+        <view class="grid-item" wx:for="{{list}}" wx:key="id" bindtap="previewImage" data-index="{{index}}" style="padding-bottom: {{type === 'avatar' ? '100%' : (type === 'wallpaper' ? '177.77%' : '150%')}}; cursor: pointer; -webkit-tap-highlight-color: transparent;">
+          <image class="grid-img" src="{{item.url}}" mode="aspectFill" lazy-load style="pointer-events: none;"></image>
+        </view>
+      </view>
+      
+      <view class="loading-state" wx:if="{{loading}}">
+        <text>加载中...</text>
+      </view>
+      <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
+        <image class="empty-icon" src="../../images/empty.png" mode="widthFix" wx:if="{{hasEmptyIcon}}"></image>
+        <text>暂无相关内容</text>
+      </view>
+      <view class="no-more" wx:if="{{!loading && list.length > 0 && noMore}}">
+        <text>没有更多了</text>
+      </view>
+    </view>
+  </block>
+
+</view>

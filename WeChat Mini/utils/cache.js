@@ -1,3 +1,5 @@
+import { getStorage, removeStorage, setStorage } from './storageManager.js'
+
 /**
  * 缓存管理工具
  */
@@ -14,7 +16,7 @@ export const cacheManager = {
       _timestamp: Date.now(),
       _expire: expire
     }
-    wx.setStorageSync(key, cacheData)
+    setStorage(key, cacheData)
   },
 
   /**
@@ -23,14 +25,14 @@ export const cacheManager = {
    * @returns {Any|null} 缓存数据或null
    */
   get(key) {
-    const cached = wx.getStorageSync(key)
+    const cached = getStorage(key)
     if (!cached) return null
 
     // 如果设置了过期时间，检查是否过期
     if (cached._expire) {
       const isExpired = Date.now() - cached._timestamp > cached._expire
       if (isExpired) {
-        wx.removeStorageSync(key)
+        removeStorage(key)
         return null
       }
     }
@@ -43,7 +45,7 @@ export const cacheManager = {
    * @param {String} key 键名
    */
   remove(key) {
-    wx.removeStorageSync(key)
+    removeStorage(key)
   },
 
   /**
@@ -51,7 +53,7 @@ export const cacheManager = {
    * @param {Array} keys 要清除的键名列表
    */
   clear(keys = []) {
-    keys.forEach(key => wx.removeStorageSync(key))
+    keys.forEach(key => removeStorage(key))
   }
 }
 

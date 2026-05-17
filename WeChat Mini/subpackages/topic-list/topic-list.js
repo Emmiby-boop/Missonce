@@ -1,4 +1,6 @@
 import { performanceMonitor } from '../../utils/performance.js'
+import logger from '../../utils/logger.js'
+import { getStorage, getWindowInfo, setStorage } from '../../utils/storageManager.js'
 
 Page({
   data: {
@@ -7,14 +9,23 @@ Page({
     refreshing: false,
     page: 1,
     pageSize: 10,
-    hasMore: true
+    hasMore: true,
+
+    statusBarHeight: 20,
+    navBarHeight: 44
   },
 
   onLoad() {
     performanceMonitor.startPageLoad('专题列表')
+
+    try {
+      const info = getWindowInfo()
+      const statusBarHeight = info.statusBarHeight || 20
+      const navBarHeight = 44
+      this.setData({ statusBarHeight, navBarHeight })
+    } catch (e) {}
     
-    // 1. Check local cache for first page
-    const cachedData = wx.getStorageSync('topic_list_cache')
+    const cachedData = getStorage('topic_list_cache')
     if (cachedData) {
       const { topics, timestamp } = cachedData
       // Cache valid for 30 minutes
@@ -69,7 +80,7 @@ Page({
         // Optimize: Use cloud:// URLs directly, skip resolveCoverUrls for performance
         // If specific WebP is needed, ensure uploaded images are optimized or use cloud functions to process
         
-        const hasMore = res.result.hasMore
+        const hasMore = res.result.hasMore !== undefined ? res.result.hasMore : (newTopics.length >= this.data.pageSize)
         
         let finalTopics = []
         if (reset) {
@@ -89,7 +100,7 @@ Page({
 
         // Cache first page
         if (page === 1 && newTopics.length > 0) {
-          wx.setStorageSync('topic_list_cache', {
+          setStorage('topic_list_cache', {
             topics: newTopics,
             timestamp: Date.now()
           })
@@ -99,6 +110,16 @@ Page({
           performanceMonitor.endPageLoad('专题列表', { 
             topicCount: finalTopics.length 
           })
+          
+          const pageLoadTime = performanceMonitor.getPageLoadTime('专题列表')
+          if (pageLoadTime) {
+            logger.logPerformance('page_load', {
+              loadTime: pageLoadTime,
+              topicCount: finalTopics.length
+            }, 'subpackages/topic-list/topic-list')
+          }
+          
+          logger.logPageView('subpackages/topic-list/topic-list')
         }
       } else {
         throw new Error(res.result?.error || 'Failed to load topics')
@@ -156,5 +177,12 @@ Page({
         wx.showToast({ title: '跳转失败', icon: 'none' })
       }
     })
+  },
+
+  // 页面滚动监听（供广告组件使用）
+  onPageScroll() {},
+
+  navigateBack() {
+    wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/index/index' }) })
   }
 })

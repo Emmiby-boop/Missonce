@@ -1,4 +1,6 @@
 
+import { getWindowInfo } from './storageManager.js'
+
 /**
  * 图片优化工具
  */
@@ -11,7 +13,7 @@ const CLOUD_FILE_PREFIX = 'cloud://'
  */
 export const getOptimalThumbnailSize = () => {
   try {
-    const info = wx.getWindowInfo()
+    const info = getWindowInfo()
     const screenWidth = info.windowWidth || 375
     // 2列布局：屏幕宽度一半减去间距 (假设间距约 20px)
     // 加上设备像素比 (dpr) 考虑，通常 2x 屏，所以实际像素宽 * 2
@@ -83,6 +85,23 @@ const processUrl = (url, width) => {
   // 静态图片转换为 WebP
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}imageMogr2/thumbnail/${width}x/format/webp/interlace/1/quality/80`
+}
+
+/**
+ * 获取 GIF 缩略图宽度
+ * GIF 图片使用更小的尺寸以提升加载速度
+ */
+export const getGifThumbnailSize = () => {
+  try {
+    const info = getWindowInfo()
+    const screenWidth = info.windowWidth || 375
+    const dpr = info.pixelRatio || 2
+    const columnWidth = (screenWidth - 20) / 2
+    // GIF 使用更小的尺寸，提高加载速度
+    return Math.floor(columnWidth * dpr * 0.8)
+  } catch (e) {
+    return 280 // 降级默认值
+  }
 }
 
 export default {

@@ -1,14 +1,21 @@
-import { getResources, getCategories, getHomeData, getBanners, getFavoritesCount, getFavorites, getPersonalizedRecommendations } from '../../utils/api.js'
-import { checkLoginStatus, loginWithProfile } from '../../utils/auth.js'
+import { getHomeData, getPersonalizedRecommendations, onHomeDataRefresh, getFavoritesCount } from '../../utils/api.js'
+import { checkLoginStatus, loginWithProfile } from '../../utils/auth'
 import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js'
-import { logger } from '../../utils/logger.js'
+import logger from '../../utils/logger.js'
 import { cacheManager } from '../../utils/cache.js'
 import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import { notificationService } from '../../services/notificationService.js'
+import { getWindowInfo, getStorage, setStorage, getTheme } from '../../utils/storageManager'
+ 
 
 Page({
   data: {
     favoritesCount: 0,
+    showDailyBadge: false,
+    unreadNotificationCount: 0,
     statusBarHeight: 20,
     navBarHeight: 44,
     banners: [],
@@ -22,7 +29,16 @@ Page({
    favoritesList: [],
     favoritesPage: 1,
     favoritesEnded: false,
-    favoritesLoading: false
+    favoritesLoading: false,
+
+    // Announcement Popup
+    showAnnouncement: false,
+    currentAnnouncement: null,
+    dontShowAgain: false,
+    
+    // Native Top Ad
+    nativeTopAd: null,
+    showNativeTopAd: false,
   },
 
   _isFirstLoad: true, // 标记是否为首次加载
@@ -31,17 +47,18 @@ Page({
   onLoad(options) {
     performanceMonitor.startPageLoad('首页')
     
-    // 🔥 优化1：先显示骨架屏，再加载数据
+    // 处理邀请参数
+    this.handleInvite(options)
+    
     this.initNavBar()
     this.setData({ loading: true })
     performanceMonitor.markMilestone('首页', '初始化完成')
-    
-    // 🔥 优化2：先尝试从 api.js 的本地缓存读取（更快）
+
+    // 🔥 优化：先尝试从本地缓存渲染（Stale-While-Revalidate 第一步）
     let hasCacheRendered = false
     try {
-      const apiCache = wx.getStorageSync('home_data_api_cache')
-      const now = Date.now()
-      if (apiCache && apiCache.expire > now && apiCache.data?.result?.success) {
+      const apiCache = getStorage('home_data_api_cache')
+      if (apiCache && apiCache.data?.result?.success) {
         const { banners, sections } = apiCache.data.result.data
         let updateData = { loading: false }
         
@@ -64,13 +81,13 @@ Page({
         if (Object.keys(updateData).length > 1 || updateData.loading === false) {
           this.setData(updateData)
           hasCacheRendered = true
-          performanceMonitor.markMilestone('首页', 'API缓存渲染完成')
+          performanceMonitor.markMilestone('首页', '本地缓存渲染完成')
         }
       }
     } catch (e) {
-      console.log('API缓存读取失败，尝试 cacheManager:', e)
+      // 缓存读取失败，忽略
     }
-    
+
     // 如果API缓存没渲染成功，再尝试 cacheManager 的缓存
     if (!hasCacheRendered) {
       const cachedData = cacheManager.get(STORAGE_KEYS.HOME_DATA_CACHE)
@@ -85,104 +102,185 @@ Page({
         }
         if (Object.keys(updateData).length > 1 || updateData.loading === false) {
           this.setData(updateData)
+          hasCacheRendered = true
           performanceMonitor.markMilestone('首页', '缓存渲染完成')
         }
       }
     }
 
-    // 🔥 优化3：延迟加载非关键数据
-    // 首页只加载关键数据，推荐等次要数据延迟加载
+    // 🔥 优化：本地缓存已渲染时，loadCriticalData 只负责后台刷新（不重复渲染相同数据）
+    this._hasCacheRendered = hasCacheRendered
     this.loadCriticalData()
     
-    // 🔥 优化4：延迟加载推荐（不影响首屏）
+    // 🔥 优化：延迟加载非关键数据（不影响首屏）
     setTimeout(() => {
       this.loadRecommendations()
-    }, 800)
+      this.checkDailyBadge()
+      this.loadNotificationBadge()
+      this.checkAnnouncement()
+    }, 1000)
+  },
+
+  onNativeAdError() {
+    if (this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: false })
+    }
+  },
+
+  async loadPageAds() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'pages/index/index'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      let nativeTop = pickByType(list, 'native_top')[0] || null
+      if (!nativeTop) {
+        const topNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'top' && it.isEnable)
+        if (topNativeVideo) nativeTop = topNativeVideo
+      }
+      if (nativeTop) this.setData({ nativeTopAd: nativeTop })
+    } catch (e) {
+      console.error('loadPageAds error:', e)
+    }
+  },
+
+  onPageScroll(e) {
+    const ad = this.data.nativeTopAd
+    const threshold = (ad && ad.scrollThreshold) || 200
+    const shouldShow = e.scrollTop >= threshold
+    if (shouldShow !== this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: shouldShow })
+    }
   },
 
   // 只加载首屏关键数据
   async loadCriticalData() {
     // 防止重复请求
     if (this._isLoadingData) {
-      console.log('[Index] 数据正在加载中，跳过重复请求')
       return
     }
     
     this._isLoadingData = true
     
     try {
-      const startTime = Date.now()
-      
-      // 只请求一次 getHomeData，因为它内部已经包含了 banners 和 sections
       performanceMonitor.markMilestone('首页', '开始请求数据')
-      const homeDataRes = await getHomeData()
+      
+      // 🔥 核心优化：复用 app.onLaunch 预热的 Promise，避免重复请求
+      // 如果预热已完成（Promise resolved），直接复用
+      // 如果预热还在进行（Promise pending），等待复用
+      // 如果没有预热（Promise 为 null），走正常流程
+      let homeDataRes
+      const app = getApp()
+      if (app.globalData.homeDataPromise) {
+        console.log('[首页] 复用预热数据...')
+        homeDataRes = await app.globalData.homeDataPromise
+        app.globalData.homeDataPromise = null  // 用完清空，防止下次重复
+      } else {
+        console.log('[首页] 无预热数据，单独请求...')
+        homeDataRes = await getHomeData()
+      }
       performanceMonitor.markMilestone('首页', '数据请求完成')
-      
-      const updateData = { loading: false }
-      let hasUpdates = false
-      let newBanners = null
-      let newSections = null
 
-      // 处理 sections 和 banners（都从 homeDataRes 中获取）
-      if (homeDataRes.result && homeDataRes.result.success) {
-        const { banners, sections } = homeDataRes.result.data
-        
-        // 处理 banners
-        if (banners && banners.length > 0) {
-          const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
-          newBanners = optimizedBanners.map(item => ({
-            ...item, 
-            id: item._id, 
-            image: item.optimizedUrl || item.image 
-          }))
-          updateData.banners = newBanners
-          hasUpdates = true
+      // 注册后台刷新回调：当 Stale-While-Revalidate 后台刷新完成时，静默更新UI
+      this._unsubscribeHomeRefresh = onHomeDataRefresh(async (freshRes) => {
+        if (freshRes && freshRes.result && freshRes.result.success && !this._isHiding) {
+          console.log('[首页] 后台刷新完成，静默更新UI')
+          await this._renderHomeData(freshRes)
         }
-
-        // 处理 sections
-        if (sections) {
-          performanceMonitor.markMilestone('首页', '开始处理sections')
-          const processedSections = await this.processSections(sections)
-          performanceMonitor.markMilestone('首页', 'sections处理完成')
-          newSections = processedSections
-          updateData.sections = processedSections
-          hasUpdates = true
-        }
-      }
-
-      if (hasUpdates) {
-        this.setData(updateData)
-        performanceMonitor.markMilestone('首页', 'setData完成')
-        
-        // 更新缓存
-        if (newBanners && newSections) {
-          cacheManager.set(STORAGE_KEYS.HOME_DATA_CACHE, { 
-            banners: newBanners, 
-            sections: newSections 
-          }, CACHE_EXPIRE.MEDIUM)
-        }
-      }
-      
-      performanceMonitor.endPageLoad('首页', {
-        bannerCount: newBanners?.length || 0,
-        sectionCount: newSections?.length || 0
       })
+
+      // 如果 onLoad 已经从本地缓存渲染了数据，且 getHomeData 返回的也是缓存数据，跳过重复渲染
+      if (this._hasCacheRendered) {
+        const cachedBanners = homeDataRes?.result?.data?.banners
+        const currentBanners = this.data.banners
+        const isSameData = cachedBanners && currentBanners && 
+          cachedBanners.length === currentBanners.length &&
+          cachedBanners[0]?._id === currentBanners[0]?.id
+        
+        if (isSameData) {
+          console.log('[首页] 数据与缓存一致，跳过重复渲染')
+        } else {
+          console.log('[首页] 检测到新数据，静默更新UI')
+          await this._renderHomeData(homeDataRes)
+        }
+      } else {
+        // 无缓存，正常渲染
+        const rendered = await this._renderHomeData(homeDataRes)
+        
+        if (rendered) {
+          performanceMonitor.endPageLoad('首页', {
+            bannerCount: this.data.banners?.length || 0,
+            sectionCount: this.data.sections?.length || 0
+          })
+          
+          const pageStats = performanceMonitor.getPageStats('首页')
+          if (pageStats && pageStats.totalTime) {
+            logger.logPerformance('page_load', {
+              loadTime: pageStats.totalTime,
+              bannerCount: this.data.banners?.length || 0,
+              sectionCount: this.data.sections?.length || 0
+            }, 'pages/index/index')
+          }
+          
+          logger.logPageView('pages/index/index')
+        }
+      }
       
-      // 关键数据加载完成后再检查收藏数
       this.loadFavoritesCount()
       
       // 🔥 预加载其他页面数据（不阻塞用户操作）
       setTimeout(() => {
         getApp().preloadOtherPagesData()
       }, 1000)
-    } catch (err) {
-      console.error('加载关键数据失败:', err)
-      this.setData({ loading: false })
-      performanceMonitor.endPageLoad('首页', { error: err.message })
     } finally {
       this._isLoadingData = false
       this._isFirstLoad = false
     }
+  },
+
+  // 渲染首页数据（提取为独立方法，stale-while-revalidate 可复用）
+  // 返回 Promise<boolean>，等待 sections 也处理完才 resolve
+  async _renderHomeData(homeDataRes) {
+    const updateData = { loading: false }
+    let hasUpdates = false
+    let newBanners = null
+    let newSections = null
+
+    if (homeDataRes.result && homeDataRes.result.success) {
+      const { banners, sections } = homeDataRes.result.data
+      
+      if (banners && banners.length > 0) {
+        const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
+        newBanners = optimizedBanners.map(item => ({
+          ...item, 
+          id: item._id, 
+          image: item.optimizedUrl || item.image 
+        }))
+        updateData.banners = newBanners
+        hasUpdates = true
+      }
+
+      if (sections) {
+        const processedSections = await this.processSections(sections)
+        newSections = processedSections
+        updateData.sections = processedSections
+        hasUpdates = true
+      }
+    }
+
+    if (hasUpdates) {
+      this.setData(updateData)
+      performanceMonitor.markMilestone('首页', 'setData完成')
+      // 更新缓存
+      if (newBanners && newSections) {
+        cacheManager.set(STORAGE_KEYS.HOME_DATA_CACHE, { 
+          banners: newBanners, 
+          sections: newSections 
+        }, CACHE_EXPIRE.MEDIUM)
+      }
+    }
+    
+    return hasUpdates
   },
 
   // 分离推荐数据加载（延迟执行）
@@ -202,9 +300,10 @@ Page({
           }))
         })
       }
-    } catch (err) {
-      console.error('加载推荐失败:', err)
+    } catch (e) {
+      console.error('loadRecommendations error:', e)
     }
+
   },
 
   // 提取数据处理逻辑
@@ -442,6 +541,12 @@ Page({
   },
 
   onPullDownRefresh() {
+    // 下拉刷新时清除缓存，确保获取最新数据
+    try {
+      wx.removeStorageSync('home_data_api_cache')
+      wx.removeStorageSync('home_data_cache')
+    } catch (e) {}
+
     // 下拉刷新时加载所有数据（完整刷新）
     Promise.all([
       this.loadCriticalData(),
@@ -460,8 +565,16 @@ Page({
 
 
   onShow() {
+    this._isHiding = false
     getApp().logEvent('pv', { page: 'index' })
     this.loadFavoritesCount()
+    this.loadNotificationBadge()
+    
+    // 刷新悬浮组件的未读计数
+    const floatingComponent = this.selectComponent('#floatingNotification')
+    if (floatingComponent && floatingComponent.refresh) {
+      floatingComponent.refresh()
+    }
     
     // 🔥 优化：首次加载由 onLoad 处理，onShow 只在特定情况下重新加载
     // 避免 onLoad 后紧接着 onShow 触发重复请求
@@ -476,10 +589,22 @@ Page({
     
     // 同步深色模式
     this.syncTheme()
+    
+    // 页面显示时智能触发插屏广告（带冷却时间检查）
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
+  },
+
+  onHide() {
+    this._isHiding = true
+  },
+
+  onUnload() {
+    this._isHiding = true
+    this._unsubscribeHomeRefresh?.()
   },
 
   syncTheme() {
-    const theme = wx.getAppBaseInfo().theme || 'light'
+    const theme = getTheme()
     this.setData({ theme })
   },
 
@@ -508,12 +633,11 @@ Page({
         
         // 如果云端是0，说明本地缓存可能是脏数据，清空它
         if (res.total === 0) {
-          wx.setStorageSync('favorites', [])
+          setStorage('favorites', [])
         }
       }
-    }).catch(err => {
-      console.error('获取云端收藏数量失败:', err)
     })
+
   },
 
   onSectionMore(e) {
@@ -571,14 +695,11 @@ Page({
   },
 
   initNavBar() {
-    try {
-      const info = wx.getWindowInfo()
-      const statusBarHeight = info.statusBarHeight || 20
-      const navBarHeight = 44 // Fixed 44px to match CSS
-      this.setData({ statusBarHeight, navBarHeight })
-    } catch (e) {
-      console.error('获取系统信息失败:', e)
-    }
+    // 🔥 优化：使用全局缓存的窗口信息，避免重复调用 wx.getWindowInfo
+    const info = getWindowInfo()
+    const statusBarHeight = info.statusBarHeight || 20
+    const navBarHeight = 44 // Fixed 44px to match CSS
+    this.setData({ statusBarHeight, navBarHeight })
   },
 
   async loadData() {
@@ -640,16 +761,13 @@ Page({
         })
         
         // 3. 缓存数据
-        wx.setStorageSync('home_data_cache', { banners, sections: processedSections })
+        setStorage('home_data_cache', { banners, sections: processedSections })
       } else {
         // 请求虽然成功但业务逻辑失败，尝试读取缓存
         this.useCache('加载首页数据失败')
       }
-    } catch (err) {
-      console.error('加载首页数据失败:', err)
-      // 网络连接失败，使用缓存
-      this.useCache('当前网络不可用，已为您展示离线内容')
-    } finally {
+    }
+  finally {
       this.setData({ loading: false })
     }
   },
@@ -769,6 +887,12 @@ Page({
     })
   },
 
+  navigateToDailyPicks() {
+    wx.navigateTo({
+      url: '/subpackages/daily-picks/daily-picks'
+    })
+  },
+
   checkLogin() {
     return checkLoginStatus()
   },
@@ -782,7 +906,6 @@ Page({
       }
       return false
     } catch (e) {
-      console.error('登录失败', e)
       return false
     }
   },
@@ -851,10 +974,7 @@ Page({
           favoritesLoading: false
         })
       })
-      .catch(err => {
-        console.error('加载收藏列表失败:', err)
-        this.setData({ favoritesLoading: false })
-      })
+
   },
 
   handleFavoriteTap(e) {
@@ -977,15 +1097,171 @@ Page({
         return
     }
 
+    // 兼容旧版 link 字段（数据库直接存的 URL）
+    if (target.link) {
+      const linkUrl = target.link.trim()
+      if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
+        wx.navigateTo({
+          url: `/subpackages/webview/webview?url=${encodeURIComponent(linkUrl)}`,
+          fail: (err) => {
+            console.error('link跳转失败:', err)
+            wx.showToast({ title: '无法打开链接', icon: 'none' })
+          }
+        })
+        return
+      }
+    }
+
     // 兼容旧版自动生成的轮播图
     if (target.targetPath) {
-      wx.switchTab({ 
+      wx.switchTab({
         url: target.targetPath,
         fail: () => wx.navigateTo({ url: target.targetPath })
       })
       return
     }
-    
+
     wx.showToast({ title: '暂未配置跳转', icon: 'none' })
+  },
+
+  checkDailyBadge() {
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const readDate = getStorage('daily_picks_read_date')
+    this.setData({
+      showDailyBadge: readDate !== todayStr
+    })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      path: '/pages/index/index',
+      imageUrl: ''
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      query: '',
+      imageUrl: ''
+    }
+  },
+
+  navigateToNotifications() {
+    wx.navigateTo({
+      url: '/subpackages/notifications/notifications'
+    })
+  },
+
+  async loadNotificationBadge() {
+    try {
+      const unreadCount = await notificationService.getUnreadCount()
+      this.setData({ unreadNotificationCount: unreadCount })
+    } catch (e) {
+      console.error('loadNotificationBadge error:', e)
+    }
+  },
+
+  async checkAnnouncement() {
+    try {
+      const notifications = await notificationService.getActiveNotifications()
+      const readIds = await notificationService.getUserReadStatus()
+      const popupAnnouncements = notifications.filter(n => 
+        n.showPopup && !readIds.includes(n._id)
+      )
+
+      if (popupAnnouncements.length > 0) {
+        const announcement = popupAnnouncements[0]
+        
+        const dismissedAnnouncements = getStorage('dismissed_announcements') || {}
+        if (dismissedAnnouncements[announcement._id]) {
+          return
+        }
+
+        this.setData({
+          showAnnouncement: true,
+          currentAnnouncement: announcement,
+          dontShowAgain: false
+        })
+      }
+    } catch (e) {}
+  },
+
+  closeAnnouncement() {
+    const { currentAnnouncement, dontShowAgain } = this.data
+
+    if (dontShowAgain && currentAnnouncement) {
+      const dismissedAnnouncements = getStorage('dismissed_announcements') || {}
+      dismissedAnnouncements[currentAnnouncement._id] = true
+      setStorage('dismissed_announcements', dismissedAnnouncements)
+    }
+
+    if (currentAnnouncement) {
+      notificationService.markAsRead(currentAnnouncement._id)
+    }
+
+    this.setData({
+      showAnnouncement: false,
+      currentAnnouncement: null
+    })
+
+    this.loadNotificationBadge()
+  },
+
+  handleAnnouncementConfirm() {
+    const { currentAnnouncement } = this.data
+    if (!currentAnnouncement) return
+
+    this.closeAnnouncement()
+
+    if (currentAnnouncement.linkType === 'page' && currentAnnouncement.linkValue) {
+      wx.navigateTo({ url: currentAnnouncement.linkValue })
+    } else if (currentAnnouncement.linkType === 'webview' && currentAnnouncement.linkValue) {
+      wx.navigateTo({ url: '/subpackages/webview/webview?url=' + encodeURIComponent(currentAnnouncement.linkValue) })
+    }
+  },
+
+  toggleDontShowAgain() {
+    this.setData({
+      dontShowAgain: !this.data.dontShowAgain
+    })
+  },
+
+  getPriorityIcon(priority) {
+    const map = {
+      high: '🔴',
+      normal: '📢',
+      low: 'ℹ️'
+    }
+    return map[priority] || '📢'
+  },
+
+  async handleInvite(options) {
+    const inviterOpenid = options.inviter || options.from
+    if (!inviterOpenid) return
+    
+    const userInfo = getStorage('userInfo')
+    if (!userInfo || !userInfo.openid) {
+      setStorage('pendingInviter', inviterOpenid)
+      return
+    }
+    
+    if (userInfo.openid === inviterOpenid) return
+    
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'userPoints',
+        data: {
+          action: 'bindInviter',
+          inviterOpenid: inviterOpenid
+        }
+      })
+      
+
+    } catch (e) {
+      console.error('绑定邀请人失败:', e)
+    }
   }
 })

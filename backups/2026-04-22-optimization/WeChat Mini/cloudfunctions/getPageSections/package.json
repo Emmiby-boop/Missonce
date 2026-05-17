@@ -1,0 +1,9 @@
+{
+  "name": "getPageSections",
+  "version": "1.0.0",
+  "description": "获取页面板块配置",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

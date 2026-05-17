@@ -1,0 +1,57 @@
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="navigateBack">
+      <image class="back-icon" src="/images/preview-back.svg" mode="aspectFit" />
+    </view>
+    <text class="nav-title">{{pageTitle}}</text>
+    <view class="nav-placeholder"></view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
+
+<view class="container">
+  <ad-unit kind="interstitial" page-path="/subpackages/resource-list/resource-list"></ad-unit>
+  <ad-unit position="top" custom-class="native-top-ad" page-path="/subpackages/resource-list/resource-list" threshold="200" ext-style="top: {{statusBarHeight + navBarHeight - 1}}px;"></ad-unit>
+  <ad-unit position="middle" custom-class="native-video-mid-ad" page-path="/subpackages/resource-list/resource-list"></ad-unit>
+  <!-- 标签导航 (当有标签数据且非搜索模式时显示) -->
+  <scroll-view class="category-scroll" scroll-x enable-flex style="top: {{statusBarHeight + navBarHeight - 1}}px" wx:if="{{tagList.length > 0 && !keyword && !color}}">
+    <view class="category-list">
+      <view class="category-item {{currentTag === item.id ? 'active' : ''}}" 
+            wx:for="{{tagList}}" 
+            wx:key="id" 
+            data-tag="{{item.id}}" 
+            bindtap="onTagChange">
+        {{item.name}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 骨架屏 - 首次加载时显示 -->
+  <view class="skeleton-container" wx:if="{{loading && list.length === 0}}">
+    <view class="skeleton-grid">
+      <view class="skeleton-item" wx:for="{{9}}" wx:key="index">
+        <view class="skeleton-image"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 资源列表 - 3列瀑布流 -->
+  <view class="waterfall-container" wx:if="{{list.length > 0}}">
+    <waterfall 
+      list="{{list}}" 
+      columnCount="3" 
+      bind:itemtap="onWaterfallItemTap"
+    />
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading && list.length > 0}}">
+    <text>加载中...</text>
+  </view>
+  <view class="no-more" wx:if="{{!hasMore && list.length > 0}}">
+    <text>没有更多了</text>
+  </view>
+  <view class="empty" wx:if="{{!loading && list.length === 0}}">
+    <text class="empty-title">暂无数据</text>
+  </view>
+</view>

@@ -1,0 +1,307 @@
+const cloud = require('wx-server-sdk')
+
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database()
+const _ = db.command
+const CloudFunctionPerformance = require('../shared/performance.js')
+
+async function getAllTags(type) {
+  try {
+    const where = type ? { type } : {}
+    const resources = await db.collection('resources')
+      .where(where)
+      .field({ tags: 1 })
+      .get()
+    
+    const allTags = new Set()
+    resources.data.forEach(item => {
+      if (item.tags && Array.isArray(item.tags)) {
+        item.tags.forEach(tag => allTags.add(tag))
+      }
+    })
+    
+    return Array.from(allTags)
+  } catch (error) {
+    console.error('获取标签失败:', error)
+    return []
+  }
+}
+
+async function getAllCategories(type) {
+  try {
+    const where = type ? { type } : {}
+    const categories = await db.collection('categories')
+      .where(where)
+      .get()
+    
+    return categories.data.map(item => ({
+      key: item.key,
+      name: item.name
+    }))
+  } catch (error) {
+    console.error('获取分类失败:', error)
+    return []
+  }
+}
+
+exports.main = async (event) => {
+  const perf = new CloudFunctionPerformance()
+  const params = event || {}
+  
+  try {
+    perf.markMilestone('初始化完成')
+    
+    const {
+      type = 'all',
+      category = '',
+      tag = '',
+      page = 1,
+      pageSize = 20,
+      keyword = '',
+      sort = 'latest',
+      ids = [],
+      includeMeta = true,
+      color = ''
+    } = params
+
+    const limit = Math.min(Math.max(parseInt(pageSize) || 20, 1), 100)
+    perf.markMilestone('参数解析完成')
+
+    if (ids && ids.length > 0) {
+       const res = await db.collection('resources')
+        .where({
+          _id: _.in(ids)
+        })
+        .field({
+          _id: true, title: true, type: true, coverUrl: true,
+          originUrl: true, categories: true, tags: true,
+          hotScore: true, dailyHotScore: true, downloads: true, favorites: true, createdAt: true
+        })
+        .limit(100)
+        .get()
+
+       const data = (res.data || []).map(item => ({
+          id: item._id,
+          title: item.title,
+          type: item.type,
+          coverUrl: item.coverUrl,
+          originUrl: item.originUrl || item.coverUrl,
+          categories: item.categories || [item.category].filter(Boolean),
+          tags: item.tags || [],
+          hotScore: item.hotScore || 0,
+          dailyHotScore: item.dailyHotScore || 0,
+          downloads: item.downloads || 0,
+          favorites: item.favorites || 0,
+          createdAt: item.createdAt || null
+        }))
+        
+        const orderMap = new Map(ids.map((id, index) => [id, index]))
+        data.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0))
+
+        perf.markMilestone('ID查询完成')
+        perf.logSummary()
+        
+        return {
+          success: true,
+          data,
+          page: 1,
+          pageSize: ids.length,
+          hasMore: false,
+          categories: [],
+          tags: []
+        }
+    }
+
+    const conditions = []
+    let searchType = type
+    let searchKeyword = keyword
+    
+    // 智能关键词解析
+    if (searchKeyword) {
+      // 定义类型关键词
+      const avatarKeywords = ['头像', '头象']
+      const wallpaperKeywords = ['壁纸', '背景', '墙纸']
+      
+      let hasAvatarKeyword = false
+      let hasWallpaperKeyword = false
+      
+      // 检查是否包含类型关键词
+      avatarKeywords.forEach(k => {
+        if (searchKeyword.includes(k)) hasAvatarKeyword = true
+      })
+      wallpaperKeywords.forEach(k => {
+        if (searchKeyword.includes(k)) hasWallpaperKeyword = true
+      })
+      
+      // 如果同时包含两种类型关键词，不做处理，保留原始搜索
+      if (hasAvatarKeyword && hasWallpaperKeyword) {
+        // 不处理
+      } 
+      // 如果包含头像关键词
+      else if (hasAvatarKeyword) {
+        searchType = 'avatar'
+        // 移除类型关键词
+        avatarKeywords.forEach(k => {
+          searchKeyword = searchKeyword.split(k).join('')
+        })
+      } 
+      // 如果包含壁纸关键词
+      else if (hasWallpaperKeyword) {
+        searchType = 'wallpaper'
+        // 移除类型关键词
+        wallpaperKeywords.forEach(k => {
+          searchKeyword = searchKeyword.split(k).join('')
+        })
+      }
+      
+      // 清理关键词
+      const cleanKeyword = searchKeyword.replace(/\s+/g, ' ').trim()
+      
+      if (cleanKeyword) {
+        const keywordReg = db.RegExp({ regexp: cleanKeyword, options: 'i' })
+        conditions.push(_.or([
+          // 1. 精确匹配 categories 数组（和后台一样）
+          { categories: _.in([cleanKeyword]) },
+          // 2. 精确匹配 tags 数组（和后台一样）
+          { tags: _.in([cleanKeyword]) },
+          // 3. 正则匹配 title
+          { title: keywordReg },
+          // 4. 正则匹配 categories 数组（备选）
+          { categories: keywordReg },
+          // 5. 正则匹配 tags 数组（备选）
+          { tags: keywordReg },
+          // 6. 正则匹配 category 字符串（备选）
+          { category: keywordReg }
+        ]))
+      }
+    }
+
+    if (searchType !== 'all') {
+      conditions.push({ type: searchType })
+    }
+
+    if (category && category !== 'all') {
+      conditions.push({
+        categories: _.in([category])
+      })
+    }
+
+    if (tag) {
+      conditions.push(_.or([
+        { tags: tag },
+        { categories: tag },
+        { category: tag }
+      ]))
+    }
+    
+    if (color) {
+      conditions.push({ colors: _.in([color]) })
+    }
+
+    const skip = Math.max(page - 1, 0) * pageSize
+    perf.markMilestone('查询条件构建完成')
+    
+    const SORT_FIELD_MAP = {
+      'latest': 'createdAt',
+      'createTime': 'createdAt',
+      'createdAt': 'createdAt',
+      'hot': 'hotScore',           // 总热度
+      'hotScore': 'hotScore',
+      'todayHot': 'dailyHotScore', // 今日热度
+      'dailyHot': 'dailyHotScore',
+      'dailyHotScore': 'dailyHotScore',
+      'viewCount': 'hotScore',
+      'likeCount': 'favorites',
+      'favorites': 'favorites',
+      'downloadCount': 'downloads',
+      'downloads': 'downloads'
+    }
+    
+    const sortField = SORT_FIELD_MAP[sort] || 'createdAt'
+
+    const queryStart = Date.now()
+    let res
+    
+    if (sort === 'random') {
+      res = await db.collection('resources')
+        .aggregate()
+        .match(_.and(conditions))
+        .sample({ size: limit })
+        .project({
+          _id: true, type: true, title: true, coverUrl: true,
+          originUrl: true, categories: true, tags: true,
+          hotScore: true, downloads: true, favorites: true, createdAt: true
+        })
+        .end()
+      
+      res.data = res.list
+    } else {
+      res = await db.collection('resources')
+        .where(_.and(conditions))
+        .field({
+          _id: true, type: true, title: true, coverUrl: true,
+          originUrl: true, categories: true, tags: true,
+          hotScore: true, dailyHotScore: true, downloads: true, favorites: true, createdAt: true
+        })
+        .orderBy(sortField, 'desc')
+        .skip(skip)
+        .limit(limit)
+        .get()
+    }
+    
+    perf.trackDatabaseQuery('resources', 'query_resources', queryStart)
+    perf.markMilestone('资源查询完成')
+
+    // 🔥 优化：移除云函数端 URL 转换，返回原始 cloud:// URL
+    // 原因：getTempFileURL 阻塞严重，导致响应慢
+    // 改为客户端按需转换，利用微信小程序原生缓存机制
+
+    const data = (res.data || []).map(item => ({
+      id: item._id,
+      title: item.title,
+      type: item.type,
+      coverUrl: item.coverUrl,
+      originUrl: item.originUrl || item.coverUrl,
+      categories: item.categories || [item.category].filter(Boolean),
+      tags: item.tags || [],
+      hotScore: item.hotScore || 0,
+      dailyHotScore: item.dailyHotScore || 0,
+      downloads: item.downloads || 0,
+      favorites: item.favorites || 0,
+      createdAt: item.createdAt || null
+    }))
+
+    let categories = []
+    let tags = []
+    if (includeMeta) {
+      const meta = await Promise.all([
+        getAllCategories(type === 'all' ? undefined : type),
+        getAllTags(type === 'all' ? undefined : type)
+      ])
+      categories = meta[0]
+      tags = meta[1]
+      perf.markMilestone('元数据获取完成')
+    }
+
+    const result = {
+      success: true,
+      data,
+      page,
+      pageSize,
+      hasMore: data.length === pageSize,
+      categories,
+      tags
+    }
+    
+    perf.logSummary()
+    return result
+    
+  } catch (error) {
+    console.error('getResources error:', error)
+    perf.logSummary()
+    return {
+      success: false,
+      message: error?.message || '加载资源失败'
+    }
+  }
+}

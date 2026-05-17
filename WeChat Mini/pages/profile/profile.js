@@ -6,14 +6,12 @@ import {
   syncUserFromCloud 
 } from '../../utils/auth.js'
 import { 
-  getFavoritesCount, 
   getUserDownloads, 
-  clearUserDownloads,
   getFavorites
 } from '../../utils/api.js'
 import { performanceMonitor } from '../../utils/performance.js'
-
-const ENV_ID = 'prod-2gfd169w229986b8' // 保持原有常量
+import logger from '../../utils/logger.js'
+import { getStorage, getWindowInfo, getTheme } from '../../utils/storageManager'
 
 Page({
   data: {
@@ -33,6 +31,11 @@ Page({
     showDownload: false,
     showFavorites: false,
     showContactMenu: false,
+    showOfficialAccount: false,
+    
+    // Official Account
+    officialAccount: null,
+    qrcodeLoaded: false,
     
     // Data Lists
     downloadHistory: [],
@@ -52,12 +55,19 @@ Page({
     
     // Counts
     downloadCount: 0,
+    memberStatus: {
+      isMember: false,
+      memberLevel: 'none',
+      memberName: '',
+      daysRemaining: 0
+    },
     favoriteCount: 0,
     
     // Menu Configuration
     menuItems: [
       { title: '联系我们', iconPath: '/images/menu-contact.svg', color: '#ff9c6e' },
       { title: '推荐给好友', iconPath: '/images/menu-share.svg', color: '#5cdbd3', isShare: true },
+
       { title: '清除缓存', iconPath: '/images/menu-clear.svg', color: '#ff85c0' },
       { title: '关于我们', iconPath: '/images/menu-about.svg', color: '#69c0ff' }
     ]
@@ -73,6 +83,15 @@ Page({
     performanceMonitor.markMilestone('个人中心', '下载数加载完成')
     this.initVersion()
     performanceMonitor.endPageLoad('个人中心')
+    
+    const pageStats = performanceMonitor.getPageStats('个人中心')
+    if (pageStats?.totalTime) {
+      logger.logPerformance('page_load', {
+        loadTime: pageStats.totalTime
+      }, 'pages/profile/profile')
+    }
+    
+    logger.logPageView('pages/profile/profile')
   },
 
   initVersion() {
@@ -97,36 +116,24 @@ Page({
   },
 
   initNavBar() {
-    try {
-      // 使用 wx.getWindowInfo 替代已废弃的 wx.getSystemInfoSync
-      const windowInfo = wx.getWindowInfo()
-      this.setData({
-        statusBarHeight: windowInfo.statusBarHeight,
-        navBarHeight: 44 // 标准导航栏高度
-      })
-    } catch (e) {
-      console.error('获取系统信息失败', e)
-      // 降级处理：如果新 API 不可用，尝试旧 API
-      try {
-        const sysInfo = wx.getSystemInfoSync()
-        this.setData({
-          statusBarHeight: sysInfo.statusBarHeight
-        })
-      } catch (err) {
-        console.error('降级获取系统信息失败', err)
-      }
-    }
+    // 🔥 优化：使用全局缓存的窗口信息，避免重复调用 wx.getWindowInfo/getSystemInfoSync
+    const windowInfo = getWindowInfo()
+    this.setData({
+      statusBarHeight: windowInfo.statusBarHeight,
+      navBarHeight: 44 // 标准导航栏高度
+    })
   },
 
   onShow() {
     this.checkLoginStatus()
     this.loadFavoritesCount()
     this.syncUserInfo()
+    this.checkTodayCheckIn()
     this.syncTheme()
   },
 
   syncTheme() {
-    const theme = wx.getAppBaseInfo().theme || 'light'
+    const theme = getTheme()
     this.setData({ theme })
     this.loadFavoritesCount()
   },
@@ -141,7 +148,7 @@ Page({
     }
 
     try {
-      const openid = wx.getStorageSync('openid')
+      const openid = getStorage('openid')
       if (!openid) return
 
       const db = wx.cloud.database()
@@ -160,14 +167,14 @@ Page({
       // Sync legacy local storage if needed
       if (favCount === 0) {
         try {
-          wx.setStorageSync('favorites', [])
+          wx.setStorage({ key: 'favorites', data: [] })
         } catch (e) {}
       }
     } catch (e) {
       console.error('加载统计数据失败:', e)
       // Fallback to local storage if cloud fails
       try {
-        const favorites = wx.getStorageSync('favorites') || []
+        const favorites = getStorage('favorites') || []
         this.setData({ 
           'stats.favorites': favorites.length,
           favoriteCount: favorites.length 
@@ -178,7 +185,7 @@ Page({
 
   checkLoginStatus() {
     if (checkLoginStatus()) {
-      const userInfo = wx.getStorageSync('userInfo')
+      const userInfo = getStorage('userInfo')
       // 格式化显示ID：优先使用userId，否则截取openid后6位
       if (userInfo) {
         userInfo.displayId = userInfo.userId || (userInfo.openid ? userInfo.openid.slice(-6).toUpperCase() : '')
@@ -210,6 +217,7 @@ Page({
       this.checkTodayCheckIn()
       this.loadFavoritesCount()
       this.syncUserInfo()
+      this.loadMemberStatus()
       
       wx.showToast({ title: '登录成功', icon: 'success' })
     } catch (e) {
@@ -222,7 +230,7 @@ Page({
     const dbUser = await syncUserFromCloud()
     if (dbUser) {
       // 强制更新页面数据，确保视图刷新
-      const localUserInfo = wx.getStorageSync('userInfo')
+      const localUserInfo = getStorage('userInfo')
       // 格式化显示ID
       if (localUserInfo) {
         localUserInfo.displayId = localUserInfo.userId || (localUserInfo.openid ? localUserInfo.openid.slice(-6).toUpperCase() : '')
@@ -233,6 +241,23 @@ Page({
       this.resolveAvatarUrl(localUserInfo.avatarUrl)
       
       this.checkTodayCheckIn() // 刷新签到状态
+    }
+  },
+
+  async loadMemberStatus() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'userPoints',
+        data: { action: 'getMemberStatus' }
+      })
+
+      if (res.result && res.result.success) {
+        this.setData({
+          memberStatus: res.result.data
+        })
+      }
+    } catch (e) {
+      console.error('获取会员状态失败:', e)
     }
   },
 
@@ -348,14 +373,12 @@ Page({
 
   loadDownloadCount() {
     try {
-      const history = wx.getStorageSync('downloadHistory') || []
+      const history = getStorage('downloadHistory') || []
       this.setData({ downloadCount: history.length })
     } catch (e) {
       this.setData({ downloadCount: 0 })
     }
   },
-
-
 
   goEditProfile() {
     if (!this.data.userInfo) return
@@ -384,6 +407,7 @@ Page({
       case '联系我们':
         this.handleContact()
         break
+
       case '清除缓存':
         this.handleClearCache()
         break
@@ -395,6 +419,7 @@ Page({
     }
   },
 
+
   handleContact() {
     this.setData({ showContactMenu: true })
   },
@@ -404,23 +429,65 @@ Page({
   },
 
   handleOfficialAccount() {
-    // TODO: 请在此处填入您的公众号关联文章链接，用于引导用户关注
-    // 只有配置了链接，点击才会跳转到文章页面
-    // 例如: https://mp.weixin.qq.com/s/xxxxxxxxxxxx
-    const articleUrl = 'https://mp.weixin.qq.com/s/3M2ZItekDXs3e4_vTejaGg' 
-
-    if (articleUrl && articleUrl.startsWith('http')) {
-      wx.navigateTo({
-        url: `/subpackages/webview/webview?url=${encodeURIComponent(articleUrl)}`,
-        fail: (err) => {
-          console.error('跳转Webview失败', err)
-          this.copyOfficialAccountName()
-        }
-      })
-    } else {
-      // 如果没有配置链接，则执行原来的复制逻辑
-      this.copyOfficialAccountName()
+    this.setData({ showContactMenu: false })
+    
+    if (!this.data.officialAccount) {
+      this.loadOfficialAccountConfig()
     }
+    
+    this.setData({ showOfficialAccount: true })
+  },
+
+  closeOfficialAccount() {
+    this.setData({ showOfficialAccount: false })
+  },
+
+  async loadOfficialAccountConfig() {
+    // 每次打开都重置加载状态
+    this.setData({ qrcodeLoaded: false })
+    
+    try {
+      const db = wx.cloud.database()
+      const res = await db.collection('contact_config')
+        .where({ type: 'official_account', enabled: true })
+        .get()
+      
+      if (res.data && res.data.length > 0) {
+        const config = res.data[0]
+        
+        // 如果有二维码且是云存储ID，需要获取临时链接
+        if (config.qrcodeUrl && !config.qrcodeUrl.startsWith('https://') && !config.qrcodeUrl.startsWith('http://')) {
+          try {
+            const tempRes = await wx.cloud.getTempFileURL({
+              fileList: [config.qrcodeUrl]
+            })
+            if (tempRes.fileList && tempRes.fileList[0].tempFileURL) {
+              config.qrcodeUrl = tempRes.fileList[0].tempFileURL
+            }
+          } catch (e) {
+            console.error('获取二维码临时链接失败:', e)
+          }
+        }
+        
+        this.setData({ 
+          officialAccount: {
+            ...config,
+            title: config.title || '官方账号'
+          }
+        })
+      }
+    } catch (err) {
+      console.error('加载官方账号配置失败:', err)
+    }
+  },
+
+  onQrcodeLoad() {
+    this.setData({ qrcodeLoaded: true })
+  },
+
+  onQrcodeError() {
+    this.setData({ qrcodeLoaded: false })
+    wx.showToast({ title: '二维码加载失败', icon: 'none' })
   },
 
   copyOfficialAccountName() {
@@ -448,20 +515,20 @@ Page({
       success: (res) => {
         if (res.confirm) {
           try {
-            const userInfo = wx.getStorageSync('userInfo')
-            const token = wx.getStorageSync('token')
-            const openid = wx.getStorageSync('openid')
-            const downloadHistory = wx.getStorageSync('downloadHistory')
-            const favorites = wx.getStorageSync('favorites')
-            
-            wx.clearStorageSync()
-            
-            if (userInfo) wx.setStorageSync('userInfo', userInfo)
-            if (token) wx.setStorageSync('token', token)
-            if (openid) wx.setStorageSync('openid', openid)
-            if (downloadHistory) wx.setStorageSync('downloadHistory', downloadHistory)
-            if (favorites) wx.setStorageSync('favorites', favorites)
-            
+            const userInfo = getStorage('userInfo')
+            const token = getStorage('token')
+            const openid = getStorage('openid')
+            const downloadHistory = getStorage('downloadHistory')
+            const favorites = getStorage('favorites')
+
+            wx.clearStorage()
+
+            if (userInfo) wx.setStorage({ key: 'userInfo', data: userInfo })
+            if (token) wx.setStorage({ key: 'token', data: token })
+            if (openid) wx.setStorage({ key: 'openid', data: openid })
+            if (downloadHistory) wx.setStorage({ key: 'downloadHistory', data: downloadHistory })
+            if (favorites) wx.setStorage({ key: 'favorites', data: favorites })
+
             wx.showToast({ title: '清除成功', icon: 'success' })
           } catch (e) {
             console.error('清除缓存失败', e)
@@ -578,6 +645,71 @@ Page({
     this.navigateToPreview(item)
   },
 
+  clearFavorites() {
+    if (this.data.favoritesList.length === 0) return
+
+    wx.showModal({
+      title: '确认清空',
+      content: `确定要清空全部 ${this.data.favoritesList.length} 条收藏吗？此操作不可恢复。`,
+      confirmText: '确定清空',
+      confirmColor: '#ff4d4f',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          this.clearAllFavorites()
+        }
+      }
+    })
+  },
+
+  async clearAllFavorites() {
+    wx.showLoading({ title: '清空中...', mask: true })
+
+    try {
+      const db = wx.cloud.database()
+      const openid = getStorage('openid')
+
+      // 1. 清空云端数据
+      if (openid) {
+        const batchDelete = async () => {
+          const res = await db.collection('favorites').where({
+            _openid: openid
+          }).limit(100).get()
+          
+          if (res.data.length > 0) {
+            const deletePromises = res.data.map(item => 
+              db.collection('favorites').doc(item._id).remove()
+            )
+            await Promise.all(deletePromises)
+            await batchDelete()
+          }
+        }
+        await batchDelete()
+      }
+
+      // 2. 清空本地数据
+      this.setData({ 
+        favoritesList: [],
+        favoritesEnded: true 
+      })
+      wx.setStorage({ key: 'favorites', data: [] })
+      this.loadFavoritesCount()
+
+      wx.hideLoading()
+      wx.showToast({
+        title: '已清空全部收藏',
+        icon: 'success'
+      })
+    } catch (err) {
+      console.error('清空收藏失败:', err)
+      wx.hideLoading()
+      wx.showToast({
+        title: '清空失败，请重试',
+        icon: 'none'
+      })
+    }
+  },
+
   navigateToPreview(item) {
     if (!item || !item.url) return
     
@@ -641,7 +773,7 @@ Page({
           downloadLoading: false
         })
         
-        wx.setStorageSync('downloadHistory', newList)
+        wx.setStorage({ key: 'downloadHistory', data: newList })
       })
       .catch(err => {
         console.error('加载云端下载记录失败:', err)
@@ -662,7 +794,28 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '正在清空...' })
           try {
-            await clearUserDownloads()
+            const db = wx.cloud.database()
+            const openid = getStorage('openid')
+
+            // 1. 清空云端数据
+            if (openid) {
+              const batchDelete = async () => {
+                const res = await db.collection('downloads').where({
+                  _openid: openid
+                }).limit(100).get()
+                
+                if (res.data.length > 0) {
+                  const deletePromises = res.data.map(item => 
+                    db.collection('downloads').doc(item._id).remove()
+                  )
+                  await Promise.all(deletePromises)
+                  await batchDelete()
+                }
+              }
+              await batchDelete()
+            }
+
+            // 2. 清空本地数据
             wx.removeStorageSync('downloadHistory')
             this.setData({ 
               downloadHistory: [],
@@ -683,9 +836,21 @@ Page({
   },
 
   onShareAppMessage() {
+    const userInfo = getStorage('userInfo')
+    const inviterParam = userInfo && userInfo.openid ? '?inviter=' + userInfo.openid : ''
     return {
-      title: '动态头像精选壁纸',
-      path: '/pages/index/index',
+      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      path: '/pages/index/index' + inviterParam,
+      imageUrl: '/images/share-cover.png'
+    }
+  },
+
+  onShareTimeline() {
+    const userInfo = getStorage('userInfo')
+    const inviterParam = userInfo && userInfo.openid ? 'inviter=' + userInfo.openid : ''
+    return {
+      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      query: inviterParam,
       imageUrl: '/images/share-cover.png'
     }
   },

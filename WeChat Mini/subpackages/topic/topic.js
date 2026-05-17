@@ -1,5 +1,7 @@
 import { getResources } from '../../utils/api.js'
 import { performanceMonitor } from '../../utils/performance.js'
+import logger from '../../utils/logger.js'
+import { getWindowInfo } from '../../utils/storageManager.js'
 
 Page({
   data: {
@@ -11,25 +13,39 @@ Page({
     category: '',
     type: 'all', // all, wallpaper, avatar
     layout: null,
-    
+
     list: [],
     page: 1,
     pageSize: 15,
     loading: false,
     noMore: false,
+
+    statusBarHeight: 20,
+    navBarHeight: 44,
     refreshing: false
   },
 
   async onLoad(options) {
     performanceMonitor.startPageLoad('专题详情')
     console.log('专题详情页加载，参数:', options)
+
+    // 获取导航栏高度（用于顶部广告定位）
+    try {
+      const info = getWindowInfo()
+      const statusBarHeight = info.statusBarHeight || 20
+      const navBarHeight = 44
+      this.setData({ statusBarHeight, navBarHeight })
+    } catch (e) {}
+
     const { id, title, cover, description, tag, category, type, sort } = options
     performanceMonitor.markMilestone('专题详情', '参数解析完成')
     
+
     // 如果传入了ID，优先从数据库获取专题详情
     if (id) {
       console.log('加载专题详情，ID:', id)
-      await this.loadTopicDetail(id)
+      // 并行加载：同时发起专题详情和资源列表请求
+      await this.loadTopicDetailAndResources(id)
     } else {
       console.warn('没有传入专题ID')
       this.setData({
@@ -53,7 +69,7 @@ Page({
     }
   },
 
-  async loadTopicDetail(id) {
+  async loadTopicDetailAndResources(id) {
     try {
       let topic
       
@@ -61,7 +77,6 @@ Page({
       const app = getApp()
       if (app.globalData.preloadedTopics && app.globalData.preloadedTopics[id]) {
         topic = app.globalData.preloadedTopics[id]
-        // Clear used preload data to save memory
         delete app.globalData.preloadedTopics[id]
         performanceMonitor.markMilestone('专题详情', '使用预加载数据')
       }
@@ -91,7 +106,8 @@ Page({
       performanceMonitor.markMilestone('专题详情', '专题详情加载完成')
 
       const rawCover = topic.coverUrl || topic.cover || ''
-
+      
+      // 先设置专题信息，立即显示给用户
       this.setData({
         id: topic._id,
         title: topic.title,
@@ -112,15 +128,10 @@ Page({
             this.setData({ pageSize: Number(gridModule.config.count) })
           }
           
-          // Calculate Aspect Ratio based on topic type
-          // If topic.resourceType is specific, use that. If 'all', use default (3:4) or try to check grid config?
-          // Let's use topic.resourceType as the main driver as per requirement.
           let aspectRatio = '133.33%' // Default 3:4
           if (topic.resourceType === 'wallpaper') aspectRatio = '177.77%' // 9:16
           if (topic.resourceType === 'avatar') aspectRatio = '100%' // 1:1
           
-          // Inject aspectRatio into grid module config for wxml usage
-          // We need to update the layout object in data
           const newLayout = { ...topic.layout }
           newLayout.modules = newLayout.modules.map(m => {
             if (m.type === 'resource-grid') {
@@ -137,7 +148,28 @@ Page({
       })
       performanceMonitor.markMilestone('专题详情', '页面设置完成')
 
-      this.loadData(true)
+      // 准备资源请求参数
+      let manualIds = []
+      if (topic.layout && topic.layout.modules) {
+        const gridModule = topic.layout.modules.find(m => m.type === 'resource-grid')
+        if (gridModule && gridModule.config && gridModule.config.sourceType === 'manual' && gridModule.config.manualIds) {
+          manualIds = gridModule.config.manualIds
+        }
+      }
+
+      const params = {
+        page: 1,
+        pageSize: this.data.pageSize,
+        sort: topic.defaultSort || 'latest',
+        type: topic.resourceType === 'all' ? undefined : topic.resourceType,
+        category: topic.filterType === 'category' ? topic.filterValue : undefined,
+        tag: topic.filterType === 'tag' ? topic.filterValue : undefined,
+        ids: manualIds.length > 0 ? manualIds : undefined,
+        includeMeta: false
+      }
+
+      // 并行加载：同时发起资源请求，但先显示专题信息
+      this.loadDataWithParams(params, true)
     } catch (err) {
       console.error('加载专题详情失败:', err)
       wx.showToast({ title: '专题不存在', icon: 'none' })
@@ -145,18 +177,7 @@ Page({
     }
   },
 
-  onPullDownRefresh() {
-    this.setData({ refreshing: true })
-    this.loadData(true)
-  },
-
-  onReachBottom() {
-    if (!this.data.noMore && !this.data.loading) {
-      this.loadData(false)
-    }
-  },
-
-  async loadData(reset = false) {
+  async loadDataWithParams(params, reset = false) {
     if (this.data.loading && !this.data.refreshing) return
 
     this.setData({ loading: true })
@@ -166,29 +187,8 @@ Page({
     }
 
     try {
-      const { type, category, tag, page, pageSize, sort, layout } = this.data
       performanceMonitor.markMilestone('专题详情', '开始请求数据')
       
-      // Check for Manual Selection in Layout
-      let manualIds = []
-      if (layout && layout.modules) {
-        const gridModule = layout.modules.find(m => m.type === 'resource-grid')
-        if (gridModule && gridModule.config && gridModule.config.sourceType === 'manual' && gridModule.config.manualIds) {
-          manualIds = gridModule.config.manualIds
-        }
-      }
-
-      const params = {
-        page,
-        pageSize,
-        sort,
-        type: type === 'all' ? undefined : type,
-        category: category || undefined,
-        tag: tag || undefined,
-        ids: manualIds.length > 0 ? manualIds : undefined,
-        includeMeta: false
-      }
-
       const res = await getResources(params)
       performanceMonitor.markMilestone('专题详情', '数据请求完成')
 
@@ -199,13 +199,12 @@ Page({
           originalUrl: item.originUrl
         }))
         
-        // 移除批量获取临时链接，直接使用 cloudID 以提升加载速度
-        // const listWithUrl = await this.batchGetTempFileURL(newList)
-
+        const hasMore = res.result.hasMore !== undefined ? res.result.hasMore : (newList.length >= params.pageSize)
+        
         this.setData({
           list: reset ? newList : [...this.data.list, ...newList],
-          page: page + 1,
-          noMore: newList.length < pageSize,
+          page: params.page + 1,
+          noMore: !hasMore,
           loading: false,
           refreshing: false
         })
@@ -215,6 +214,16 @@ Page({
           performanceMonitor.endPageLoad('专题详情', { 
             itemCount: newList.length 
           })
+          
+          const pageLoadTime = performanceMonitor.getPageLoadTime('专题详情')
+          if (pageLoadTime) {
+            logger.logPerformance('page_load', {
+              loadTime: pageLoadTime,
+              itemCount: newList.length
+            }, 'subpackages/topic/topic')
+          }
+          
+          logger.logPageView('subpackages/topic/topic')
         }
       } else {
         this.setData({ loading: false, refreshing: false })
@@ -231,6 +240,42 @@ Page({
         wx.stopPullDownRefresh()
       }
     }
+  },
+
+  onPullDownRefresh() {
+    this.setData({ refreshing: true })
+    this.loadData(true)
+  },
+
+  onReachBottom() {
+    if (!this.data.noMore && !this.data.loading) {
+      this.loadData(false)
+    }
+  },
+
+  async loadData(reset = false) {
+    const { type, category, tag, page, pageSize, sort, layout } = this.data
+    
+    let manualIds = []
+    if (layout && layout.modules) {
+      const gridModule = layout.modules.find(m => m.type === 'resource-grid')
+      if (gridModule && gridModule.config && gridModule.config.sourceType === 'manual' && gridModule.config.manualIds) {
+        manualIds = gridModule.config.manualIds
+      }
+    }
+
+    const params = {
+      page,
+      pageSize,
+      sort,
+      type: type === 'all' ? undefined : type,
+      category: category || undefined,
+      tag: tag || undefined,
+      ids: manualIds.length > 0 ? manualIds : undefined,
+      includeMeta: false
+    }
+
+    await this.loadDataWithParams(params, reset)
   },
 
   // 批量获取临时链接 helper - 已废弃，直接使用 cloudID
@@ -282,5 +327,12 @@ Page({
       title: this.data.title || '精选专题',
       path: `/pages/topic/topic?id=${this.data.id}&tag=${this.data.tag}&title=${this.data.title}`
     }
+  },
+
+  // 页面滚动监听（供广告组件使用）
+  onPageScroll() {},
+
+  navigateBack() {
+    wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/index/index' }) })
   }
 })

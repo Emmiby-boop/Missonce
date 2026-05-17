@@ -6,6 +6,8 @@
 <view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
 
 <view class="container">
+  <ad-unit kind="interstitial" page-path="/pages/avatar/avatar"></ad-unit>
+  <ad-unit position="top" custom-class="native-top-ad" page-path="/pages/avatar/avatar" threshold="200" ext-style="top: {{statusBarHeight + navBarHeight - 1}}px;"></ad-unit>
 
   <!-- 搜索框 -->
   <view class="search-container" style="top: {{statusBarHeight + navBarHeight - 1}}px;">
@@ -21,7 +23,7 @@
 
   <!-- 标签导航（新版：横向滚动 + 展开按钮） -->
   <view class="category-wrapper">
-    <scroll-view class="category-scroll" scroll-x enable-flex scroll-into-view="{{'tag-' + currentTag}}" scroll-with-animation>
+    <scroll-view class="category-scroll" scroll-x enable-flex scroll-into-view="{{'tag-' + currentTag}}" scroll-with-animation bindscrolltolower="onTagScrollToLower">
       <view class="category-list">
         <view id="tag-all" class="category-item {{currentTag === 'all' ? 'active' : ''}}" 
               data-tag="all" 
@@ -66,6 +68,8 @@
     </view>
   </view>
 
+  <ad-unit position="middle" custom-class="native-video-mid-ad" page-path="/pages/avatar/avatar"></ad-unit>
+
   <!-- 🔥 动态板块渲染模式 -->
   <block wx:if="{{isSectionMode && sections.length > 0}}">
     <view class="section-block" wx:for="{{sections}}" wx:key="_id">
@@ -80,13 +84,15 @@
 
       <!-- 网格布局 -->
       <view class="avatar-grid-container" wx:if="{{item.type === 'grid'}}">
-        <view class="avatar-grid-item" wx:for="{{item.items}}" wx:for-item="subItem" wx:key="id" bindtap="previewImage" 
-              data-url="{{subItem.url}}" 
-              data-original-url="{{subItem.originalUrl}}" 
-              data-categories="{{subItem.categories}}" 
-              data-tags="{{subItem.tags}}">
-          <image class="avatar-img" src="{{subItem.url}}" mode="aspectFill" lazy-load></image>
-        </view>
+        <block wx:for="{{item.items}}" wx:for-item="subItem" wx:key="id">
+          <view class="avatar-grid-item" wx:if="{{index < 8}}" bindtap="previewImage" 
+                data-url="{{subItem.url}}" 
+                data-original-url="{{subItem.originalUrl}}" 
+                data-categories="{{subItem.categories}}" 
+                data-tags="{{subItem.tags}}">
+            <image class="avatar-img" src="{{subItem.url}}" mode="aspectFill" lazy-load></image>
+          </view>
+        </block>
       </view>
 
       <!-- 瀑布流布局 -->
@@ -98,6 +104,9 @@
             <image class="waterfall-img" src="{{subItem.url}}" mode="widthFix" lazy-load></image>
           </view>
         </view>
+
+
+
         <view class="waterfall-column">
           <view class="waterfall-item" wx:for="{{item.rightColumn}}" wx:for-item="subItem" wx:key="id" bindtap="previewImage"
                 data-url="{{subItem.url}}" 
@@ -198,3 +207,6 @@
     </scroll-view>
   </view>
 </view>
+
+<!-- 悬浮消息按钮 -->
+<floating-notification></floating-notification>

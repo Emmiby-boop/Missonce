@@ -1,0 +1,11 @@
+{
+  "name": "adminHome",
+  "version": "1.0.0",
+  "description": "Admin Home Layout Management",
+  "main": "index.js",
+  "author": "TraeAI",
+  "license": "MIT",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

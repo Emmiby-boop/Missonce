@@ -6,6 +6,8 @@
 <view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
 
 <view class="container">
+  <ad-unit kind="interstitial" page-path="/pages/wallpaper/wallpaper"></ad-unit>
+  <ad-unit position="top" custom-class="native-top-ad" page-path="/pages/wallpaper/wallpaper" threshold="200" ext-style="top: {{statusBarHeight + navBarHeight - 1}}px;"></ad-unit>
   <!-- 搜索框 -->
   <view class="search-container" style="top: {{statusBarHeight + navBarHeight - 1}}px;">
     <view class="search-header" bindtap="navigateToSearch">
@@ -19,7 +21,7 @@
 
   <!-- 标签导航（新版：横向滚动 + 展开按钮） -->
   <view class="category-wrapper">
-    <scroll-view class="category-scroll" scroll-x enable-flex scroll-into-view="{{'tag-' + currentTag}}" scroll-with-animation>
+    <scroll-view class="category-scroll" scroll-x enable-flex scroll-into-view="{{'tag-' + currentTag}}" scroll-with-animation bindscrolltolower="onTagScrollToLower">
       <view class="category-list">
         <view id="tag-all" class="category-item {{currentTag === 'all' ? 'active' : ''}}" 
               data-tag="all" 
@@ -64,6 +66,8 @@
       <text>最新</text>
     </view>
   </view>
+
+  <ad-unit position="middle" custom-class="native-video-mid-ad" page-path="/pages/wallpaper/wallpaper"></ad-unit>
 
   <!-- 🔥 动态板块渲染模式 -->
   <block wx:if="{{isSectionMode && sections.length > 0}}">
@@ -188,3 +192,6 @@
     </scroll-view>
   </view>
 </view>
+
+<!-- 分类弹窗 -->
+<floating-notification></floating-notification>

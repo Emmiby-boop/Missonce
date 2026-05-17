@@ -1,0 +1,20 @@
+<view class="floating-area">
+  <view 
+    class="floating-button-container" 
+    wx:if="{{showButton}}"
+    style="left: {{x}}px; top: {{y}}px;"
+    catchtouchstart="onTouchStart"
+    catchtouchmove="onTouchMove"
+    catchtouchend="onTouchEnd"
+    catchtap="handleTap"
+  >
+    <view class="floating-button">
+      <view class="icon-container">
+        <image class="cat-icon" src="/images/cat-icon.png" mode="aspectFit"></image>
+      </view>
+      <view class="badge" wx:if="{{unreadCount > 0}}">
+        {{unreadCount > 99 ? '99+' : unreadCount}}
+      </view>
+    </view>
+  </view>
+</view>

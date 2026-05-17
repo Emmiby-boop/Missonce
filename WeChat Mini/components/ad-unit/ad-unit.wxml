@@ -1,0 +1,25 @@
+<view class="{{customClass}}" style="{{extStyle}}">
+  <view wx:if="{{kind === 'native'}}">
+    <!-- 非顶部广告 -->
+    <view wx:if="{{showAd && adUnitId && position !== 'top'}}">
+      <ad-custom unit-id="{{adUnitId}}" ad-intervals="{{adIntervals}}" binderror="onAdError"></ad-custom>
+    </view>
+    <view class="ad-anchor" id="ad-anchor"></view>
+  </view>
+  <!-- 顶部悬浮广告容器 -->
+  <view wx:if="{{position === 'top' && showAd && adUnitId}}" class="top-ad-container {{showAd ? 'show' : ''}}" style="top: {{statusBarHeight + navBarHeight}}px;">
+    <ad-custom unit-id="{{adUnitId}}" ad-intervals="{{adIntervals}}" binderror="onAdError"></ad-custom>
+  </view>
+  <view wx:elif="{{kind === 'rewarded'}}">
+    <button wx:if="{{showButton}}" class="rewarded-btn" bindtap="onRewardTap" loading="{{isLoading}}" disabled="{{isLoading}}">
+      {{buttonText}}
+    </button>
+    <view wx:if="{{isLoading}}" class="rv-mask">
+      <view class="rv-box">
+        <view class="rv-spinner"></view>
+        <text class="rv-text">广告加载中…</text>
+      </view>
+    </view>
+  </view>
+  <view wx:elif="{{kind === 'interstitial'}}"></view>
+</view>

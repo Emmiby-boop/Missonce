@@ -1,0 +1,1238 @@
+import { getResources, getCategories, getHomeData, getBanners, getFavoritesCount, getFavorites, getPersonalizedRecommendations } from '../../utils/api.js'
+import { checkLoginStatus, loginWithProfile } from '../../utils/auth'
+import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js'
+import logger from '../../utils/logger.js'
+import { cacheManager } from '../../utils/cache.js'
+import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
+import { performanceMonitor } from '../../utils/performance.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import { notificationService } from '../../services/notificationService.js'
+ 
+
+Page({
+  data: {
+    favoritesCount: 0,
+    showDailyBadge: false,
+    unreadNotificationCount: 0,
+    statusBarHeight: 20,
+    navBarHeight: 44,
+    banners: [],
+    sections: [], // 动态首页板块
+    recommendations: [], // 个性化推荐
+    loading: true,
+    showGuide: false,
+
+    // Favorites Popup
+    showFavorites: false,
+   favoritesList: [],
+    favoritesPage: 1,
+    favoritesEnded: false,
+    favoritesLoading: false,
+
+    // Announcement Popup
+    showAnnouncement: false,
+    currentAnnouncement: null,
+    dontShowAgain: false,
+    
+    // Native Top Ad
+    nativeTopAd: null,
+    showNativeTopAd: false,
+  },
+
+  _isFirstLoad: true, // 标记是否为首次加载
+  _isLoadingData: false, // 标记是否正在加载数据
+
+  onLoad(options) {
+    performanceMonitor.startPageLoad('首页')
+    
+    
+    
+    // 处理邀请参数
+    this.handleInvite(options)
+    
+    // 🔥 优化：先显示骨架屏，再加载数据
+    this.initNavBar()
+    this.setData({ loading: true })
+    performanceMonitor.markMilestone('首页', '初始化完成')
+    
+    // 🔥 优化：先尝试从 api.js 的本地缓存读取（更快）
+    let hasCacheRendered = false
+    try {
+      const apiCache = wx.getStorageSync('home_data_api_cache')
+      const now = Date.now()
+      if (apiCache && apiCache.expire > now && apiCache.data?.result?.success) {
+        const { banners, sections } = apiCache.data.result.data
+        let updateData = { loading: false }
+        
+        if (banners && banners.length > 0) {
+          const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
+          updateData.banners = optimizedBanners.map(item => ({
+            ...item, 
+            id: item._id, 
+            image: item.optimizedUrl || item.image 
+          }))
+        }
+        
+        if (sections) {
+          this.processSections(sections).then(processedSections => {
+            this.setData({ sections: processedSections })
+          })
+          updateData.sections = sections
+        }
+        
+        if (Object.keys(updateData).length > 1 || updateData.loading === false) {
+          this.setData(updateData)
+          hasCacheRendered = true
+          performanceMonitor.markMilestone('首页', 'API缓存渲染完成')
+        }
+      }
+    } catch (e) {
+      console.log('API缓存读取失败，尝试 cacheManager:', e)
+    }
+    
+    // 如果API缓存没渲染成功，再尝试 cacheManager 的缓存
+    if (!hasCacheRendered) {
+      const cachedData = cacheManager.get(STORAGE_KEYS.HOME_DATA_CACHE)
+      if (cachedData) {
+        const { banners, sections } = cachedData
+        let updateData = { loading: false }
+        if (banners && banners.length > 0) {
+          updateData.banners = banners.map(item => ({ ...item, id: item._id }))
+        }
+        if (sections) {
+          updateData.sections = sections
+        }
+        if (Object.keys(updateData).length > 1 || updateData.loading === false) {
+          this.setData(updateData)
+          performanceMonitor.markMilestone('首页', '缓存渲染完成')
+        }
+      }
+    }
+
+    // 🔥 优化：只加载关键数据
+    this.loadCriticalData()
+    
+    
+    // 🔥 优化：延迟加载非关键数据（不影响首屏）
+    setTimeout(() => {
+      this.loadRecommendations()
+      this.checkDailyBadge()
+      this.loadNotificationBadge()
+      this.checkAnnouncement()
+    }, 1000)
+  },
+
+  onNativeAdError() {
+    if (this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: false })
+    }
+  },
+
+  async loadPageAds() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'pages/index/index'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      let nativeTop = pickByType(list, 'native_top')[0] || null
+      if (!nativeTop) {
+        const topNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'top' && it.isEnable)
+        if (topNativeVideo) nativeTop = topNativeVideo
+      }
+      if (nativeTop) this.setData({ nativeTopAd: nativeTop })
+    } catch (e) {}
+  },
+
+  onPageScroll(e) {
+    const ad = this.data.nativeTopAd
+    const threshold = (ad && ad.scrollThreshold) || 200
+    const shouldShow = e.scrollTop >= threshold
+    if (shouldShow !== this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: shouldShow })
+    }
+  },
+
+  // 只加载首屏关键数据
+  async loadCriticalData() {
+    // 防止重复请求
+    if (this._isLoadingData) {
+      console.log('[Index] 数据正在加载中，跳过重复请求')
+      return
+    }
+    
+    this._isLoadingData = true
+    
+    try {
+      const startTime = Date.now()
+      
+      // 只请求一次 getHomeData，因为它内部已经包含了 banners 和 sections
+      performanceMonitor.markMilestone('首页', '开始请求数据')
+      const homeDataRes = await getHomeData()
+      performanceMonitor.markMilestone('首页', '数据请求完成')
+      
+      console.log('[Index] getHomeData 返回数据:', homeDataRes)
+      
+      const updateData = { loading: false }
+      let hasUpdates = false
+      let newBanners = null
+      let newSections = null
+
+      // 处理 sections 和 banners（都从 homeDataRes 中获取）
+      if (homeDataRes.result && homeDataRes.result.success) {
+        const { banners, sections } = homeDataRes.result.data
+        
+        console.log('[Index] 原始 sections 数据:', sections)
+        
+        // 处理 banners
+        if (banners && banners.length > 0) {
+          const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
+          newBanners = optimizedBanners.map(item => ({
+            ...item, 
+            id: item._id, 
+            image: item.optimizedUrl || item.image 
+          }))
+          updateData.banners = newBanners
+          hasUpdates = true
+        }
+
+        // 处理 sections
+        if (sections) {
+          performanceMonitor.markMilestone('首页', '开始处理sections')
+          const processedSections = await this.processSections(sections)
+          performanceMonitor.markMilestone('首页', 'sections处理完成')
+          console.log('[Index] 处理后的 sections 数据:', processedSections)
+          newSections = processedSections
+          updateData.sections = processedSections
+          hasUpdates = true
+        }
+      }
+
+      if (hasUpdates) {
+        this.setData(updateData)
+        performanceMonitor.markMilestone('首页', 'setData完成')
+        
+        // 更新缓存
+        if (newBanners && newSections) {
+          cacheManager.set(STORAGE_KEYS.HOME_DATA_CACHE, { 
+            banners: newBanners, 
+            sections: newSections 
+          }, CACHE_EXPIRE.MEDIUM)
+        }
+      }
+      
+      performanceMonitor.endPageLoad('首页', {
+        bannerCount: newBanners?.length || 0,
+        sectionCount: newSections?.length || 0
+      })
+      
+      const pageStats = performanceMonitor.getPageStats('首页')
+      if (pageStats && pageStats.totalTime) {
+        logger.logPerformance('page_load', {
+          loadTime: pageStats.totalTime,
+          bannerCount: newBanners?.length || 0,
+          sectionCount: newSections?.length || 0
+        }, 'pages/index/index')
+      }
+      
+      logger.logPageView('pages/index/index')
+      
+      this.loadFavoritesCount()
+      
+      // 🔥 预加载其他页面数据（不阻塞用户操作）
+      setTimeout(() => {
+        getApp().preloadOtherPagesData()
+      }, 1000)
+    } catch (err) {
+      console.error('加载关键数据失败:', err)
+      this.setData({ loading: false })
+      performanceMonitor.endPageLoad('首页', { error: err.message })
+    } finally {
+      this._isLoadingData = false
+      this._isFirstLoad = false
+    }
+  },
+
+  // 分离推荐数据加载（延迟执行）
+  async loadRecommendations() {
+    try {
+      const recRes = await getPersonalizedRecommendations(6)
+      if (recRes && recRes.length > 0) {
+        const thumbSize = getOptimalThumbnailSize()
+        const optimized = optimizeImageUrls(recRes, 'coverUrl', thumbSize)
+        
+        this.setData({
+          recommendations: optimized.map(item => ({
+            ...item,
+            id: item._id,
+            url: item.optimizedUrl || item.coverUrl || item.url,
+            originalUrl: item.originUrl || item.originalUrl || item.url
+          }))
+        })
+      }
+    } catch (err) {
+      console.error('加载推荐失败:', err)
+    }
+  },
+
+  // 提取数据处理逻辑
+  async processSections(sections) {
+    const processedSections = []
+    const thumbSize = getOptimalThumbnailSize()
+
+    for (const section of sections) {
+      const processed = { ...section, items: [] }
+      
+      if (section.items && section.items.length > 0) {
+        const optimizedItems = optimizeImageUrls(section.items, 'coverUrl', thumbSize)
+        
+        processed.items = optimizedItems.map(item => ({
+          ...item,
+          id: item._id,
+          url: item.optimizedUrl || item.coverUrl || item.url,
+          originalUrl: item.originUrl || item.originalUrl || item.url,
+          rawUrl: item.coverUrl || item.url,
+          rawOriginalUrl: item.originUrl || item.originalUrl || item.url,
+          resourceType: item.type || item.resourceType || 'wallpaper'
+        }))
+      }
+      
+      if (processed.items.length > 0 && section.dataSource?.autoSplit) {
+        const types = new Set(processed.items.map(i => i.resourceType))
+        if (types.size > 1) {
+          const avatarItems = processed.items.filter(i => i.resourceType === 'avatar')
+          const wallpaperItems = processed.items.filter(i => i.resourceType !== 'avatar')
+          
+          if (avatarItems.length > 0) {
+            processedSections.push({
+              ...processed,
+              _id: processed._id + '-avatar',
+              type: 'avatar_row',
+              items: avatarItems,
+              leftColumn: undefined,
+              rightColumn: undefined
+            })
+          }
+          
+          if (wallpaperItems.length > 0) {
+            const leftCol = []
+            const rightCol = []
+            wallpaperItems.forEach((item, index) => {
+              if (index % 2 === 0) leftCol.push(item)
+              else rightCol.push(item)
+            })
+            processedSections.push({
+              ...processed,
+              _id: processed._id + '-wallpaper',
+              type: 'wallpaper_grid',
+              items: wallpaperItems,
+              leftColumn: leftCol,
+              rightColumn: rightCol
+            })
+          }
+          continue
+        }
+      }
+      
+      processedSections.push(processed)
+    }
+    
+    return processedSections
+  },
+
+  async loadAllData() {
+    // 使用 Promise.allSettled 确保部分失败不影响整体展示
+    const [bannersRes, homeDataRes, recRes] = await Promise.allSettled([
+      getBanners('active'),
+      getHomeData(),
+      getPersonalizedRecommendations(6)
+    ])
+    
+    const updateData = { loading: false }
+    let hasUpdates = false
+    let newBanners = null
+    let newSections = null
+
+    // 1. 处理 Banners
+    if (bannersRes.status === 'fulfilled' && bannersRes.value) {
+       const banners = bannersRes.value
+       if (banners.length > 0) {
+          // 优化轮播图（宽度 750px）
+          // 注意：现在 optimizeImageUrls 是同步函数，不再需要 await
+          const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
+          newBanners = optimizedBanners.map(item => ({
+            ...item,
+            id: item._id, 
+            image: item.optimizedUrl || item.image 
+          }))
+          updateData.banners = newBanners
+          hasUpdates = true
+       }
+    } else if (bannersRes.status === 'rejected') {
+       logger.error('加载轮播图失败:', bannersRes.reason)
+    }
+
+    // 2. 处理 Sections (HomeData)
+    if (homeDataRes.status === 'fulfilled' && homeDataRes.value && homeDataRes.value.result && homeDataRes.value.result.success) {
+       const { sections } = homeDataRes.value.result.data
+       const processedSections = []
+       const thumbSize = getOptimalThumbnailSize()
+
+       for (const section of sections) {
+           const processed = { ...section, items: [] }
+           
+           if (section.items && section.items.length > 0) {
+             // 批量优化图片 (同步)
+             const optimizedItems = optimizeImageUrls(section.items, 'coverUrl', thumbSize)
+             
+             processed.items = optimizedItems.map(item => ({
+                ...item,
+                id: item._id,
+                url: item.optimizedUrl || item.coverUrl || item.url,
+                originalUrl: item.originUrl || item.originalUrl || item.url,
+                rawUrl: item.coverUrl || item.url,
+                rawOriginalUrl: item.originUrl || item.originalUrl || item.url,
+                resourceType: item.type || item.resourceType || 'wallpaper'
+             }))
+           }
+
+          // 预处理瀑布流列
+          if (section.type === 'wallpaper_grid') {
+            const leftColumn = []
+            const rightColumn = []
+            
+            // 智能分配：头像占1格，壁纸占2格
+            let leftSlots = 0
+            let rightSlots = 0
+            
+            processed.items.forEach((item) => {
+              const isAvatar = item.resourceType === 'avatar'
+              const slots = isAvatar ? 1 : 2
+              
+              // 优先放到格子少的一列
+              if (leftSlots <= rightSlots) {
+                leftColumn.push(item)
+                leftSlots += slots
+              } else {
+                rightColumn.push(item)
+                rightSlots += slots
+              }
+            })
+            
+            processed.leftColumn = leftColumn
+            processed.rightColumn = rightColumn
+          }
+          
+          // 根据后台 autoSplit 配置自动分离混合内容
+          if (processed.items.length > 0 && section.dataSource?.autoSplit) {
+            const types = new Set(processed.items.map(i => i.resourceType))
+            if (types.size > 1) {
+              // 存在混合内容，分离为头像和壁纸两组
+              const avatarItems = processed.items.filter(i => i.resourceType === 'avatar')
+              const wallpaperItems = processed.items.filter(i => i.resourceType !== 'avatar')
+              
+              // 创建头像 section
+              if (avatarItems.length > 0) {
+                processedSections.push({
+                  ...processed,
+                  _id: processed._id + '-avatar',
+                  type: 'avatar_row',
+                  items: avatarItems,
+                  leftColumn: undefined,
+                  rightColumn: undefined
+                })
+              }
+              
+              // 创建壁纸 section (使用瀑布流)
+              if (wallpaperItems.length > 0) {
+                const leftCol = []
+                const rightCol = []
+                wallpaperItems.forEach((item, index) => {
+                  if (index % 2 === 0) leftCol.push(item)
+                  else rightCol.push(item)
+                })
+                processedSections.push({
+                  ...processed,
+                  _id: processed._id + '-wallpaper',
+                  type: 'wallpaper_grid',
+                  items: wallpaperItems,
+                  leftColumn: leftCol,
+                  rightColumn: rightCol
+                })
+              }
+              continue
+            }
+          }
+          
+          processedSections.push(processed)
+       }
+       
+       newSections = processedSections
+       updateData.sections = processedSections
+       hasUpdates = true
+    } else {
+       logger.error('加载首页数据失败:', homeDataRes.reason || homeDataRes.value)
+    }
+
+    // 3. 处理推荐
+    if (recRes.status === 'fulfilled' && recRes.value) {
+      const recommendations = recRes.value
+      if (recommendations.length > 0) {
+        const thumbSize = getOptimalThumbnailSize()
+        // 同步优化
+        const optimized = optimizeImageUrls(recommendations, 'coverUrl', thumbSize)
+
+        updateData.recommendations = optimized.map(item => ({
+            ...item,
+            id: item._id,
+            url: item.optimizedUrl || item.coverUrl || item.url,
+            originalUrl: item.originUrl || item.originalUrl || item.url
+          }))
+        hasUpdates = true
+      }
+    }
+
+    // 4. 一次性更新数据
+    if (hasUpdates) {
+      this.setData(updateData)
+      
+      // 更新缓存
+      if (newBanners && newSections) {
+         cacheManager.set(STORAGE_KEYS.HOME_DATA_CACHE, { 
+           banners: newBanners, 
+           sections: newSections 
+         }, CACHE_EXPIRE.MEDIUM)
+      }
+    }
+    
+    // 数据加载完成后，再次检查收藏数（非阻塞）
+    this.loadFavoritesCount()
+  },
+
+  onPullDownRefresh() {
+    // 下拉刷新时清除缓存，确保获取最新数据
+    try {
+      wx.removeStorageSync('home_data_api_cache')
+      wx.removeStorageSync('home_data_cache')
+      console.log('[Index] 缓存已清除')
+    } catch (e) {
+      console.error('[Index] 清除缓存失败:', e)
+    }
+    
+    // 下拉刷新时加载所有数据（完整刷新）
+    Promise.all([
+      this.loadCriticalData(),
+      this.loadRecommendations()
+    ]).then(() => {
+      wx.stopPullDownRefresh()
+      wx.showToast({
+        title: '刷新成功',
+        icon: 'none'
+      })
+    }).catch(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+
+
+  onShow() {
+    this._isHiding = false
+    getApp().logEvent('pv', { page: 'index' })
+    this.loadFavoritesCount()
+    this.loadNotificationBadge()
+    
+    // 刷新悬浮组件的未读计数
+    const floatingComponent = this.selectComponent('#floatingNotification')
+    if (floatingComponent && floatingComponent.refresh) {
+      floatingComponent.refresh()
+    }
+    
+    // 🔥 优化：首次加载由 onLoad 处理，onShow 只在特定情况下重新加载
+    // 避免 onLoad 后紧接着 onShow 触发重复请求
+    if (!this._isFirstLoad && (this.data.banners.length === 0 || this.data.sections.length === 0)) {
+      this.loadCriticalData()
+    }
+    
+    // 推荐数据延迟加载
+    if (this.data.recommendations.length === 0) {
+      setTimeout(() => this.loadRecommendations(), 500)
+    }
+    
+    // 同步深色模式
+    this.syncTheme()
+    
+    // 页面显示时智能触发插屏广告（带冷却时间检查）
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
+  },
+
+  onHide() {
+    this._isHiding = true
+  },
+
+  onUnload() {
+    this._isHiding = true
+  },
+
+  syncTheme() {
+    const theme = wx.getAppBaseInfo().theme || 'light'
+    this.setData({ theme })
+  },
+
+  loadFavoritesCount() {
+    if (!this.checkLogin()) {
+      this.setData({ favoritesCount: 0 })
+      return
+    }
+    
+    // 1. 优先读取本地缓存（快速展示）
+    wx.getStorage({
+      key: 'favorites',
+      success: (res) => {
+        const favorites = res.data || []
+        this.setData({ favoritesCount: favorites.length })
+      },
+      fail: () => {
+        // 忽略错误，可能是没有缓存
+      }
+    })
+
+    // 2. 静默同步云端准确数量（修正角标）
+    getFavoritesCount().then(res => {
+      if (res.total !== this.data.favoritesCount) {
+        this.setData({ favoritesCount: res.total })
+        
+        // 如果云端是0，说明本地缓存可能是脏数据，清空它
+        if (res.total === 0) {
+          wx.setStorageSync('favorites', [])
+        }
+      }
+    }).catch(err => {
+      console.error('获取云端收藏数量失败:', err)
+    })
+  },
+
+  onSectionMore(e) {
+    const section = e.currentTarget.dataset.section
+    if (!section) return
+
+    // 优先使用配置的 moreLink
+    if (section.moreLink) {
+      // 检查是否是 TabBar 页面
+      const tabPages = [
+        '/pages/index/index',
+        '/pages/avatar/avatar',
+        '/pages/wallpaper/wallpaper',
+        '/pages/profile/profile'
+      ]
+      
+      // 确保链接以 / 开头，修复相对路径问题
+      let targetUrl = section.moreLink
+      if (!targetUrl.startsWith('/')) {
+        targetUrl = '/' + targetUrl
+      }
+      
+      // 自动修正路径：将 /pages/resource-list 修正为 /subpackages/resource-list
+      if (targetUrl.includes('/pages/resource-list/')) {
+        targetUrl = targetUrl.replace('/pages/resource-list/', '/subpackages/resource-list/')
+      }
+      
+      if (tabPages.includes(targetUrl)) {
+        wx.switchTab({ url: targetUrl })
+        return
+      }
+      
+      wx.navigateTo({
+        url: targetUrl,
+        fail: (err) => {
+          logger.error('跳转失败:', err)
+          wx.showToast({ title: '页面跳转失败', icon: 'none' })
+        }
+      })
+      return
+    }
+
+    // 如果没有配置 moreLink，则根据 queryConfig 跳转到通用列表页
+    const config = section.queryConfig || {}
+    const params = []
+    
+    if (config.resourceType) params.push(`type=${config.resourceType}`)
+    if (config.category) params.push(`category=${encodeURIComponent(config.category)}`)
+    if (config.sortField) params.push(`sort=${config.sortField}`)
+    if (section.title) params.push(`title=${encodeURIComponent(section.title)}`)
+    
+    const url = `/subpackages/resource-list/resource-list?${params.join('&')}`
+    
+    wx.navigateTo({ url })
+  },
+
+  initNavBar() {
+    try {
+      const info = wx.getWindowInfo()
+      const statusBarHeight = info.statusBarHeight || 20
+      const navBarHeight = 44 // Fixed 44px to match CSS
+      this.setData({ statusBarHeight, navBarHeight })
+    } catch (e) {
+      console.error('获取系统信息失败:', e)
+    }
+  },
+
+  async loadData() {
+    try {
+      const res = await getHomeData()
+      if (res.result && res.result.success) {
+        const { banners, sections } = res.result.data
+        
+        // 1. 处理 Banners
+        if (banners) {
+          this.setData({
+            banners: banners.map(item => ({
+              ...item,
+              id: item._id
+            }))
+          })
+        }
+
+        // 2. 处理 Sections
+        const processedSections = []
+        for (const section of sections) {
+           const processed = {
+             ...section,
+             items: []
+           }
+           
+           if (section.items && section.items.length > 0) {
+             // 批量优化图片，使用 350px 宽度 (2列布局足够)
+             const optimizedItems = await optimizeImageUrls(section.items, 'coverUrl', 350)
+             
+             processed.items = optimizedItems.map(item => ({
+                ...item,
+                id: item._id,
+                url: item.optimizedUrl || item.coverUrl || item.url, // 优先使用优化后的链接
+                originalUrl: item.originUrl || item.originalUrl || item.url,
+                rawUrl: item.coverUrl || item.url,
+                rawOriginalUrl: item.originUrl || item.originalUrl || item.url
+             }))
+           }
+
+          // 如果是壁纸网格，预先分成两列用于瀑布流展示
+          if (section.type === 'wallpaper_grid') {
+            const leftColumn = []
+            const rightColumn = []
+            processed.items.forEach((item, index) => {
+              if (index % 2 === 0) leftColumn.push(item)
+              else rightColumn.push(item)
+            })
+            processed.leftColumn = leftColumn
+            processed.rightColumn = rightColumn
+          }
+          
+          processedSections.push(processed)
+        }
+        
+        this.setData({ 
+          sections: processedSections,
+          loading: false 
+        })
+        
+        // 3. 缓存数据
+        wx.setStorageSync('home_data_cache', { banners, sections: processedSections })
+      } else {
+        // 请求虽然成功但业务逻辑失败，尝试读取缓存
+        this.useCache('加载首页数据失败')
+      }
+    } catch (err) {
+      console.error('加载首页数据失败:', err)
+      // 网络连接失败，使用缓存
+      this.useCache('当前网络不可用，已为您展示离线内容')
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+
+  useCache(toastTitle) {
+    wx.getStorage({
+      key: 'home_data_cache',
+      success: (res) => {
+        const cachedData = res.data
+        if (cachedData) {
+          const { banners, sections } = cachedData
+          this.setData({ 
+            banners: banners || [],
+            sections: sections || []
+          })
+          if (toastTitle) {
+            wx.showToast({
+              title: toastTitle,
+              icon: 'none',
+              duration: 3000
+            })
+          }
+        }
+      }
+    })
+  },
+
+  previewImage(e) {
+    const item = e.currentTarget.dataset
+    this._previewImage(item)
+  },
+
+  onWaterfallItemTap(e) {
+    const { item } = e.detail
+    this._previewImage(item)
+  },
+
+  _previewImage(item) {
+    const currentUrl = item.originalUrl || item.url
+    const currentRawUrl = item.rawOriginalUrl || item.rawUrl
+    const type = item.type || 'wallpaper'
+
+    // 从数据列表中找到完整的 item 对象（包含 _id）
+    let fullItem = null
+    
+    // 先从 avatarList 中查找
+    if (this.data.avatarList) {
+      fullItem = this.data.avatarList.find(i => (i.originalUrl || i.url) === currentUrl)
+    }
+    
+    // 再从 wallpaperList 中查找
+    if (!fullItem && this.data.wallpaperList) {
+      fullItem = this.data.wallpaperList.find(i => (i.originalUrl || i.url) === currentUrl)
+    }
+    
+    // 如果在 sections 模式下，从 sections 中查找
+    if (!fullItem && this.data.isSectionMode && this.data.sections) {
+      for (const section of this.data.sections) {
+        if (section.items) {
+          fullItem = section.items.find(i => (i.originalUrl || i.url) === currentUrl)
+          if (fullItem) break
+        }
+        if (section.leftColumn) {
+          fullItem = section.leftColumn.find(i => (i.originalUrl || i.url) === currentUrl)
+          if (fullItem) break
+        }
+        if (section.rightColumn) {
+          fullItem = section.rightColumn.find(i => (i.originalUrl || i.url) === currentUrl)
+          if (fullItem) break
+        }
+      }
+    }
+    
+    // 如果找不到完整对象，使用传入的 item
+    fullItem = fullItem || item
+
+    // 如果是头像，跳转到自定义预览页面（支持圆形/方形切换和下载）
+    if (type === 'avatar') {
+      wx.navigateTo({
+        url: `/subpackages/preview/preview?url=${encodeURIComponent(currentUrl)}&rawUrl=${encodeURIComponent(currentRawUrl || '')}&isAvatar=true&avatarData=${encodeURIComponent(JSON.stringify(fullItem))}`
+      })
+    } else {
+      // 如果是壁纸，也跳转到自定义预览页
+      wx.navigateTo({
+        url: `/subpackages/wallpaper-preview/wallpaper-preview?url=${encodeURIComponent(currentUrl)}&rawUrl=${encodeURIComponent(currentRawUrl || '')}&wallpaperData=${encodeURIComponent(JSON.stringify(fullItem))}`
+      })
+    }
+  },
+
+  navigateToWallpaper() {
+    wx.switchTab({
+      url: '/pages/wallpaper/wallpaper'
+    })
+  },
+
+  navigateToAvatar() {
+    wx.switchTab({
+      url: '/pages/avatar/avatar'
+    })
+  },
+
+  navigateToSearch() {
+    wx.navigateTo({
+      url: '/subpackages/search/search'
+    })
+  },
+
+  navigateToTopicList() {
+    wx.navigateTo({
+      url: '/subpackages/topic-list/topic-list'
+    })
+  },
+
+  navigateToInspiration() {
+    wx.navigateTo({
+      url: '/subpackages/inspiration-writer/inspiration-writer'
+    })
+  },
+
+  navigateToDailyPicks() {
+    wx.navigateTo({
+      url: '/subpackages/daily-picks/daily-picks'
+    })
+  },
+
+  checkLogin() {
+    return checkLoginStatus()
+  },
+
+  async handleLogin() {
+    try {
+      const user = await loginWithProfile()
+      if (user) {
+        this.loadFavoritesCount()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('登录失败', e)
+      return false
+    }
+  },
+
+  showLoginModal() {
+    wx.showModal({
+      title: '请先登录',
+      content: '查看收藏夹需要登录',
+      confirmText: '去登录',
+      cancelText: '取消',
+      success: async (res) => {
+        if (res.confirm) {
+          // 尝试直接调用登录逻辑
+          const success = await this.handleLogin()
+          if (success) {
+             this.openFavorites()
+          }
+        }
+      }
+    })
+  },
+
+  navigateToFavorites() {
+    this.openFavorites()
+  },
+
+  // ---------------------------------------------------------
+  // 收藏功能逻辑 (复用自 Profile 页面)
+  // ---------------------------------------------------------
+
+  openFavorites() {
+    if (!this.checkLogin()) {
+      this.showLoginModal()
+      return
+    }
+    
+    // 重置并加载
+    this.setData({ 
+      showFavorites: true,
+      favoritesList: [],
+      favoritesPage: 1,
+      favoritesEnded: false
+    })
+    
+    this.loadMoreFavorites()
+  },
+
+  closeFavoritesPanel() {
+    this.setData({ showFavorites: false })
+  },
+
+  loadMoreFavorites() {
+    if (this.data.favoritesLoading || this.data.favoritesEnded) return
+    
+    this.setData({ favoritesLoading: true })
+    
+    getFavorites('all', this.data.favoritesPage, 20)
+      .then(res => {
+        const list = res.data || []
+        const newList = this.data.favoritesPage === 1 ? list : [...this.data.favoritesList, ...list]
+        
+        this.setData({
+          favoritesList: newList,
+          favoritesPage: this.data.favoritesPage + 1,
+          favoritesEnded: list.length < 20,
+          favoritesLoading: false
+        })
+      })
+      .catch(err => {
+        console.error('加载收藏列表失败:', err)
+        this.setData({ favoritesLoading: false })
+      })
+  },
+
+  handleFavoriteTap(e) {
+    const { url, type } = e.currentTarget.dataset
+    if (!url) return
+    
+    if (type === 'wallpaper') {
+      wx.navigateTo({
+        url: `/subpackages/wallpaper-preview/wallpaper-preview?url=${encodeURIComponent(url)}`
+      })
+    } else if (type === 'avatar') {
+      wx.navigateTo({
+        url: `/subpackages/preview/preview?url=${encodeURIComponent(url)}&isAvatar=true`
+      })
+    } else {
+      wx.previewImage({
+        urls: [url],
+        current: url
+      })
+    }
+  },
+
+  noop() {}, // 空函数，用于阻止冒泡
+
+  randomWallpaper() {
+    const list = []
+    // 从当前展示的板块中收集所有壁纸
+    this.data.sections.forEach(sec => {
+      if (sec.type === 'wallpaper_grid' && sec.items) {
+        list.push(...sec.items)
+      }
+    })
+
+    if (!list.length) {
+      wx.showToast({ title: '暂无壁纸可随机', icon: 'none' })
+      return
+    }
+
+    const picked = list[Math.floor(Math.random() * list.length)]
+    const currentUrl = picked.originalUrl || picked.url
+    const currentRawUrl = picked.rawOriginalUrl || picked.rawUrl
+    const currentIndex = list.findIndex(item => (item.originalUrl || item.url) === currentUrl)
+    const imageList = list.map(item => item.originalUrl || item.url)
+
+    wx.navigateTo({
+      url: `/subpackages/wallpaper-preview/wallpaper-preview?url=${encodeURIComponent(currentUrl)}&rawUrl=${encodeURIComponent(currentRawUrl || '')}&currentIndex=${currentIndex}&imageList=${encodeURIComponent(JSON.stringify(imageList))}&wallpaperData=${encodeURIComponent(JSON.stringify({ categories: picked.categories, tags: picked.tags }))}`
+    })
+  },
+
+  randomAvatar() {
+    const list = []
+    // 从当前展示的板块中收集所有头像
+    this.data.sections.forEach(sec => {
+      if (sec.type === 'avatar_row' && sec.items) {
+        list.push(...sec.items)
+      }
+    })
+
+    if (!list.length) {
+      wx.showToast({ title: '暂无头像可随机', icon: 'none' })
+      return
+    }
+
+    const picked = list[Math.floor(Math.random() * list.length)]
+    const currentUrl = picked.originalUrl || picked.url
+    const currentRawUrl = picked.rawOriginalUrl || picked.rawUrl
+
+    wx.navigateTo({
+      url: `/subpackages/preview/preview?url=${encodeURIComponent(currentUrl)}&rawUrl=${encodeURIComponent(currentRawUrl || '')}&isAvatar=true&avatarData=${encodeURIComponent(JSON.stringify({ categories: picked.categories, tags: picked.tags }))}`
+    })
+  },
+
+
+  onBannerTap(e) {
+    const id = e.currentTarget.dataset.id
+    const target = (this.data.banners || []).find(item => item.id === id)
+    if (!target) return
+
+    // 新版配置处理
+    if (target.type === 'page' && target.target) {
+      const tabPages = [
+        '/pages/index/index',
+        '/pages/avatar/avatar',
+        '/pages/wallpaper/wallpaper',
+        '/pages/profile/profile'
+      ]
+      
+      if (tabPages.some(path => target.target.startsWith(path))) {
+        wx.switchTab({ url: target.target })
+      } else {
+        wx.navigateTo({ 
+          url: target.target,
+          fail: (err) => {
+            console.error('跳转失败:', err)
+            wx.showToast({ title: '页面路径无效', icon: 'none' })
+          }
+        })
+      }
+      return
+    }
+
+    if (target.type === 'resource' && target.target) {
+        // 假设 target 是资源ID，跳转到预览页
+        // 这里暂时假设是壁纸，如果是头像可能需要额外字段区分，或者去详情页
+        // 简单起见，跳转到通用预览
+        // TODO: 完善资源类型判断
+        wx.showToast({ title: '暂不支持直接跳转资源ID', icon: 'none' })
+        return
+    }
+
+    if (target.type === 'webview' && target.target) {
+        // 跳转到 webview 页面
+        wx.navigateTo({ 
+          url: `/subpackages/webview/webview?url=${encodeURIComponent(target.target)}`,
+          fail: (err) => {
+            console.error('跳转Webview失败', err)
+            wx.showToast({ title: '无法打开链接', icon: 'none' })
+          }
+        })
+        return
+    }
+
+    // 兼容旧版自动生成的轮播图
+    if (target.targetPath) {
+      wx.switchTab({ 
+        url: target.targetPath,
+        fail: () => wx.navigateTo({ url: target.targetPath })
+      })
+      return
+    }
+    
+    wx.showToast({ title: '暂未配置跳转', icon: 'none' })
+  },
+
+  checkDailyBadge() {
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const readDate = wx.getStorageSync('daily_picks_read_date')
+    this.setData({
+      showDailyBadge: readDate !== todayStr
+    })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      path: '/pages/index/index',
+      imageUrl: ''
+    }
+  },
+
+  onShareTimeline() {
+    return {
+      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      query: '',
+      imageUrl: ''
+    }
+  },
+
+  navigateToNotifications() {
+    wx.navigateTo({
+      url: '/subpackages/notifications/notifications'
+    })
+  },
+
+  async loadNotificationBadge() {
+    try {
+      const unreadCount = await notificationService.getUnreadCount()
+      this.setData({ unreadNotificationCount: unreadCount })
+    } catch (err) {
+      console.error('加载通知角标失败:', err)
+    }
+  },
+
+  async checkAnnouncement() {
+    try {
+      const notifications = await notificationService.getActiveNotifications()
+      const readIds = await notificationService.getUserReadStatus()
+      const popupAnnouncements = notifications.filter(n => 
+        n.showPopup && !readIds.includes(n._id)
+      )
+
+      if (popupAnnouncements.length > 0) {
+        const announcement = popupAnnouncements[0]
+        
+        const dismissedAnnouncements = wx.getStorageSync('dismissed_announcements') || {}
+        if (dismissedAnnouncements[announcement._id]) {
+          return
+        }
+
+        this.setData({
+          showAnnouncement: true,
+          currentAnnouncement: announcement,
+          dontShowAgain: false
+        })
+      }
+    } catch (err) {
+      console.error('检查公告失败:', err)
+    }
+  },
+
+  closeAnnouncement() {
+    const { currentAnnouncement, dontShowAgain } = this.data
+
+    if (dontShowAgain && currentAnnouncement) {
+      const dismissedAnnouncements = wx.getStorageSync('dismissed_announcements') || {}
+      dismissedAnnouncements[currentAnnouncement._id] = true
+      wx.setStorageSync('dismissed_announcements', dismissedAnnouncements)
+    }
+
+    if (currentAnnouncement) {
+      notificationService.markAsRead(currentAnnouncement._id)
+    }
+
+    this.setData({
+      showAnnouncement: false,
+      currentAnnouncement: null
+    })
+
+    this.loadNotificationBadge()
+  },
+
+  handleAnnouncementConfirm() {
+    const { currentAnnouncement } = this.data
+    if (!currentAnnouncement) return
+
+    this.closeAnnouncement()
+
+    if (currentAnnouncement.linkType === 'page' && currentAnnouncement.linkValue) {
+      wx.navigateTo({ url: currentAnnouncement.linkValue })
+    } else if (currentAnnouncement.linkType === 'webview' && currentAnnouncement.linkValue) {
+      wx.navigateTo({ url: '/subpackages/webview/webview?url=' + encodeURIComponent(currentAnnouncement.linkValue) })
+    }
+  },
+
+  toggleDontShowAgain() {
+    this.setData({
+      dontShowAgain: !this.data.dontShowAgain
+    })
+  },
+
+  getPriorityIcon(priority) {
+    const map = {
+      high: '🔴',
+      normal: '📢',
+      low: 'ℹ️'
+    }
+    return map[priority] || '📢'
+  },
+
+  async handleInvite(options) {
+    const inviterOpenid = options.inviter || options.from
+    if (!inviterOpenid) return
+    
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.openid) {
+      wx.setStorageSync('pendingInviter', inviterOpenid)
+      return
+    }
+    
+    if (userInfo.openid === inviterOpenid) return
+    
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'userPoints',
+        data: {
+          action: 'bindInviter',
+          inviterOpenid: inviterOpenid
+        }
+      })
+      
+      if (res.result && res.result.success) {
+        console.log('绑定邀请人成功')
+      }
+    } catch (e) {
+      console.error('绑定邀请人失败:', e)
+    }
+  }
+})

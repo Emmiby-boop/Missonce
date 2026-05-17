@@ -1,0 +1,13 @@
+{
+  "envId": "missonce-99-1gfaff6n002f6ac1",
+  "functionRoot": "../",
+  "functions": [
+    {
+      "name": "uploadResource",
+      "timeout": 300,
+      "memory": 512,
+      "installDependency": true,
+      "runtime": "Nodejs20.19"
+    }
+  ]
+}

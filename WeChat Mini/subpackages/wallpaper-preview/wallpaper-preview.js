@@ -1,6 +1,10 @@
 import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
 import { loginWithProfile, checkLoginStatus } from '../../utils/auth.js'
 import { reportError } from '../../utils/logger.js'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
+import { generateInteractionStats } from '../../utils/statsGenerator.js'
+import { getStorage, getTheme, getWindowInfo, setStorage } from '../../utils/storageManager.js'
 
 const APPID = 'wx78c0b02bd2db5462'
 
@@ -8,6 +12,7 @@ Page({
   data: {
     showLoginModal: false,
     isLoginLoading: false,
+    _isHiding: false,
     theme: 'light',
     statusBarHeight: 20,
     navBarHeight: 44,
@@ -34,17 +39,32 @@ Page({
     simMode: 'lock', // 'lock' or 'home'
     simTime: '09:41',
     simDate: '1月1日 星期一',
-    showPosterModal: false
+    showPosterModal: false,
+    // 底部原生广告
+    bottomNativeVideoAd: null,
+    showBottomNativeAd: false,
+    
+    // 新增：互动数据
+    viewCount: 0,
+    viewCountText: '0',
+    likeCount: 0,
+    likeCountText: '0',
+    isLiked: false,
+    hotScore: 0,
+    hotScoreText: '0',
   },
 
   onShow() {
+    this.setData({ _isHiding: false })
     getApp().logEvent('pv', { page: 'wallpaper-preview' })
     this.updateSimTime()
     this.syncTheme()
+    // 页面显示时智能触发插屏广告（带冷却时间检查）
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
   },
 
   syncTheme() {
-    const theme = wx.getAppBaseInfo().theme || 'light'
+    const theme = getTheme()
     this.setData({ theme })
   },
 
@@ -70,6 +90,113 @@ Page({
     if (this.data.showSimulation) {
       this.updateSimTime()
     }
+  },
+
+  // 根据资源数据计算互动数据
+  // - 热度值：真实数据
+  // - 浏览量：根据热度值按比例生成，上限2000
+  // - 点赞数：基于浏览量按比例生成（点赞率 3%~10%）
+  // - 每日增量：每天在昨天基础上增加，保证只增不减
+  _computeInteractionData(resource, url) {
+    const effectiveUrl = url || resource?.url || resource?.coverUrl || resource?.originUrl || ''
+
+    // 如果 URL 为空，使用 resource 的唯一标识
+    const hashInput = effectiveUrl || (resource?.id || resource?._id) || JSON.stringify(resource || {})
+
+    const seed = this._hashString(hashInput)
+
+    // 获取今天的日期字符串
+    const today = new Date().toISOString().split('T')[0]
+
+    // 读取存储的基准数据
+    const storageKey = `stats_base_${seed}`
+    let storedData = null
+    try {
+      const cached = getStorage(storageKey)
+      if (cached) storedData = JSON.parse(cached)
+    } catch (e) {}
+
+    // 检查是否需要重置基准（跨天）
+    if (storedData && storedData.date !== today) {
+      // 新的一天，重置为昨天的值作为新基准
+      storedData = {
+        date: today,
+        baseViews: storedData.currentViews || 0,
+        baseLikes: storedData.currentLikes || 0
+      }
+      try {
+        setStorage(storageKey, JSON.stringify(storedData))
+      } catch (e) {}
+    }
+
+    // 真实数据：热度值
+    const hotScore = resource?.hotScore
+    const hasRealHot = hotScore != null && hotScore > 0
+
+    if (hasRealHot) {
+      // 热度值：小幅波动 ±5%
+      const hotFactor = 0.95 + (seed % 10) * 0.01
+      const finalHotScore = Math.floor(hotScore * hotFactor)
+
+      // 浏览量 = 热度值 × 比例系数（1~3倍），上限2000
+      const viewMultiplier = 1 + (seed % 20) / 10
+      let viewCount = Math.floor(finalHotScore * viewMultiplier)
+      viewCount = Math.min(viewCount, 2000)
+
+      // 点赞数 = 浏览量 × 点赞率（3%~10%）
+      const likeRate = 0.03 + (seed % 8) / 100
+      let likeCount = Math.floor(viewCount * likeRate)
+
+      // 如果有基准数据，确保今天的值 >= 昨天的值（每日增量）
+      if (storedData && storedData.date === today) {
+        viewCount = Math.max(viewCount, storedData.baseViews)
+        likeCount = Math.max(likeCount, storedData.baseLikes)
+
+        // 每天增加 1%~3%
+        const dailyGrowth = 1 + (seed % 3 + 1) / 100
+        viewCount = Math.max(viewCount, Math.floor(storedData.baseViews * dailyGrowth))
+        likeCount = Math.max(likeCount, Math.floor(storedData.baseLikes * dailyGrowth))
+      }
+
+      // 保存当前值作为后续比较的基准
+      try {
+        setStorage(storageKey, JSON.stringify({
+          date: today,
+          baseViews: viewCount,
+          baseLikes: likeCount,
+          currentViews: viewCount,
+          currentLikes: likeCount
+        }))
+      } catch (e) {}
+
+      return {
+        viewCount,
+        likeCount,
+        hotScore: finalHotScore
+      }
+    }
+
+    // 无热度数据时，使用完整的假数据
+    return generateInteractionStats(effectiveUrl)
+  },
+
+  // 根据字符串生成固定数值（用于生成稳定随机因子）
+  _hashString(str) {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    return Math.abs(hash)
+  },
+
+  // 格式化数字显示
+  _formatCount(n) {
+    if (n >= 10000) {
+      return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万'
+    }
+    return n >= 1000 ? n.toLocaleString() : n
   },
 
   setSimMode(e) {
@@ -101,7 +228,12 @@ Page({
       iconShare: '/images/preview-share.svg',
       iconBack: '/images/preview-back.svg',
       iconHome: '/images/preview-home.svg',
-      iconEdit: '/images/preview-edit.svg'
+      iconEdit: '/images/preview-edit.svg',
+      iconMore: '../../images/more.svg',
+      iconLike: '/images/icon-like.svg',
+      iconLikeActive: '/images/icon-like-active.svg',
+      iconView: '/images/icon-view.svg',
+      iconHot: '/images/icon-hot.svg'
     }
   },
 
@@ -124,7 +256,7 @@ Page({
 
   initNavBar() {
     try {
-      const info = wx.getWindowInfo()
+      const info = getWindowInfo()
       const statusBarHeight = info.statusBarHeight || 20
       const navBarHeight = 44 // Fixed 44px
       this.setData({ statusBarHeight, navBarHeight })
@@ -156,22 +288,28 @@ Page({
     tags = tags.map(t => t.trim()).filter(t => t)
     
     // 使用当前壁纸的标签进行相似推荐
+    // 🔥 优化：增加推荐数量到 12
     return getResources({
       type: 'wallpaper',
-      pageSize: 6,
+      pageSize: 12,
       page: 1,
       sort: 'hot',
       // category: currentCategories.length > 0 ? currentCategories[0].name : undefined,
       tag: tags.length > 0 ? tags[0] : undefined
     }).then(res => {
       const similarList = (res.result.data || []).map(item => ({
-        url: item.coverUrl || item.url || '', // Fallback to empty string
-        originalUrl: item.originUrl || '',
+        _id: item.id || item._id,
+        url: item.url || item.coverUrl || item.originUrl || '',
+        coverUrl: item.coverUrl,
+        originUrl: item.originUrl || '',
         title: item.title || '',
         categories: item.categories || [],
         tags: item.tags || [],
+        views: item.views || 0,
+        favorites: item.favorites || 0,
+        hotScore: item.hotScore || 0,
         category: item.categories && item.categories.length > 0 ? item.categories[0].name : '相似壁纸'
-      })).filter(item => item.url) // Filter out items with no url
+      })).filter(item => item.url)
       
       return similarList
     }).catch(error => {
@@ -197,7 +335,13 @@ Page({
     this.setData({ isLoginLoading: true })
     
     try {
-      await loginWithProfile()
+      const userInfo = await wx.getUserProfile({ desc: '用于登录' })
+      await wx.login()
+      
+      await loginWithProfile({
+        nickName: userInfo.userInfo.nickName,
+        avatarUrl: userInfo.userInfo.avatarUrl
+      })
       
       this.setData({ 
         showLoginModal: false,
@@ -205,7 +349,6 @@ Page({
       })
       wx.showToast({ title: '登录成功', icon: 'success' })
       
-      // Refresh favorite status
       this.loadFavorites()
     } catch (err) {
       console.error('登录流程异常:', err)
@@ -219,6 +362,10 @@ Page({
     this.handleThemeChange = this.handleThemeChange.bind(this)
     wx.onThemeChange(this.handleThemeChange)
     this.setData(this.getIconSet())
+    
+    // 初始化插屏广告管理器
+    interstitialAdManager.initInterstitialAd('/subpackages/wallpaper-preview/wallpaper-preview')
+    this.initBottomNativeAd()
 
     const { url, currentIndex, imageList: listParam, wallpaperData, rawUrl } = options
 
@@ -268,12 +415,21 @@ Page({
           parsedWallpaperData = JSON.parse(decodedWallpaperData)
           console.log('预览页面加载参数:', options)
           console.log('当前壁纸数据:', parsedWallpaperData)
+          
+          const currentUrl = parsedWallpaperData.url || parsedWallpaperData.imageUrl || ''
+          const stats = this._computeInteractionData(parsedWallpaperData, currentUrl)
+
           this.setData({
-            currentWallpaper: parsedWallpaperData
+            currentWallpaper: parsedWallpaperData,
+            viewCount: stats.viewCount,
+            viewCountText: this._formatCount(stats.viewCount),
+            likeCount: stats.likeCount,
+            likeCountText: this._formatCount(stats.likeCount),
+            hotScore: stats.hotScore,
+            hotScoreText: this._formatCount(stats.hotScore)
           })
           itemsList[index] = parsedWallpaperData;
           
-          // 记录浏览历史
           if (parsedWallpaperData) {
             recordBrowseHistory(parsedWallpaperData)
           }
@@ -326,6 +482,148 @@ Page({
     }
   },
 
+  async initBottomNativeAd() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'subpackages/wallpaper-preview/wallpaper-preview'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      const nativeBottom = pickByType(list, 'native_bottom')[0] || null
+      const bottomNativeVideo = (list || []).find(it => it.type === 'native_video' && (it.position === 'bottom' || !it.position) && it.isEnable) || null
+      const chosenBottom = nativeBottom || bottomNativeVideo
+      if (chosenBottom) {
+        this.setData({ bottomNativeVideoAd: chosenBottom }, () => {
+          this.maybeAutoShowBottomAd()
+        })
+      }
+    } catch (e) {}
+  },
+
+  onReachBottom() {
+    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
+      this.setData({ showBottomNativeAd: true })
+    }
+  },
+
+  onNativeAdError() {
+    if (this.data.showBottomNativeAd) {
+      this.setData({ showBottomNativeAd: false })
+    }
+  },
+  
+  maybeAutoShowBottomAd() {
+    if (!this.data.bottomNativeVideoAd || this.data.showBottomNativeAd) return
+    const win = getWindowInfo()
+    wx.createSelectorQuery()
+      .select('.container')
+      .boundingClientRect(rect => {
+        if (!rect) return
+        const threshold = 40
+        if (rect.bottom <= win.windowHeight + threshold) {
+          this.setData({ showBottomNativeAd: true })
+        }
+      })
+      .exec()
+  },
+  
+  onPageScroll(e) {
+    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
+      if (!this._winH || !this._contentH) {
+        const win = getWindowInfo()
+        this._winH = win.windowHeight
+        wx.createSelectorQuery()
+          .select('.container')
+          .boundingClientRect(rect => {
+            if (rect) this._contentH = rect.bottom
+          })
+          .exec()
+      } else {
+        const near = e.scrollTop + this._winH + 40 >= this._contentH
+        if (near) this.setData({ showBottomNativeAd: true })
+      }
+    }
+  },
+  
+  onRewarded(e) {
+    console.log('[AD][Rewarded][WP] onRewarded:', e.detail)
+
+  },
+  
+  ensureRewardedForFirstDownload() {
+    const that = this
+    // 返回: { success: true/false, method: 'free'/'points'/'member' }
+    let adResult = { success: false, method: 'points' }
+    
+    return new Promise(async (resolve) => {
+      try {
+        const statusRes = await wx.cloud.callFunction({
+          name: 'userPoints',
+          data: { action: 'getDownloadStatus', resourceType: 'wallpaper' }
+        })
+        if (!that) return resolve(adResult)
+        
+        const status = statusRes.result && statusRes.result.success ? statusRes.result.data : null
+        console.log('[AD][Rewarded][WP] getDownloadStatus:', status)
+        
+        if (!status) {
+          // 无法获取状态，用积分
+          adResult = { success: true, method: 'points' }
+          return resolve(adResult)
+        }
+        
+        // 会员直接通过
+        if (status.isMember) {
+          adResult = { success: true, method: 'member' }
+          return resolve(adResult)
+        }
+        
+        // 如果今天已经看过广告，直接下载
+        if (status.freeDownloadUsed) {
+          adResult = { success: true, method: 'free' }
+          return resolve(adResult)
+        }
+        
+        // 首次下载：必须观看激励广告
+        try {
+          wx.showModal({
+            title: '首次下载提示',
+            content: '首次下载需要观看激励视频，观看后可免费下载今日所有资源！',
+            confirmText: '观看视频',
+            cancelText: '取消',
+            success: async (modalRes) => {
+              if (!that) return resolve(adResult)
+              
+              if (modalRes.confirm) {
+                // 用户选择观看广告
+                const rewardedAdComponent = that.selectComponent('#rewardedAd')
+                if (rewardedAdComponent) {
+                  console.log('[AD][Rewarded][WP] show rewarded ad')
+                  const result = await rewardedAdComponent.showRewarded()
+                  
+                  // 广告观看成功
+                  if (result.success) {
+                    adResult = { success: true, method: 'free' }
+                  } else {
+                    // 广告没看完，不能下载
+                  wx.showToast({ title: '需要完整观看广告才能下载', icon: 'none' })
+                  }
+                }
+              }
+              // 返回结果
+              resolve(adResult)
+            }
+          })
+        } catch (e) {
+          console.log('[AD][Rewarded][WP] ad show failed:', e)
+          resolve(adResult)
+        }
+      } catch (e) {
+        console.log('[AD][Rewarded][WP] getDownloadStatus failed:', e)
+        resolve(adResult)
+      }
+    })
+  },
+
   getWallpaperTagList(item) {
     const currentWallpaper = item || this.data.currentWallpaper || {}
     let rawTags = currentWallpaper.tags || []
@@ -360,6 +658,13 @@ Page({
     
     try {
       const item = await findResourceByUrl(url)
+      
+      // 检查页面是否已卸载
+      if (this.data._isHiding) {
+        console.log('[wallpaper-preview] 页面已卸载，跳过数据更新')
+        return
+      }
+      
       if (item) {
         // 更新 itemsList
         const itemsList = this.data.itemsList;
@@ -367,14 +672,34 @@ Page({
         
         // 如果当前还在查看这张图，则更新视图
         if (this.data.currentIndex === index) {
+           const url = item.url || item.coverUrl || ''
+           const stats = this._computeInteractionData(item, url)
+
+           // 再次检查页面状态
+           if (this.data._isHiding) {
+             console.log('[wallpaper-preview] 页面已卸载，跳过 setData')
+             return
+           }
+           
            this.setData({
              itemsList,
              currentWallpaper: item,
-             tagList: this.getWallpaperTagList(item)
+             tagList: this.getWallpaperTagList(item),
+             viewCount: stats.viewCount,
+             viewCountText: this._formatCount(stats.viewCount),
+             likeCount: stats.likeCount,
+             likeCountText: this._formatCount(stats.likeCount),
+             hotScore: stats.hotScore,
+             hotScoreText: this._formatCount(stats.hotScore)
            });
            
            // 更新相似推荐
            this.buildSimilarList().then(similarList => {
+             // 再次检查页面状态
+             if (this.data._isHiding) {
+               console.log('[wallpaper-preview] 页面已卸载，跳过相似推荐更新')
+               return
+             }
              this.setData({ similarList })
            })
            
@@ -383,6 +708,11 @@ Page({
              recordBrowseHistory(item)
            }
         } else {
+           // 再次检查页面状态
+           if (this.data._isHiding) {
+             console.log('[wallpaper-preview] 页面已卸载，跳过 itemsList 更新')
+             return
+           }
            this.setData({ itemsList });
         }
       } else {
@@ -395,8 +725,12 @@ Page({
 
 
   onUnload() {
+    this.setData({ _isHiding: true })
     wx.offThemeChange && wx.offThemeChange(this.handleThemeChange)
     if (this.hideTimer) clearTimeout(this.hideTimer)
+    if (this.browseTimer) clearTimeout(this.browseTimer)
+    // 清理广告资源
+    interstitialAdManager.destroy()
   },
 
   handleThemeChange(res) {
@@ -435,8 +769,10 @@ Page({
     let index = this.data.imageList.indexOf(url)
 
     if (index !== -1) {
-      // 如果找到了，直接切换
+      // 如果找到了，直接切换并滚动到顶部
       this.setData({ currentIndex: index })
+      // 滚动到顶部
+      wx.pageScrollTo({ scrollTop: 0, duration: 300 })
       // 手动触发 swiper change 逻辑以更新状态
       this.onSwiperChange({ detail: { current: index } })
     } else {
@@ -451,6 +787,8 @@ Page({
         currentIndex: newIndex
       })
       
+      // 滚动到顶部
+      wx.pageScrollTo({ scrollTop: 0, duration: 300 })
       this.onSwiperChange({ detail: { current: newIndex } })
     }
   },
@@ -478,6 +816,7 @@ Page({
 
   async onSwiperChange(e) {
     const index = e.detail.current
+    const previous = this.data.currentIndex
 
     // 更新当前数据对象
     const currentItem = this.data.itemsList[index];
@@ -488,11 +827,32 @@ Page({
     const needsFetch = !currentItem || (!currentItem.tags || currentItem.tags.length === 0);
 
     if (currentItem) {
+      // 始终计算并更新互动数据（即使没tag，热度值也可能不同）
+      const url = currentItem.url || currentItem.coverUrl || ''
+      const stats = this._computeInteractionData(currentItem, url)
+
+      // 🔥 强制重播动画
+      const loadedImages = { ...this.data.loadedImages }
+      loadedImages[index] = false
+      
       this.setData({
-        currentAvatar: currentItem, 
         currentWallpaper: currentItem,
-        tagList: this.getWallpaperTagList(currentItem)
+        viewCount: stats.viewCount,
+        viewCountText: this._formatCount(stats.viewCount),
+        likeCount: stats.likeCount,
+        likeCountText: this._formatCount(stats.likeCount),
+        hotScore: stats.hotScore,
+        hotScoreText: this._formatCount(stats.hotScore),
+        tagList: this.getWallpaperTagList(currentItem),
+        loadedImages
       });
+      
+      // 延迟后显示，触发动画
+      setTimeout(() => {
+        this.setData({
+          [`loadedImages.${index}`]: true
+        })
+      }, 50)
       
       // 记录浏览历史 (带防抖)
       if (this.browseTimer) clearTimeout(this.browseTimer)
@@ -502,9 +862,15 @@ Page({
         }
       }, 1000)
     } else {
-       this.setData({
+      this.setData({
         tagList: [],
-        currentWallpaper: {}
+        currentWallpaper: {},
+        viewCount: 0,
+        viewCountText: '0',
+        likeCount: 0,
+        likeCountText: '0',
+        hotScore: 0,
+        hotScoreText: '0'
       });
     }
 
@@ -527,12 +893,14 @@ Page({
     this.hideTimer = setTimeout(() => {
       this.setData({ showPageIndicator: false })
     }, 2000)
+    
+    this.slideDirection = index > previous ? 'left' : 'right'
   },
 
   loadFavorites() {
     // 优先加载本地缓存
     try {
-      const favorites = wx.getStorageSync('favorites') || []
+      const favorites = getStorage('favorites') || []
       this.setData({ favorites })
     } catch (e) {
       console.error('加载本地收藏失败:', e)
@@ -549,7 +917,7 @@ Page({
         
         // 更新本地存储和页面数据
         this.setData({ favorites: cloudFavorites })
-        wx.setStorageSync('favorites', cloudFavorites)
+        setStorage('favorites', cloudFavorites)
         this.checkFavorite()
       }
     }).catch(err => {
@@ -581,7 +949,7 @@ Page({
       this.saveFavorites(newFavorites)
       
       // 云端移除
-      // 如果有ID，优先使用ID删除 (这样能触发热度更新)
+          // 如果有ID，优先使用ID删除 (这样能触发热度更新)
       const removePromise = resourceId 
         ? removeFavorite(resourceId) 
         : removeFavorite(currentUrl, 'wallpaper')
@@ -600,12 +968,14 @@ Page({
       this.setData({ favorites: newFavorites, isFavorite: true })
       this.saveFavorites(newFavorites)
 
-      // 云端添加
-      addFavorite(resourceId, 'wallpaper', currentUrl, currentWallpaper ? currentWallpaper.title : '').then(res => {
+      try {
+        // 云端添加
+        await addFavorite(resourceId, 'wallpaper', currentUrl, currentWallpaper ? currentWallpaper.title : '')
         console.log('云端添加收藏成功')
-      }).catch(err => {
+      } catch (err) {
         console.error('云端添加收藏失败:', err)
-      })
+        // 即使云端失败，本地状态已更新，不影响用户体验
+      }
 
       wx.showToast({ title: '已收藏', icon: 'none' })
     }
@@ -613,19 +983,82 @@ Page({
 
   saveFavorites(favorites) {
     try {
-      wx.setStorageSync('favorites', favorites)
+      setStorage('favorites', favorites)
     } catch (e) {
       console.error('保存收藏失败:', e)
       wx.showToast({ title: '收藏失败', icon: 'none' })
     }
   },
 
+  // 新增：点赞功能
+  toggleLike() {
+    const { isLiked, likeCount } = this.data
+    
+    // 切换点赞状态
+    const newIsLiked = !isLiked
+    const newLikeCount = newIsLiked ? likeCount + 1 : likeCount - 1
+    
+    this.setData({
+      isLiked: newIsLiked,
+      likeCount: newLikeCount,
+      likeCountText: this._formatCount(newLikeCount)
+    })
+    
+    // 提示用户
+    wx.showToast({
+      title: newIsLiked ? '已点赞' : '取消点赞',
+      icon: 'none'
+    })
+  },
+
+  // 新增：显示评论弹窗
   showPoster() {
     this.setData({ showPosterModal: true })
   },
 
   hidePoster() {
     this.setData({ showPosterModal: false })
+  },
+
+  onMoreTap() {
+    wx.showActionSheet({
+      itemList: ['复制页面链接', '分享给好友'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.copyPagePath()
+        } else if (res.tapIndex === 1) {
+          this.showPoster()
+        }
+      }
+    })
+  },
+
+  copyPagePath() {
+    const { currentUrl } = this.data
+    let path = '/subpackages/wallpaper-preview/wallpaper-preview'
+    const params = []
+    
+    if (currentUrl) {
+      params.push(`url=${encodeURIComponent(currentUrl)}`)
+    }
+    
+    const userInfo = getStorage('userInfo')
+    if (userInfo && userInfo.openid) {
+      params.push(`inviter=${userInfo.openid}`)
+    }
+    
+    path = path + '?' + params.join('&')
+    
+    wx.setClipboardData({
+      data: path,
+      success: () => {
+        wx.showToast({ title: '页面链接已复制', icon: 'success' })
+      },
+      fail: (err) => {
+        console.error('复制链接失败:', err)
+        wx.showToast({ title: '复制失败，请重试', icon: 'none' })
+      }
+    })
   },
 
   onShareAppMessage() {
@@ -646,10 +1079,10 @@ Page({
   addDownloadRecord(record) {
     // Local
     try {
-      const list = wx.getStorageSync('downloadHistory') || []
+      const list = getStorage('downloadHistory') || []
       const newItem = { ...record, time: Date.now() }
       const newList = [newItem, ...list].slice(0, 50)
-      wx.setStorageSync('downloadHistory', newList)
+      setStorage('downloadHistory', newList)
     } catch (e) {
       console.error('保存下载记录失败', e)
     }
@@ -745,10 +1178,19 @@ Page({
           const itemsList = this.data.itemsList
           itemsList[currentIndex] = item
           
+          const url = item.url || item.coverUrl || ''
+          const stats = this._computeInteractionData(item, url)
+
           this.setData({
             itemsList,
             currentWallpaper: item,
-            tagList: this.getWallpaperTagList(item)
+            tagList: this.getWallpaperTagList(item),
+            viewCount: stats.viewCount,
+            viewCountText: this._formatCount(stats.viewCount),
+            likeCount: stats.likeCount,
+            likeCountText: this._formatCount(stats.likeCount),
+            hotScore: stats.hotScore,
+            hotScoreText: this._formatCount(stats.hotScore)
           })
           resolve(item._id)
         } else {
@@ -766,27 +1208,120 @@ Page({
     return this.fetchingInfoPromise
   },
 
+  async checkRewardAdEnabled() {
+    const cache = getStorage('rewardAdEnabled_cache')
+    if (cache && Date.now() - cache.time < 60000) {
+      return cache.enabled
+    }
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'getConfig',
+        data: { key: 'rewardAdEnabled' }
+      })
+      const enabled = res.result?.data?.value !== false
+      setStorage('rewardAdEnabled_cache', { enabled, time: Date.now() })
+      return enabled
+    } catch (e) {
+      return true
+    }
+  },
+
   async downloadImage() {
+    console.log('[WP] downloadImage click')
     if (!this.checkLogin()) {
+      console.log('[WP] not logged in, show login modal')
       this.showLoginModal()
       return
     }
 
-    // 确保有资源ID (用于热度统计)
+    const that = this
+
+    try {
+      console.log('[WP] ensureRewardedForFirstDownload start')
+      const rewardAdEnabled = await this.checkRewardAdEnabled()
+      console.log('激励广告开关状态', rewardAdEnabled)
+
+      let adResult
+      if (!rewardAdEnabled) {
+        adResult = { success: true, method: 'free' }
+      } else {
+        adResult = await this.ensureRewardedForFirstDownload()
+      }
+      console.log('[WP] ensureRewardedForFirstDownload done, result:', adResult)
+
+      if (!adResult.success) {
+        console.log('[WP] ad not completed, cancel download')
+        return
+      }
+
+      if (adResult.method === 'free') {
+        that.doDownload(true, 'free')
+      } else if (adResult.method === 'member') {
+        that.doDownload(true, 'member')
+      } else {
+        that.doDownload(false, 'points')
+      }
+    } catch (e) {
+      console.error('检查下载状态失败', e)
+      that.doDownload(false, 'points')
+    }
+  },
+
+  async doDownload(isFree = false, downloadMethod = 'points') {
+    console.log('[WP] doDownload start, isFree=', isFree, 'method=', downloadMethod)
+    if (!this.checkLogin()) {
+      console.log('[WP] not logged in, abort')
+      this.showLoginModal()
+      return
+    }
+
     await this.ensureResourceId()
+    console.log('[WP] ensureResourceId done')
 
     const that = this
     const hasAlbumPermission = await this.ensureAlbumPermission()
+    console.log('[WP] album permission:', hasAlbumPermission)
     if (!hasAlbumPermission) {
       return
     }
     const rawUrl = this.pickUrl()
+    console.log('[WP] picked url:', rawUrl)
     if (!rawUrl) {
       wx.showToast({ title: '图片地址缺失', icon: 'none' })
       return
     }
 
-    wx.showLoading({ title: '保存中...', mask: true })
+    if (!isFree) {
+      try {
+        const statusRes = await wx.cloud.callFunction({
+          name: 'userPoints',
+          data: { action: 'getDownloadStatus' }
+        })
+        const status = statusRes.result && statusRes.result.success ? statusRes.result.data : {}
+        const downloadCost = status.downloadCost || status.pointsRequired || 6
+        
+        const deductRes = await wx.cloud.callFunction({
+          name: 'userPoints',
+          data: {
+            action: 'deductPoints',
+            amount: downloadCost,
+            type: 'download',
+            description: '下载消耗积分'
+          }
+        })
+        
+        if (!deductRes.result || !deductRes.result.success) {
+          wx.showToast({ title: '积分扣除失败', icon: 'none' })
+          return
+        }
+      } catch (e) {
+        console.error('积分扣除失败:', e)
+        wx.showToast({ title: '积分扣除失败', icon: 'none' })
+        return
+      }
+    }
+
+    wx.showLoading({ title: '保存中..', mask: true })
 
     // 处理 cloud:// 协议的云存储文件
     if (rawUrl.startsWith('cloud://')) {
@@ -794,7 +1329,7 @@ Page({
         fileID: rawUrl,
         success(res) {
           if (res.statusCode === 200) {
-            that.saveToAlbum(res.tempFilePath, rawUrl)
+            that.saveToAlbum(res.tempFilePath, rawUrl, downloadMethod)
           } else {
             wx.hideLoading()
             wx.showToast({ title: '下载云文件失败', icon: 'none' })
@@ -828,22 +1363,22 @@ Page({
       success(res) {
         if (res.statusCode === 200) {
           const tempFilePath = res.filePath || res.tempFilePath
-          that.saveToAlbum(tempFilePath, url)
+          that.saveToAlbum(tempFilePath, url, downloadMethod)
         } else {
           // 下载失败尝试代理
-          that.tryProxyDownload(url)
+          that.tryProxyDownload(url, downloadMethod)
         }
       },
       fail(err) {
         // 下载失败尝试代理
         console.warn('wx.downloadFile fail, trying proxy:', err)
-        that.tryProxyDownload(url)
+        that.tryProxyDownload(url, downloadMethod)
       }
     })
   },
 
   // 辅助方法：保存文件到相册
-  saveToAlbum(tempFilePath, originalUrl) {
+  saveToAlbum(tempFilePath, originalUrl, downloadMethod = 'points') {
     const that = this
     
     // 尝试修正文件后缀，防止 saveImageToPhotosAlbum 因无后缀报错
@@ -857,7 +1392,7 @@ Page({
       else if (originalUrl.includes('.gif')) ext = '.gif'
       else if (originalUrl.includes('.webp')) ext = '.webp'
       
-      // 使用 wx.env.USER_DATA_PATH 临时目录，避免触发文件监听器导致重编译
+    // 使用 wx.env.USER_DATA_PATH 临时目录，避免触发文件监听器导致重编译
       // 如果临时文件没有后缀，手动重命名（复制）
       if (!tempFilePath.match(/\.[a-zA-Z0-9]+$/) || tempFilePath.indexOf(wx.env.USER_DATA_PATH) === -1) {
         const newPath = `${wx.env.USER_DATA_PATH}/${Date.now()}_${Math.random().toString(36).substr(2)}${ext}`
@@ -865,7 +1400,7 @@ Page({
         finalPath = newPath
       }
     } catch (e) {
-      console.error('修正文件后缀失败，尝试直接保存', e)
+        console.error('修正文件后缀失败，尝试直接保存', e)
     }
 
     wx.saveImageToPhotosAlbum({
@@ -876,7 +1411,8 @@ Page({
         that.addDownloadRecord({ 
           url: originalUrl, 
           type: 'wallpaper',
-          id: wp._id // Pass ID to trigger hotScore update
+          id: wp._id, // Pass ID to trigger hotScore update
+          downloadMethod: downloadMethod
         })
         wx.showToast({ 
           title: '已保存到相册', 
@@ -933,7 +1469,7 @@ Page({
   },
 
   // 辅助方法：尝试使用云函数代理下载
-  tryProxyDownload(url) {
+  tryProxyDownload(url, downloadMethod = 'points') {
     const that = this
     wx.cloud.callFunction({
       name: 'proxyDownload',
@@ -944,7 +1480,7 @@ Page({
         wx.cloud.downloadFile({
           fileID: result.fileID,
           success(res2) {
-            that.saveToAlbum(res2.tempFilePath, url)
+            that.saveToAlbum(res2.tempFilePath, url, downloadMethod)
           },
           fail(e2) {
             wx.hideLoading()
@@ -969,5 +1505,27 @@ Page({
         duration: 3000
       })
     })
-  }
+  },
+  
+    // 新增：触摸开始
+  onTouchStart(e) {
+    this.touchStartX = e.touches[0].clientX
+    this.touchStartY = e.touches[0].clientY
+  },
+  
+  // 新增：触摸结束
+  onTouchEnd(e) {
+    this.touchEndX = e.changedTouches[0].clientX
+    this.touchEndY = e.changedTouches[0].clientY
+    
+    const deltaX = this.touchEndX - this.touchStartX
+    const deltaY = this.touchEndY - this.touchStartY
+    
+    // 判断是否为横向滑动
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+      const direction = deltaX > 0 ? 'right' : 'left'
+      this.slideDirection = direction
+    }
+  },
 })
+

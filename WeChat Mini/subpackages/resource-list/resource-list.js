@@ -1,6 +1,11 @@
 import { getResources, getCategories } from '../../utils/api.js'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
+import { getStorage, getWindowInfo } from '../../utils/storageManager.js'
 
 Page({
+  _isLoadingData: false,
+  
   data: {
     statusBarHeight: 20,
     navBarHeight: 44,
@@ -11,36 +16,133 @@ Page({
     currentTag: 'all',
     currentSort: 'hot', // 默认按热门排序
     pageTitle: '资源列表',
+    keyword: '',
+    color: '',
     
     // Data
     list: [],
     tagList: [], // Optional tags if we want to allow filtering within the category
+    _allTags: [], // 所有标签（内部）
+    tagBatchSize: 30, // 首屏渲染标签数量
     
     // Pagination
     page: 1,
     pageSize: 15,
     loading: false,
     hasMore: true,
+    nativeTopAd: null,
+    showNativeTopAd: false,
+    midNativeVideoAd: null,
+    bottomNativeVideoAd: null,
+    showBottomNativeAd: false,
   },
 
   onLoad(options) {
     this.initNavBar()
     
+    // 初始化插屏广告管理器
+    interstitialAdManager.initInterstitialAd('/subpackages/resource-list/resource-list')
+    
+    const decode = (val) => val ? decodeURIComponent(val) : ''
+    
     // 优先使用 options 中的 sort，如果没有则默认为 'hot'
-    const { type = 'wallpaper', category = '', tag = 'all', sort = 'hot', title } = options
+    const { type = 'wallpaper', category = '', tag = 'all', sort = 'hot', title, keyword = '', color = '' } = options
+    
+    const decodedKeyword = decode(keyword)
+    const decodedColor = decode(color)
+    const decodedCategory = decode(category)
+    const decodedTitle = decode(title)
+    
+    // 智能识别标题
+    let pageTitle = decodedTitle
+    if (!pageTitle) {
+      if (decodedKeyword) {
+        pageTitle = decodedKeyword
+      } else if (decodedColor) {
+        pageTitle = `${decodedColor}系`
+      } else if (decodedCategory) {
+        pageTitle = decodedCategory
+      } else if (type === 'avatar') {
+        pageTitle = '头像列表'
+      } else {
+        pageTitle = '壁纸精选'
+      }
+    }
+    
+    // 保存原始标题，用于类型切换时重新生成
+    const originalTitle = pageTitle
     
     this.setData({
       type,
-      currentCategory: category,
+      currentCategory: decodedCategory,
       currentTag: tag,
       currentSort: sort,
-      pageTitle: title || (type === 'avatar' ? '头像列表' : '壁纸精选')
+      keyword: decodedKeyword,
+      color: decodedColor,
+      pageTitle,
+      originalTitle,
+      list: [],
+      page: 1,
+      hasMore: true,
+      loading: false
     })
 
-    // 加载标签列表
-    this.loadNavTags()
+    // 只有非搜索模式下才加载标签列表
+    if (!decodedKeyword && !decodedColor) {
+      this.loadNavTags()
+    }
     
-    this.loadData()
+    this.loadData(true)
+    this.loadPageAds()
+  },
+  
+  onReachBottom() {
+    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
+      this.setData({ showBottomNativeAd: true })
+    }
+  },
+  
+  async loadPageAds() {
+    try {
+      const pages = getCurrentPages()
+      const current = pages && pages.length ? pages[pages.length - 1] : null
+      const route = current?.route || 'subpackages/resource-list/resource-list'
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      let nativeTop = pickByType(list, 'native_top')[0] || null
+      if (!nativeTop) {
+        const topNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'top' && it.isEnable)
+        if (topNativeVideo) nativeTop = topNativeVideo
+      }
+      if (nativeTop) this.setData({ nativeTopAd: nativeTop })
+      const midNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'middle' && it.isEnable)
+      const nativeBottom = pickByType(list, 'native_bottom')[0] || null
+      const bottomNativeVideo = (list || []).find(it => it.type === 'native_video' && (it.position === 'bottom' || !it.position) && it.isEnable)
+      const chosenBottom = nativeBottom || bottomNativeVideo
+      if (midNativeVideo) this.setData({ midNativeVideoAd: midNativeVideo })
+      if (chosenBottom) this.setData({ bottomNativeVideoAd: chosenBottom })
+    } catch (e) {}
+  },
+  
+  onPageScroll(e) {
+    const ad = this.data.nativeTopAd
+    const threshold = (ad && ad.scrollThreshold) || 200
+    const shouldShow = e.scrollTop >= threshold
+    if (shouldShow !== this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: shouldShow })
+    }
+    // 滚动时智能触发插屏广告（带冷却与防抖）
+    interstitialAdManager.smartTriggerInterstitialAd(1500)
+  },
+  
+  onShow() {
+    // 页面显示时智能触发插屏广告（带冷却时间检查）
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
+  },
+  
+  onNativeAdError() {
+    if (this.data.showNativeTopAd) {
+      this.setData({ showNativeTopAd: false })
+    }
   },
 
   async loadNavTags() {
@@ -78,13 +180,52 @@ Page({
         // 过滤掉重复的 'all'
         sortedTags = sortedTags.filter(t => t.id !== 'all' && t.name !== '全部')
         
+        const allTags = [{ id: 'all', name: '全部' }, ...sortedTags]
+        // 分批渲染：首屏只渲染前 30 个
+        const batchSize = this.data.tagBatchSize || 30
+        const initialTags = allTags.slice(0, batchSize)
+        
         this.setData({
-          tagList: [{ id: 'all', name: '全部' }, ...sortedTags]
+          tagList: initialTags,
+          _allTags: allTags
         })
       }
     } catch (error) {
       console.error('加载标签失败:', error)
     }
+  },
+  
+  // 滚动加载更多标签
+  onTagScrollToLower() {
+    const allTags = this.data._allTags
+    const currentLen = this.data.tagList.length
+    if (currentLen >= allTags.length) return // 已全部加载
+    
+    const batchSize = this.data.tagBatchSize || 30
+    const nextBatch = allTags.slice(currentLen, currentLen + batchSize)
+    if (nextBatch.length > 0) {
+      this.setData({
+        tagList: [...this.data.tagList, ...nextBatch]
+      })
+    }
+  },
+
+  onTypeChange(e) {
+    const type = e.currentTarget.dataset.type
+    if (type === this.data.type) return
+    
+    this.setData({
+      type,
+      list: [],
+      page: 1,
+      hasMore: true,
+      loading: false
+    }, () => {
+      if (!this.data.keyword && !this.data.color) {
+        this.loadNavTags()
+      }
+      this.loadData(true)
+    })
   },
 
   onTagChange(e) {
@@ -119,7 +260,7 @@ Page({
 
   initNavBar() {
     try {
-      const info = wx.getWindowInfo()
+      const info = getWindowInfo()
       const statusBarHeight = info.statusBarHeight || 20
       const navBarHeight = 44 // Fixed 44px
       this.setData({ statusBarHeight, navBarHeight })
@@ -134,20 +275,21 @@ Page({
   },
 
   async loadData(reset = false) {
-    if (this.data.loading) return
+    if (this._isLoadingData) return
     if (!reset && !this.data.hasMore) return
-
+    
+    this._isLoadingData = true
     this.setData({ loading: true })
 
     try {
       const page = reset ? 1 : this.data.page
-      const { type, currentCategory, currentTag, currentSort, pageSize } = this.data
+      const { type, currentCategory, currentTag, currentSort, pageSize, keyword, color } = this.data
       
       let res;
       if (type === 'likes') {
         // 加载点赞列表
         const db = wx.cloud.database()
-        const openid = wx.getStorageSync('openid')
+        const openid = getStorage('openid')
         if (!openid) {
           this.setData({ loading: false, hasMore: false })
           return
@@ -177,14 +319,28 @@ Page({
         
         // 保持点赞顺序
         const orderedResources = resourceIds.map(id => resourcesRes.data.find(r => r._id === id)).filter(Boolean)
+        // 确保有 type 字段
+        orderedResources.forEach(item => {
+          if (!item.id) item.id = item._id
+          if (!item.type) item.type = item.type || 'wallpaper'
+        })
         res = { result: { success: true, data: orderedResources } }
       } else {
         const params = {
           type,
           page,
-          pageSize
+          pageSize,
+          includeMeta: false  // 🔥 优化：不需要分类标签，减少查询
         }
 
+        if (keyword) {
+          params.keyword = keyword
+        }
+        
+        if (color) {
+          params.color = color
+        }
+        
         if (currentCategory) {
           params.category = currentCategory
         }
@@ -232,7 +388,8 @@ Page({
           rawOriginalUrl: item.originUrl,
           title: item.title,
           categories: item.categories,
-          tags: item.tags
+          tags: item.tags,
+          type: item.type
         }))
 
         this.setData({
@@ -248,6 +405,8 @@ Page({
       console.error('加载资源失败:', error)
       this.setData({ loading: false })
       wx.showToast({ title: '加载失败', icon: 'none' })
+    } finally {
+      this._isLoadingData = false
     }
   },
 
@@ -261,16 +420,22 @@ Page({
     })
   },
 
+  onWaterfallItemTap(e) {
+    const item = e.detail.item
+    this.previewImage({ currentTarget: { dataset: item } })
+  },
+
   previewImage(e) {
     const item = e.currentTarget.dataset
-    const { type, list } = this.data
+    const { list } = this.data
     const currentUrl = item.url || item.originalUrl
     
     // 从 list 数组中找到完整的 item 对象（包含 _id）
     let fullItem = list.find(i => (i.url || i.originalUrl) === currentUrl)
     fullItem = fullItem || item
+    const itemType = fullItem.type || 'wallpaper'
     
-    if (type === 'avatar') {
+    if (itemType === 'avatar') {
         wx.navigateTo({
             url: `/subpackages/preview/preview?url=${encodeURIComponent(fullItem.url)}&rawUrl=${encodeURIComponent(fullItem.rawUrl)}&isAvatar=true&avatarData=${encodeURIComponent(JSON.stringify(fullItem))}`
         })

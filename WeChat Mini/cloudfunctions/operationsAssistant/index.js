@@ -46,28 +46,26 @@ class OperationsAssistant {
       }
     } catch (error) {
       console.error('获取看板数据失败:', error)
-      return { success: false, message: error.message }
+      return { success: false, message: '操作失败，请稍后重试' }
     }
   }
 
   async getUserStats(startDate) {
     try {
-      const [allUsersRes, activeUsersRes, newUsersRes] = await Promise.all([
-        db.collection('sys_user').count(),
-        db.collection('events')
-          .where({ createTime: _.gte(startDate) })
-          .aggregate()
-          .group({ _id: '$_openid' })
-          .count('count')
-          .end(),
-        db.collection('sys_user')
+      const [allUsersRes, newUsersRes] = await Promise.all([
+        db.collection('users').count(),
+        db.collection('users')
           .where({ createdAt: _.gte(startDate) })
           .count()
       ])
 
+      const activeUsersRes = await db.collection('users')
+        .where({ lastLoginAt: _.gte(startDate) })
+        .count()
+
       return {
         total: allUsersRes.total || 0,
-        active: activeUsersRes.list[0]?.count || 0,
+        active: activeUsersRes.total || 0,
         new: newUsersRes.total || 0
       }
     } catch (error) {
@@ -325,7 +323,7 @@ class OperationsAssistant {
       }
     } catch (error) {
       console.error('内容质量检查失败:', error)
-      return { success: false, message: error.message }
+      return { success: false, message: '操作失败，请稍后重试' }
     }
   }
 
@@ -400,7 +398,7 @@ class OperationsAssistant {
       }
     } catch (error) {
       console.error('趋势预测失败:', error)
-      return { success: false, message: error.message }
+      return { success: false, message: '操作失败，请稍后重试' }
     }
   }
 
@@ -478,15 +476,15 @@ class OperationsAssistant {
       }
     } catch (error) {
       console.error('获取用户行为失败:', error)
-      return { success: false, message: error.message }
+      return { success: false, message: '操作失败，请稍后重试' }
     }
   }
 
   async getBehaviorStats(startDate) {
     try {
       const [favoritesRes, downloadsRes] = await Promise.all([
-        db.collection('events').where({ type: 'favorite', createTime: _.gte(startDate) }).count(),
-        db.collection('events').where({ type: 'download', createTime: _.gte(startDate) }).count()
+        db.collection('favorites').count(),
+        db.collection('downloads').count()
       ])
 
       return {
@@ -498,7 +496,79 @@ class OperationsAssistant {
       }
     } catch (error) {
       console.error('获取行为统计失败:', error)
-      return { success: false, message: error.message }
+      return { success: false, message: '操作失败，请稍后重试' }
+    }
+  }
+
+  async getDownloadRecords(limit = 100, skip = 0) {
+    try {
+      const recordsRes = await db.collection('downloads')
+        .orderBy('createTime', 'desc')
+        .skip(skip)
+        .limit(limit)
+        .get()
+
+      const resourceIds = [...new Set(recordsRes.data.map(r => r.resourceId).filter(Boolean))]
+
+      const resourcesRes = resourceIds.length > 0 
+        ? await db.collection('resources')
+            .where({ _id: _.in(resourceIds) })
+            .get()
+        : { data: [] }
+
+      const resourceMap = new Map(resourcesRes.data.map(r => [r._id, r]))
+
+      const records = recordsRes.data.map(record => ({
+        ...record,
+        resource: resourceMap.get(record.resourceId),
+        resourceTitle: resourceMap.get(record.resourceId)?.title,
+        resourceType: resourceMap.get(record.resourceId)?.type,
+        resourceCover: resourceMap.get(record.resourceId)?.coverUrl || resourceMap.get(record.resourceId)?.url
+      }))
+
+      return {
+        success: true,
+        data: records
+      }
+    } catch (error) {
+      console.error('获取下载记录失败:', error)
+      return { success: false, message: '操作失败，请稍后重试' }
+    }
+  }
+
+  async getFavoriteRecords(limit = 100, skip = 0) {
+    try {
+      const recordsRes = await db.collection('favorites')
+        .orderBy('createTime', 'desc')
+        .skip(skip)
+        .limit(limit)
+        .get()
+
+      const resourceIds = [...new Set(recordsRes.data.map(r => r.resourceId).filter(Boolean))]
+
+      const resourcesRes = resourceIds.length > 0 
+        ? await db.collection('resources')
+            .where({ _id: _.in(resourceIds) })
+            .get()
+        : { data: [] }
+
+      const resourceMap = new Map(resourcesRes.data.map(r => [r._id, r]))
+
+      const records = recordsRes.data.map(record => ({
+        ...record,
+        resource: resourceMap.get(record.resourceId),
+        resourceTitle: resourceMap.get(record.resourceId)?.title,
+        resourceType: resourceMap.get(record.resourceId)?.type,
+        resourceCover: resourceMap.get(record.resourceId)?.coverUrl || resourceMap.get(record.resourceId)?.url
+      }))
+
+      return {
+        success: true,
+        data: records
+      }
+    } catch (error) {
+      console.error('获取收藏记录失败:', error)
+      return { success: false, message: '操作失败，请稍后重试' }
     }
   }
 }
@@ -506,7 +576,22 @@ class OperationsAssistant {
 const assistant = new OperationsAssistant()
 
 exports.main = async (event, context) => {
-  const { action, days = 7, startDate, endDate, type = 'all', limit = 50, skip = 0 } = event
+  const wxContext = cloud.getWXContext()
+  const callerOpenid = wxContext.OPENID
+  const { action, days = 7, startDate, endDate, type = 'all', limit = 100, skip = 0 } = event
+
+  // 🔒 安全检查：所有操作均需管理员鉴权
+  if (!callerOpenid) {
+    return { success: false, message: '未登录' }
+  }
+
+  const adminCheck = await db.collection('admins')
+    .where({ _openid: callerOpenid })
+    .count()
+
+  if (adminCheck.total === 0) {
+    return { success: false, message: '权限不足，仅管理员可查看运营数据' }
+  }
 
   try {
     if (action === 'dashboard') {
@@ -536,6 +621,14 @@ exports.main = async (event, context) => {
       return await assistant.getBehaviorStats(start)
     }
 
+    if (action === 'downloadRecords') {
+      return await assistant.getDownloadRecords(limit, skip)
+    }
+
+    if (action === 'favoriteRecords') {
+      return await assistant.getFavoriteRecords(limit, skip)
+    }
+
     return {
       success: false,
       message: '无效的操作'
@@ -544,7 +637,7 @@ exports.main = async (event, context) => {
     console.error('运营助手错误:', error)
     return {
       success: false,
-      message: error.message || '服务异常'
+      message: '操作失败，请稍后重试'
     }
   }
 }

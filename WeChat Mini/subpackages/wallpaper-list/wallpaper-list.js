@@ -1,4 +1,5 @@
 import { getResources, getCategories } from '../../utils/api.js'
+import { getWindowInfo } from '../../utils/storageManager.js'
 
 Page({
   data: {
@@ -31,7 +32,7 @@ Page({
 
   initNavBar() {
     try {
-      const info = wx.getWindowInfo()
+      const info = getWindowInfo()
       const statusBarHeight = info.statusBarHeight || 20
       const navBarHeight = 44 // Fixed 44px
       this.setData({ statusBarHeight, navBarHeight })
@@ -185,5 +186,8 @@ Page({
       }
     }
     return value
-  }
+  },
+
+  // 页面滚动监听（供广告组件使用）
+  onPageScroll() {}
 })
