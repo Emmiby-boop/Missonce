@@ -34,6 +34,9 @@ dist-ssr
 .cloudbase
 cloudbase-state.json
 
+# Backup directories (not part of the source code)
+backups/
+
 # WeChat Mini Program
 project.private.config.json
 miniprogram_npm/
