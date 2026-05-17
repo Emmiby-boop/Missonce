@@ -116,12 +116,12 @@ Component({
         this.videoAd = null
         this.data._adReady = false
         this.data._adShowing = false
+        this.data.isLoading = false // data-only，不触发setData渲染
         if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
         if (this._adResolve) {
           this._adResolve({ success: false, error: '页面隐藏' })
           this._adResolve = null
         }
-        if (this.isAttached) this.setData({ isLoading: false })
       }
     }
   },
