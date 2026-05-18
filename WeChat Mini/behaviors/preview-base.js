@@ -3,9 +3,9 @@
  * Shared methods between avatar preview and wallpaper preview pages.
  * Extracted from preview.js / wallpaper-preview.js to eliminate duplication.
  */
-const { generateInteractionStats } = require('../../utils/statsGenerator.js')
-const { getStorage, setStorage } = require('../../utils/storageManager.js')
-const { checkLoginStatus } = require('../../utils/auth.js')
+const { generateInteractionStats } = require('../utils/statsGenerator.js')
+const { getStorage, setStorage } = require('../utils/storageManager.js')
+const { checkLoginStatus } = require('../utils/auth.js')
 
 module.exports = Behavior({
   methods: {
