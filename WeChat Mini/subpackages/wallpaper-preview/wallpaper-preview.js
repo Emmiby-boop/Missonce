@@ -1,4 +1,4 @@
-﻿import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
+import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
 import { loginWithProfile } from '../../utils/auth.js'
 import { reportError } from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
@@ -155,7 +155,7 @@ Page({
         navBarHeight: 44
       }, this.getIconSet()))
     } catch (e) {
-      console.error(\"获取系统信息失败:\", e)
+      console.error("获取系统信息失败:", e)
     }
   },
 
