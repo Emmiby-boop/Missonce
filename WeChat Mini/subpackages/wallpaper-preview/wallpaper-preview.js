@@ -144,7 +144,7 @@ Page({
 
 
   // 已废弃，由 _initViewData 替代
-  initNavBar() {}
+  initNavBar() {},
 
   // 合并 initNavBar + getIconSet -> 1 次 setData
   _initViewData() {
