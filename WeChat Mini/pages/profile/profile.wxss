@@ -42,7 +42,7 @@ page {
   border-radius: 24rpx;
   padding: 40rpx 30rpx;
   margin: 0 24rpx 24rpx;
-  box-shadow: 0 8rpx 24rpx var(--shadow-color);
+  box-shadow: 0 4rpx 16rpx var(--shadow-color);
 }
 
 .user-content-wrapper {
@@ -178,7 +178,8 @@ page {
 }
 
 .member-badge-icon {
-  font-size: 20rpx;
+  width: 22rpx;
+  height: 22rpx;
   margin-right: 4rpx;
 }
 
@@ -309,7 +310,7 @@ page {
 /* Menu Section */
 .menu-section {
   background: var(--card-bg);
-  border-radius: 20rpx;
+  border-radius: 24rpx;
   padding: 0 24rpx;
   margin: 0 24rpx;
   box-shadow: 0 4rpx 16rpx var(--shadow-color);
@@ -357,8 +358,8 @@ page {
 
 .logout-link text {
   font-size: 26rpx;
-  color: var(--text-sub);
-  text-decoration: underline;
+  color: #e57373;
+  opacity: 0.7;
 }
 
 /* 统一深色模式逻辑由 app.wxss 管理 */
@@ -385,8 +386,8 @@ page {
 }
 
 .checkin-btn.checked {
-  background: var(--bg-color);
-  box-shadow: none;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  box-shadow: 0 2rpx 8rpx rgba(82, 196, 26, 0.15);
 }
 
 .checkin-icon-box {
@@ -400,13 +401,9 @@ page {
   margin-right: 12rpx;
 }
 
-.checkin-icon {
-  font-size: 26rpx;
-  color: #ff9a9e;
-}
-
-.checkin-btn.checked .checkin-icon {
-  color: #999;
+.checkin-icon-img {
+  width: 28rpx;
+  height: 28rpx;
 }
 
 .checkin-text {
@@ -416,7 +413,7 @@ page {
 }
 
 .checkin-btn.checked .checkin-text {
-  color: #999;
+  color: #2e7d32;
 }
 
 .points-entry {
@@ -432,7 +429,8 @@ page {
 }
 
 .points-entry-icon {
-  font-size: 28rpx;
+  width: 32rpx;
+  height: 32rpx;
   margin-right: 8rpx;
 }
 
@@ -700,13 +698,31 @@ page {
 }
 
 .download-empty {
-  padding: 100rpx 0;
+  padding: 80rpx 0;
   text-align: center;
   color: var(--text-sub);
   font-size: 28rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16rpx;
+}
+
+.empty-icon {
+  width: 120rpx;
+  height: 120rpx;
+  opacity: 0.3;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: var(--text-sub);
+}
+
+.empty-hint {
+  font-size: 22rpx;
+  color: var(--text-sub);
+  opacity: 0.6;
 }
 
 /* Action Sheet Styles */

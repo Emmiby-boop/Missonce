@@ -65,11 +65,10 @@ Page({
     
     // Menu Configuration
     menuItems: [
-      { title: '联系我们', iconPath: '/images/menu-contact.svg', color: '#ff9c6e' },
-      { title: '推荐给好友', iconPath: '/images/menu-share.svg', color: '#5cdbd3', isShare: true },
-
-      { title: '清除缓存', iconPath: '/images/menu-clear.svg', color: '#ff85c0' },
-      { title: '关于我们', iconPath: '/images/menu-about.svg', color: '#69c0ff' }
+      { title: '联系我们', desc: '联系客服与关注公众号', iconPath: '/images/menu-contact.svg', color: '#ff9c6e' },
+      { title: '推荐给好友', desc: '分享给微信好友', iconPath: '/images/menu-share.svg', color: '#5cdbd3', isShare: true },
+      { title: '清除缓存', desc: '清理本地缓存数据', iconPath: '/images/menu-clear.svg', color: '#ff85c0' },
+      { title: '关于我们', desc: '版本信息与隐私政策', iconPath: '/images/menu-about.svg', color: '#69c0ff' }
     ]
   },
 
