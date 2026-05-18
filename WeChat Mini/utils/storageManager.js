@@ -39,7 +39,8 @@ const getDefaultStorageKeys = () => [
   STORAGE_KEYS.CHECK_IN_DAYS,
   STORAGE_KEYS.LAST_CHECK_IN_DATE,
   'favorites',
-  'local_read_notification_ids'
+  'local_read_notification_ids',
+  'home_data_api_cache'
 ]
 
 const readStorageAsync = (key) => {
@@ -101,6 +102,12 @@ const _batchPreloadStorage = (keys) => {
 
 export const initStorageCache = () => {
   _batchPreloadStorage(getDefaultStorageKeys())
+  // 首页缓存同步预加载：确保页面 onLoad 时 getStorage 能立即命中
+  // 避免 startupSyncFallbackDisabled 期间漏掉缓存
+  try {
+    const homeCache = wx.getStorageSync('home_data_api_cache')
+    if (homeCache) storageCache['home_data_api_cache'] = homeCache
+  } catch (e) {}
 }
 
 export const preloadStorageCache = (keys = []) => {
