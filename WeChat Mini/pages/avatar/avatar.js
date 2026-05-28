@@ -21,7 +21,7 @@ Page({
     page: 1,
     loading: true, // 🔥 优化：初始值为 true，显示骨架屏
     hasMore: true,
-    skeletons: new Array(12).fill(0),
+    skeletons: new Array(6).fill(0),
     showBackToTop: false,
     
     // 🔥 新增：动态布局支持

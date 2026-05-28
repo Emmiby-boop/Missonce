@@ -151,16 +151,8 @@
   <!-- 头像网格布局 (固定三列) -->
   <view class="avatar-grid-container" wx:if="{{avatars.length > 0}}">
     <view class="avatar-grid-item" wx:for="{{avatars}}" wx:key="id" bindtap="previewImage" 
-          data-url="{{item.url}}" 
-          data-original-url="{{item.originalUrl}}" 
-          data-raw-url="{{item.rawUrl}}" 
-          data-raw-original-url="{{item.rawOriginalUrl}}" 
-          data-categories="{{item.categories}}" 
-          data-tags="{{item.tags}}">
+          data-url="{{item.originalUrl || item.url}}">
       <image class="avatar-img" src="{{item.url}}" mode="aspectFill" lazy-load></image>
-      <view class="avatar-info" wx:if="{{item.tags && item.tags.length > 0}}">
-        <view class="avatar-tag">{{item.tags[0]}}</view>
-      </view>
     </view>
   </view>
 
