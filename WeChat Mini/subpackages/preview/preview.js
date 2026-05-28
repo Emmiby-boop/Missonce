@@ -320,19 +320,13 @@ Page({
     
     return new Promise(async (resolve) => {
       try {
-        // 🔥 优先用预取缓存（< 1ms），无缓存时才调云函数
-        let status = null
-        const cache = getStorage('downloadStatus_cache')
-        if (cache && Date.now() - cache.time < 10000) {
-          status = cache.data
-        } else {
-          const statusRes = await wx.cloud.callFunction({
-            name: 'userPoints',
-            data: { action: 'getDownloadStatus', resourceType: 'avatar' }
-          })
-          if (!that) return resolve(adResult)
-          status = statusRes.result && statusRes.result.success ? statusRes.result.data : null
-        }
+        const statusRes = await wx.cloud.callFunction({
+          name: 'userPoints',
+          data: { action: 'getDownloadStatus', resourceType: 'avatar' }
+        })
+        if (!that) return resolve(adResult)
+        
+        const status = statusRes.result && statusRes.result.success ? statusRes.result.data : null
         console.log('[AD][Rewarded] getDownloadStatus:', status)
         
         if (!status) {
@@ -370,6 +364,11 @@ Page({
                   
                   if (result.success) {
                     adResult = { success: true, method: 'free' }
+                    // 🔥 广告看完立即调用云函数记录，不等文件下载完成，防止二次点击时 recordDownload 还未写入导致重复弹窗
+                    wx.cloud.callFunction({
+                      name: 'userPoints',
+                      data: { action: 'recordDownload', downloadMethod: 'free', resourceType: 'avatar' }
+                    }).catch(() => {})
                   } else {
                     wx.showToast({ title: '需要完整观看广告才能下载', icon: 'none' })
                   }

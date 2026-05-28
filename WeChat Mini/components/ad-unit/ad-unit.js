@@ -639,6 +639,17 @@ Component({
             console.log('[AD][Rewarded] show aborted (page switch):', errMsg)
             this.data.isLoading = false
             resolve({ success: false, error: '页面切换，广告取消' })
+          } else if (errMsg.indexOf('destroyed') !== -1 || errMsg.indexOf('destroy') !== -1) {
+            // 广告实例已被 SDK 销毁（常见于中途退出后），需要重建
+            console.log('[AD][Rewarded] ad destroyed, re-initializing...')
+            this.videoAd = null
+            this.data._adReady = false
+            this.data.isLoading = false
+            if (this.isAttached && !this.data._pageHidden) {
+              this.setData({ isLoading: false })
+              this.initRewarded()  // 自动重建，下次点击即可正常播放
+            }
+            resolve({ success: false, error: '广告实例已销毁，已自动重建，请重试' })
           } else {
             // 正常异常（加载失败等）：必须通过 setData 重置 UI，否则加载动画永远不消失
             console.error('[AD][Rewarded] show failed:', errMsg)
