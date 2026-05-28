@@ -744,12 +744,12 @@ Page({
         that.doDownload(true)
       }
     } finally {
-      // doDownload 是异步的，延迟解锁避免连击
+      // 安全兜底：15 秒后强制解锁，防止异常路径下 isDownloading 永不清除
       setTimeout(() => {
         if (this.data.isDownloading) {
           this.setData({ isDownloading: false })
         }
-      }, 3000)
+      }, 15000)
     }
   },
 
@@ -764,12 +764,14 @@ Page({
     console.log('相册权限:', hasAlbumPermission)
     if (!hasAlbumPermission) {
       console.log('没有相册权限')
+      this.setData({ isDownloading: false })
       return
     }
     const rawUrl = this.pickUrl()
     console.log('图片地址:', rawUrl)
     if (!rawUrl) {
       wx.showToast({ title: '图片地址缺失', icon: 'none' })
+      this.setData({ isDownloading: false })
       return
     }
 
@@ -784,11 +786,13 @@ Page({
             that.saveToAlbum(res.tempFilePath, rawUrl, downloadMethod)
           } else {
             wx.hideLoading()
+            that.setData({ isDownloading: false })
             wx.showToast({ title: '下载云文件失败', icon: 'none' })
           }
         },
         fail(err) {
           wx.hideLoading()
+          that.setData({ isDownloading: false })
           console.error('cloud.downloadFile fail:', err)
           wx.showToast({ title: '下载云文件失败: ' + (err.errMsg || '未知错误'), icon: 'none' })
         }
