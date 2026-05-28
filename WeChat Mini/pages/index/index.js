@@ -674,6 +674,17 @@ Page({
     })
   },
 
+  navigateToWatermark() {
+    wx.navigateToMiniProgram({
+      appId: 'wxbd304fe2186156e4',
+      path: '',
+      fail: (err) => {
+        console.error('跳转去水印小程序失败:', err)
+        wx.showToast({ title: '跳转失败', icon: 'none' })
+      }
+    })
+  },
+
   navigateToFavorites() {
     this.openFavorites()
   },

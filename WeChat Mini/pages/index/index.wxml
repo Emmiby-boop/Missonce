@@ -62,30 +62,29 @@
     </view>
     <view class="quick-grid">
       <view class="quick-item" bindtap="navigateToTopicList">
-        <view class="quick-icon-box" style="background: #e0f2fe;">
-          <image src="../../images/icon-fire.png" class="quick-icon"></image>
+        <view class="quick-icon-box quick-icon-topics">
+          <image src="../../images/quick-topics.png" class="quick-icon"></image>
         </view>
         <text class="quick-text">精选专题</text>
       </view>
       <view class="quick-item" bindtap="navigateToInspiration">
-        <view class="quick-icon-box" style="background: #e0f2fe;">
-          <text style="font-size: 40rpx;">✨</text>
+        <view class="quick-icon-box quick-icon-inspiration">
+          <image src="../../images/quick-inspiration.png" class="quick-icon"></image>
         </view>
         <text class="quick-text">灵感文案</text>
       </view>
       <view class="quick-item" bindtap="navigateToDailyPicks">
-        <view class="quick-icon-box" style="background: #e0f2fe;">
-          <text style="font-size: 40rpx;">📅</text>
+        <view class="quick-icon-box quick-icon-daily">
+          <image src="../../images/quick-daily.png" class="quick-icon"></image>
         </view>
         <text class="quick-text">每日推荐</text>
         <view class="quick-badge" wx:if="{{showDailyBadge}}" style="background: #ef4444;">NEW</view>
       </view>
-      <view class="quick-item" bindtap="navigateToFavorites">
-        <view class="quick-icon-box" style="background: #e0f2fe;">
-          <image class="quick-icon" src="../../images/profile-active.png" mode="widthFix"></image>
+      <view class="quick-item" bindtap="navigateToWatermark">
+        <view class="quick-icon-box quick-icon-watermark">
+          <image class="quick-icon" src="../../images/quick-watermark.png" mode="widthFix"></image>
         </view>
-        <text class="quick-text">收藏夹</text>
-        <view class="quick-badge" wx:if="{{favoritesCount > 0}}">{{favoritesCount}}</view>
+        <text class="quick-text">去水印</text>
       </view>
     </view>
   </view>

@@ -28,6 +28,9 @@
     }
   ],
   "lazyCodeLoading": "requiredComponents",
+  "navigateToMiniProgramAppIdList": [
+    "wxbd304fe2186156e4"
+  ],
   
   "cloud": true,
   "darkmode": true,
