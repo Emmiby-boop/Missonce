@@ -11,7 +11,7 @@ export const BRAND = {
 
 /** 按钮 / 提示文案 */
 export const UI_TEXT = {
-  scanHint: '扫码体验',
+  scanHint: '扫码查看',
   shareBtn: '发送给朋友',
   saveBtn: '保存海报',
   generating: '正在生成海报...',

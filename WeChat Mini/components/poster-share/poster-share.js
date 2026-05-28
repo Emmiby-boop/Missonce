@@ -102,11 +102,18 @@ function getDateInfo() {
   }
 }
 
+const _ratioCache = new Map()    // 图片宽高比缓存，避免重复 wx.getImageInfo 网络请求
+
 function getImageRatio(url) {
+  if (_ratioCache.has(url)) return Promise.resolve(_ratioCache.get(url))
   return new Promise((resolve) => {
     wx.getImageInfo({
       src: url,
-      success: (res) => resolve(res.width / res.height),
+      success: (res) => {
+        const ratio = res.width / res.height
+        _ratioCache.set(url, ratio)
+        resolve(ratio)
+      },
       fail: () => resolve(9 / 16)
     })
   })
@@ -164,10 +171,22 @@ Component({
   lifetimes: {
     attached() {
       if (wx.showShareImageMenu) this.setData({ canShowShareMenu: true })
+      // 🔥 预热：组件挂载时提前拉取语录和小程序码，首次打开海报弹窗时秒开
+      fetchQuotes().catch(() => {})
+      this._prefetchQRCode()
     }
   },
 
   methods: {
+    _prefetchQRCode() {
+      wx.cloud.callFunction({
+        name: 'getQRCode',
+        data: { path: 'pages/index/index', scene: 's=p' }
+      }).then(res => {
+        if (res.result?.url) this.data.qrCodeUrl = res.result.url
+      }).catch(() => {})
+    },
+
     noop() {},
 
     onClose() {
@@ -230,7 +249,8 @@ Component({
         }
 
         this.setData({ width: W, height: H })
-        await new Promise(r => setTimeout(r, 150))
+        // 等待 Canvas 节点渲染（一帧即可，无需 150ms）
+        await new Promise(r => setTimeout(r, 50))
 
         // ---- Canvas ----
         const canvasRes = await new Promise(resolve => {
@@ -286,7 +306,7 @@ Component({
         ctx.fillStyle = 'rgba(255,255,255,0.85)'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(BRAND.tagline, W / 2, imgY + imgH - 22)
+        ctx.fillText(BRAND.appName, W / 2, imgY + imgH - 22)
         ctx.restore()
 
         // === 3. 语录 ===
@@ -371,15 +391,6 @@ Component({
           ctx.fillText(UI_TEXT.scanHint, qrX + qrSz / 2, qrY + qrSz + 10)
           ctx.restore()
         }
-
-        // === 6. 底部水印 ===
-        ctx.save()
-        ctx.font = T.fontTiny
-        ctx.fillStyle = T.textLight
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'bottom'
-        ctx.fillText(BRAND.appName, W / 2, H - 16)
-        ctx.restore()
 
         // === 恢复裁剪 + 导出 ===
         ctx.restore()
