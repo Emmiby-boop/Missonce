@@ -177,7 +177,6 @@ Page({
 
   _optimizeUrl(url) {
     if (!url || typeof url !== 'string') return url
-    if (url.startsWith('cloud://')) return url
     if (url.includes('imageMogr2')) return url
     const w = this._previewImageWidth()
     const sep = url.includes('?') ? '&' : '?'
