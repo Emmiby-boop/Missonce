@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <nav class="nav">
+    <nav class="nav" role="navigation" aria-label="主导航">
       <RouterLink
         v-for="item in navItems"
         :key="item.path"
@@ -42,15 +42,16 @@ const route = useRoute();
 const navItems = [
   { path: '/', label: '概览' },
   { path: '/operations-dashboard', label: '智能运营助手' },
+  { path: '/media-parse', label: '媒体解析' },
   { path: '/resources', label: '资源管理' },
-  { path: '/quotes', label: '文案管理' },
+  { path: '/user-manager', label: '用户管理' },
   { path: '/ai-config', label: 'AI配置' },
-  { path: '/notifications', label: '公告管理' },
+  { path: '/page-ads', label: '页面广告管理' },
   { path: '/banners', label: '轮播图管理' },
   { path: '/home-layout', label: '首页布局管理' },
   { path: '/topics', label: '专题管理' },
   { path: '/categories-tags', label: '分类与标签管理' },
-  { path: '/page-ads', label: '页面广告管理' },
+  { path: '/notifications', label: '公告管理' },
   { path: '/contact-config', label: '联系方式配置' },
   { path: '/admins', label: '管理员管理' },
   { path: '/logs', label: '日志管理' },
@@ -144,6 +145,27 @@ defineEmits(['close']);
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  overflow-y: auto;
+  min-height: 0; /* 允许 flex 子元素收缩并出现滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.nav::-webkit-scrollbar-thumb:hover {
+  background: var(--text-sub);
 }
 
 .nav-item {

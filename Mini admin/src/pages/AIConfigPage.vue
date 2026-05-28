@@ -39,7 +39,7 @@
           class="px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
           :class="activeTab === 'quotes' ? 'bg-[var(--primary)] text-white shadow-sm' : 'bg-[var(--bg-card)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-color)]'"
         >
-          文案管理
+          灵感文案
         </button>
       </div>
     </div>
@@ -546,7 +546,7 @@
       </div>
     </div>
 
-    <!-- 文案管理 Tab（复用 QuotesPage 组件） -->
+    <!-- 灵感文案 Tab（小程序灵感文案，quotes 集合） -->
     <section v-if="activeTab === 'quotes'">
       <QuotesPage />
     </section>
