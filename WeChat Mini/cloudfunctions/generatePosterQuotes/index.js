@@ -1,11 +1,41 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const https = require('https')
+const http = require('http')
+const { URL } = require('url')
+
+// HTTP 请求封装
+function httpRequest(url, options) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const mod = u.protocol === 'https:' ? https : http
+    const req = mod.request(url, {
+      method: options.method || 'POST',
+      headers: options.headers || {},
+      timeout: 30000
+    }, (res) => {
+      let body = ''
+      res.on('data', chunk => body += chunk)
+      res.on('end', () => {
+        try {
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, body, json: () => JSON.parse(body) })
+        } catch {
+          resolve({ ok: false, status: res.statusCode, body, json: () => { throw new Error('Invalid JSON') } })
+        }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('请求超时')) })
+    if (options.body) req.write(options.body)
+    req.end()
+  })
+}
 
 // OpenAI 兼容的 AI API 调用
 async function callAI(apiUrl, apiKey, model, systemPrompt, userPrompt) {
   const url = apiUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
-  const response = await fetch(url, {
+  const response = await httpRequest(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -23,13 +53,11 @@ async function callAI(apiUrl, apiKey, model, systemPrompt, userPrompt) {
   })
 
   if (!response.ok) {
-    const errText = await response.text()
-    throw new Error(`AI API 返回错误 ${response.status}: ${errText}`)
+    throw new Error(`AI API 返回错误 ${response.status}: ${response.body.substring(0, 300)}`)
   }
 
-  const json = await response.json()
-  const content = json.choices?.[0]?.message?.content || ''
-  return content
+  const json = response.json()
+  return json.choices?.[0]?.message?.content || ''
 }
 
 // 解析 AI 返回的文案为数组
@@ -44,7 +72,6 @@ exports.main = async (event) => {
   const { action = 'generate', count = 5 } = event
 
   try {
-    // 读取 writer 配置
     const writerRes = await db.collection('sys_config').doc('ai_writer_config').get().catch(() => null)
     if (!writerRes || !writerRes.data) {
       return { success: false, message: '请先在 AI 配置页面配置文案模型' }
@@ -60,21 +87,10 @@ exports.main = async (event) => {
 
     console.log('正在调用 AI 生成文案...', { model: cfg.MODEL, provider: cfg.PROVIDER })
 
-    const raw = await callAI(
-      cfg.API_URL,
-      cfg.API_KEY,
-      cfg.MODEL,
-      systemPrompt,
-      userPrompt
-    )
-
+    const raw = await callAI(cfg.API_URL, cfg.API_KEY, cfg.MODEL, systemPrompt, userPrompt)
     const quotes = parseQuotes(raw)
 
-    return {
-      success: true,
-      quotes,
-      raw
-    }
+    return { success: true, quotes, raw }
   } catch (error) {
     console.error('生成文案失败:', error)
     return { success: false, message: error.message || 'AI 生成失败' }
