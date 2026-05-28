@@ -149,7 +149,7 @@ async function bindInviter(inviterOpenid) {
   return false
 }
 
-module.exports = {
+export {
   showShareMenu,
   onShareAppMessage,
   onShareTimeline,

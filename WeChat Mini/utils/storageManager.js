@@ -2,7 +2,8 @@ import { STORAGE_KEYS } from '../config/constants'
 
 const storageCache = {}
 const storagePending = {}
-let startupSyncFallbackDisabled = true
+// 启动阶段标记：启动后 5 秒内禁用同步回退（wx.getStorageSync），避免阻塞渲染线程
+let _isStartupPhase = true
 
 let _windowInfo = null
 let _appBaseInfo = null
@@ -70,7 +71,7 @@ const readStorageAsync = (key) => {
 }
 
 setTimeout(() => {
-  startupSyncFallbackDisabled = false
+  _isStartupPhase = false
 }, 5000)
 
 export const initStorageCache = () => {
@@ -164,7 +165,7 @@ export const getStorage = (key) => {
 
   readStorageAsync(key).catch(() => {})
 
-  if (startupSyncFallbackDisabled) {
+  if (_isStartupPhase) {
     return null
   }
 

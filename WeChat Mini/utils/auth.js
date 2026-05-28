@@ -106,16 +106,16 @@ export const loginWithProfile = async (userInfo = {}) => {
     const safeAvatar = userInfo.avatarUrl || '/images/default-avatar.png'
     const mergedUser = { ...userInfo, nickName: safeNick, avatarUrl: safeAvatar }
 
-    // 3. 获取设备信息
+    // 2. 获取设备信息
     const deviceInfo = getDeviceInfo()
 
-    // 4. 获取 Code
+    // 3. 获取 Code
     const codeRes = await getLoginCode()
     if (!codeRes.code) {
       throw new Error('获取登录凭证失败')
     }
 
-    // 5. 调用云函数登录
+    // 4. 调用云函数登录
     const loginRes = await wx.cloud.callFunction({
       name: 'login',
       data: { 

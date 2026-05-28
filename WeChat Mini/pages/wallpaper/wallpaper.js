@@ -113,12 +113,6 @@ Page({
   },
   
   
-  
-  onReachBottom() {
-    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
-      this.setData({ showBottomNativeAd: true })
-    }
-  },
 
   onPageScroll(e) {
     const ad = this.data.nativeTopAd

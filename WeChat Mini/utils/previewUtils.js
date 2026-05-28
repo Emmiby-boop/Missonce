@@ -131,14 +131,8 @@ const previewUtils = {
     })
 
     try {
-      const userInfo = await wx.getUserProfile({ desc: '用于登录' })
-
-      await wx.login()
-
-      await loginWithProfile({
-        nickName: userInfo.userInfo.nickName,
-        avatarUrl: userInfo.userInfo.avatarUrl
-      })
+      // wx.getUserProfile 已废弃，loginWithProfile 内部已完成 wx.login + 云函数登录
+      await loginWithProfile()
 
       pageInstance.setData({
         showLoginModal: false,

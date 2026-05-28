@@ -151,12 +151,9 @@ function quickTest() {
   diagnoseData(goodData, '修复后的数据')
 }
 
-// 导出供外部使用
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    checkDuplicateIds,
-    checkMissingIds,
-    diagnoseData,
-    quickTest
-  }
+export {
+  checkDuplicateIds,
+  checkMissingIds,
+  diagnoseData,
+  quickTest
 }

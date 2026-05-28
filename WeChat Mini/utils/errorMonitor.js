@@ -1,7 +1,5 @@
 import { getAppBaseInfo, getDeviceInfo } from './storageManager.js'
 
-const ERROR_REPORT_URL = 'https://your-error-reporting-endpoint.com/api/errors'
-
 class ErrorMonitor {
   constructor() {
     this.errorQueue = []

@@ -1,23 +1,32 @@
 import { checkLoginStatus } from './utils/auth'
 import logger from './utils/logger'
 import { getStorage, initStorageCache } from './utils/storageManager'
+import { getHomeData } from './utils/api.js'
 
 const originalPage = Page
 
 Page = function(pageConfig) {
-  const pagePath = ''
   
   const wrapMethod = (methodName, originalMethod) => {
     return function(...args) {
       try {
         return originalMethod.apply(this, args)
       } catch (e) {
-        console.error(`页面方法 ${methodName} 出错:`, e)
+        // 动态获取当前页面路径，而非硬编码空字符串
+        let currentRoute = ''
+        try {
+          const pages = getCurrentPages()
+          if (pages && pages.length > 0) {
+            currentRoute = pages[pages.length - 1].route || ''
+          }
+        } catch (_) {}
+        
+        console.error(`页面方法 ${methodName} 出错 (${currentRoute}):`, e)
         logger.logError('page_error', `页面${methodName}出错`, {
           error: e.message,
           stack: e.stack,
           method: methodName
-        }, pagePath)
+        }, currentRoute)
         throw e
       }
     }
@@ -113,11 +122,9 @@ App({
   _preheatHomeData() {
     if (!wx.cloud) return
     
-    // 引入 api.js 中的 getHomeData
+    // getHomeData 已在文件顶部 import，此处直接使用
     // 它会检查本地缓存，有则直接返回；无则调云函数
     // 同时把 Promise 保存到 globalData 供首页复用
-    const { getHomeData } = require('./utils/api.js')
-    
     this.globalData.homeDataPromise = getHomeData().then(res => {
       console.log('[预热] getHomeData 完成，结果已缓存')
       return res

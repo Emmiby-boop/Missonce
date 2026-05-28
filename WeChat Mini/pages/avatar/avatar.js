@@ -118,12 +118,7 @@ Page({
     
   },
   
-  onReachBottom() {
-    if (!this.data.showBottomNativeAd && this.data.bottomNativeVideoAd && this.data.bottomNativeVideoAd.adUnitId) {
-      this.setData({ showBottomNativeAd: true })
-    }
-  },
-  
+
   onNativeAdError() {
     if (this.data.showNativeTopAd) {
       this.setData({ showNativeTopAd: false })
@@ -383,7 +378,7 @@ Page({
       
       // 批量优化图片链接 (动态计算最佳宽度)
       const thumbSize = getOptimalThumbnailSize()
-      const optimizedAvatars = await optimizeImageUrls(newAvatars, 'coverUrl', thumbSize)
+      const optimizedAvatars = optimizeImageUrls(newAvatars, 'coverUrl', thumbSize)
       
       const processedAvatars = optimizedAvatars.map((item) => {
         return {

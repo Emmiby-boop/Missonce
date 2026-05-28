@@ -1,4 +1,11 @@
-const ENV = __wxConfig.envVersion || 'develop'
+// 使用微信官方 API 获取环境版本，替代不可靠的 __wxConfig 内部变量
+const ENV = (() => {
+  try {
+    return wx.getAccountInfoSync().miniProgram.envVersion || 'develop'
+  } catch (e) {
+    return 'develop'
+  }
+})()
 
 export const logger = {
   debug: (...args) => {

@@ -17,25 +17,25 @@ const subscribers = {}
 export const createStore = (key, initialValue) => {
   store[key] = initialValue
   subscribers[key] = []
+
+  // 提取 set 逻辑为本地函数，供 set 和 update 共用，避免箭头函数 this 绑定问题
+  const _set = (value) => {
+    const oldValue = store[key]
+    store[key] = value
+    if (subscribers[key]) {
+      subscribers[key].forEach(callback => {
+        try {
+          callback(value, oldValue)
+        } catch (e) {
+          console.error(`[Store] ${key} 订阅者执行失败:`, e)
+        }
+      })
+    }
+  }
   
   return {
     get: () => store[key],
-    
-    set: (value) => {
-      const oldValue = store[key]
-      store[key] = value
-      
-      // 通知所有订阅者
-      if (subscribers[key]) {
-        subscribers[key].forEach(callback => {
-          try {
-            callback(value, oldValue)
-          } catch (e) {
-            console.error(`[Store] ${key} 订阅者执行失败:`, e)
-          }
-        })
-      }
-    },
+    set: _set,
     
     // 订阅状态变化
     subscribe: (callback) => {
@@ -56,7 +56,7 @@ export const createStore = (key, initialValue) => {
     // 更新状态（支持函数式更新）
     update: (updater) => {
       if (typeof updater === 'function') {
-        this.set(updater(store[key]))
+        _set(updater(store[key]))
       }
     }
   }

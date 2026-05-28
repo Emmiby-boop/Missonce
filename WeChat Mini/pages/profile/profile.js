@@ -135,7 +135,6 @@ Page({
   syncTheme() {
     const theme = getTheme()
     this.setData({ theme })
-    this.loadFavoritesCount()
   },
 
   async loadFavoritesCount() {

@@ -147,7 +147,7 @@ function generateInteractionStats(url, options = {}) {
   }
 }
 
-module.exports = {
+export {
   generateInteractionStats,
   formatCount
 }

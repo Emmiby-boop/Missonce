@@ -19,7 +19,10 @@ export const STORAGE_KEYS = {
   CHECK_IN_DAYS: 'checkInDays',
   LAST_CHECK_IN_DATE: 'lastCheckInDate',
   HOME_DATA_CACHE: 'home_data_cache',
-  WALLPAPER_LIST_CACHE: 'wallpaper_list_cache'
+  WALLPAPER_LIST_CACHE: 'wallpaper_list_cache',
+  AVATAR_LIST_CACHE: 'avatar_list_cache',
+  WALLPAPER_SECTIONS_CACHE: 'wallpaper_sections_cache',
+  AVATAR_SECTIONS_CACHE: 'avatar_sections_cache'
 }
 
 // 资源类型

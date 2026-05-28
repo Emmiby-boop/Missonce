@@ -70,7 +70,7 @@ function generateComments(url, type = 'avatar') {
   return comments
 }
 
-module.exports = {
+export {
   generateInteractionStats,
   generateComments
 }

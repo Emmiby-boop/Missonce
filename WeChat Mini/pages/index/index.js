@@ -72,10 +72,11 @@ Page({
         }
         
         if (sections) {
+          // 异步处理 sections（图片优化），完成后更新
           this.processSections(sections).then(processedSections => {
             this.setData({ sections: processedSections })
           })
-          updateData.sections = sections
+          // 不在 updateData 中设置未处理的 sections，避免先渲染原始数据再被异步覆盖闪烁
         }
         
         if (Object.keys(updateData).length > 1 || updateData.loading === false) {
@@ -371,175 +372,6 @@ Page({
     return processedSections
   },
 
-  async loadAllData() {
-    // 使用 Promise.allSettled 确保部分失败不影响整体展示
-    const [bannersRes, homeDataRes, recRes] = await Promise.allSettled([
-      getBanners('active'),
-      getHomeData(),
-      getPersonalizedRecommendations(6)
-    ])
-    
-    const updateData = { loading: false }
-    let hasUpdates = false
-    let newBanners = null
-    let newSections = null
-
-    // 1. 处理 Banners
-    if (bannersRes.status === 'fulfilled' && bannersRes.value) {
-       const banners = bannersRes.value
-       if (banners.length > 0) {
-          // 优化轮播图（宽度 750px）
-          // 注意：现在 optimizeImageUrls 是同步函数，不再需要 await
-          const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
-          newBanners = optimizedBanners.map(item => ({
-            ...item,
-            id: item._id, 
-            image: item.optimizedUrl || item.image 
-          }))
-          updateData.banners = newBanners
-          hasUpdates = true
-       }
-    } else if (bannersRes.status === 'rejected') {
-       logger.error('加载轮播图失败:', bannersRes.reason)
-    }
-
-    // 2. 处理 Sections (HomeData)
-    if (homeDataRes.status === 'fulfilled' && homeDataRes.value && homeDataRes.value.result && homeDataRes.value.result.success) {
-       const { sections } = homeDataRes.value.result.data
-       const processedSections = []
-       const thumbSize = getOptimalThumbnailSize()
-
-       for (const section of sections) {
-           const processed = { ...section, items: [] }
-           
-           if (section.items && section.items.length > 0) {
-             // 批量优化图片 (同步)
-             const optimizedItems = optimizeImageUrls(section.items, 'coverUrl', thumbSize)
-             
-             processed.items = optimizedItems.map(item => ({
-                ...item,
-                id: item._id,
-                url: item.optimizedUrl || item.coverUrl || item.url,
-                originalUrl: item.originUrl || item.originalUrl || item.url,
-                rawUrl: item.coverUrl || item.url,
-                rawOriginalUrl: item.originUrl || item.originalUrl || item.url,
-                resourceType: item.type || item.resourceType || 'wallpaper'
-             }))
-           }
-
-          // 预处理瀑布流列
-          if (section.type === 'wallpaper_grid') {
-            const leftColumn = []
-            const rightColumn = []
-            
-            // 智能分配：头像占1格，壁纸占2格
-            let leftSlots = 0
-            let rightSlots = 0
-            
-            processed.items.forEach((item) => {
-              const isAvatar = item.resourceType === 'avatar'
-              const slots = isAvatar ? 1 : 2
-              
-              // 优先放到格子少的一列
-              if (leftSlots <= rightSlots) {
-                leftColumn.push(item)
-                leftSlots += slots
-              } else {
-                rightColumn.push(item)
-                rightSlots += slots
-              }
-            })
-            
-            processed.leftColumn = leftColumn
-            processed.rightColumn = rightColumn
-          }
-          
-          // 根据后台 autoSplit 配置自动分离混合内容
-          if (processed.items.length > 0 && section.dataSource?.autoSplit) {
-            const types = new Set(processed.items.map(i => i.resourceType))
-            if (types.size > 1) {
-              // 存在混合内容，分离为头像和壁纸两组
-              const avatarItems = processed.items.filter(i => i.resourceType === 'avatar')
-              const wallpaperItems = processed.items.filter(i => i.resourceType !== 'avatar')
-              
-              // 创建头像 section
-              if (avatarItems.length > 0) {
-                processedSections.push({
-                  ...processed,
-                  _id: processed._id + '-avatar',
-                  type: 'avatar_row',
-                  items: avatarItems,
-                  leftColumn: undefined,
-                  rightColumn: undefined
-                })
-              }
-              
-              // 创建壁纸 section (使用瀑布流)
-              if (wallpaperItems.length > 0) {
-                const leftCol = []
-                const rightCol = []
-                wallpaperItems.forEach((item, index) => {
-                  if (index % 2 === 0) leftCol.push(item)
-                  else rightCol.push(item)
-                })
-                processedSections.push({
-                  ...processed,
-                  _id: processed._id + '-wallpaper',
-                  type: 'wallpaper_grid',
-                  items: wallpaperItems,
-                  leftColumn: leftCol,
-                  rightColumn: rightCol
-                })
-              }
-              continue
-            }
-          }
-          
-          processedSections.push(processed)
-       }
-       
-       newSections = processedSections
-       updateData.sections = processedSections
-       hasUpdates = true
-    } else {
-       logger.error('加载首页数据失败:', homeDataRes.reason || homeDataRes.value)
-    }
-
-    // 3. 处理推荐
-    if (recRes.status === 'fulfilled' && recRes.value) {
-      const recommendations = recRes.value
-      if (recommendations.length > 0) {
-        const thumbSize = getOptimalThumbnailSize()
-        // 同步优化
-        const optimized = optimizeImageUrls(recommendations, 'coverUrl', thumbSize)
-
-        updateData.recommendations = optimized.map(item => ({
-            ...item,
-            id: item._id,
-            url: item.optimizedUrl || item.coverUrl || item.url,
-            originalUrl: item.originUrl || item.originalUrl || item.url
-          }))
-        hasUpdates = true
-      }
-    }
-
-    // 4. 一次性更新数据
-    if (hasUpdates) {
-      this.setData(updateData)
-      
-      // 更新缓存
-      if (newBanners && newSections) {
-         cacheManager.set(STORAGE_KEYS.HOME_DATA_CACHE, { 
-           banners: newBanners, 
-           sections: newSections 
-         }, CACHE_EXPIRE.MEDIUM)
-      }
-    }
-    
-    // 数据加载完成后，再次检查收藏数（非阻塞）
-    this.loadFavoritesCount()
-  },
-
   onPullDownRefresh() {
     // 下拉刷新时清除缓存，确保获取最新数据
     try {
@@ -609,8 +441,13 @@ Page({
   },
 
   loadFavoritesCount() {
+    // 防止短时间内重复调用（onLoad → loadCriticalData 和 onShow 都会触发）
+    if (this._favoritesCountLoading) return
+    this._favoritesCountLoading = true
+    
     if (!this.checkLogin()) {
       this.setData({ favoritesCount: 0 })
+      this._favoritesCountLoading = false
       return
     }
     
@@ -636,6 +473,8 @@ Page({
           setStorage('favorites', [])
         }
       }
+    }).catch(() => {}).finally(() => {
+      this._favoritesCountLoading = false
     })
 
   },
@@ -700,99 +539,6 @@ Page({
     const statusBarHeight = info.statusBarHeight || 20
     const navBarHeight = 44 // Fixed 44px to match CSS
     this.setData({ statusBarHeight, navBarHeight })
-  },
-
-  async loadData() {
-    try {
-      const res = await getHomeData()
-      if (res.result && res.result.success) {
-        const { banners, sections } = res.result.data
-        
-        // 1. 处理 Banners
-        if (banners) {
-          this.setData({
-            banners: banners.map(item => ({
-              ...item,
-              id: item._id
-            }))
-          })
-        }
-
-        // 2. 处理 Sections
-        const processedSections = []
-        for (const section of sections) {
-           const processed = {
-             ...section,
-             items: []
-           }
-           
-           if (section.items && section.items.length > 0) {
-             // 批量优化图片，使用 350px 宽度 (2列布局足够)
-             const optimizedItems = await optimizeImageUrls(section.items, 'coverUrl', 350)
-             
-             processed.items = optimizedItems.map(item => ({
-                ...item,
-                id: item._id,
-                url: item.optimizedUrl || item.coverUrl || item.url, // 优先使用优化后的链接
-                originalUrl: item.originUrl || item.originalUrl || item.url,
-                rawUrl: item.coverUrl || item.url,
-                rawOriginalUrl: item.originUrl || item.originalUrl || item.url
-             }))
-           }
-
-          // 如果是壁纸网格，预先分成两列用于瀑布流展示
-          if (section.type === 'wallpaper_grid') {
-            const leftColumn = []
-            const rightColumn = []
-            processed.items.forEach((item, index) => {
-              if (index % 2 === 0) leftColumn.push(item)
-              else rightColumn.push(item)
-            })
-            processed.leftColumn = leftColumn
-            processed.rightColumn = rightColumn
-          }
-          
-          processedSections.push(processed)
-        }
-        
-        this.setData({ 
-          sections: processedSections,
-          loading: false 
-        })
-        
-        // 3. 缓存数据
-        setStorage('home_data_cache', { banners, sections: processedSections })
-      } else {
-        // 请求虽然成功但业务逻辑失败，尝试读取缓存
-        this.useCache('加载首页数据失败')
-      }
-    }
-  finally {
-      this.setData({ loading: false })
-    }
-  },
-
-  useCache(toastTitle) {
-    wx.getStorage({
-      key: 'home_data_cache',
-      success: (res) => {
-        const cachedData = res.data
-        if (cachedData) {
-          const { banners, sections } = cachedData
-          this.setData({ 
-            banners: banners || [],
-            sections: sections || []
-          })
-          if (toastTitle) {
-            wx.showToast({
-              title: toastTitle,
-              icon: 'none',
-              duration: 3000
-            })
-          }
-        }
-      }
-    })
   },
 
   previewImage(e) {
@@ -1156,11 +902,15 @@ Page({
   },
 
   async loadNotificationBadge() {
+    // 防止短时间内重复调用
+    if (this._notificationBadgeLoading) return
+    this._notificationBadgeLoading = true
     try {
       const unreadCount = await notificationService.getUnreadCount()
       this.setData({ unreadNotificationCount: unreadCount })
     } catch (e) {
-      console.error('loadNotificationBadge error:', e)
+    } finally {
+      this._notificationBadgeLoading = false
     }
   },
 
@@ -1229,15 +979,6 @@ Page({
     })
   },
 
-  getPriorityIcon(priority) {
-    const map = {
-      high: '🔴',
-      normal: '📢',
-      low: 'ℹ️'
-    }
-    return map[priority] || '📢'
-  },
-
   async handleInvite(options) {
     const inviterOpenid = options.inviter || options.from
     if (!inviterOpenid) return
@@ -1259,7 +1000,11 @@ Page({
         }
       })
       
-
+      if (res.result && res.result.success) {
+        console.log('[邀请] 绑定邀请人成功:', inviterOpenid)
+      } else {
+        console.warn('[邀请] 绑定邀请人失败:', res.result?.message || '未知错误')
+      }
     } catch (e) {
       console.error('绑定邀请人失败:', e)
     }

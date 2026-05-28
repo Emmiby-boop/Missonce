@@ -3,7 +3,6 @@
  * Shared methods between avatar preview and wallpaper preview pages.
  * Extracted from preview.js / wallpaper-preview.js to eliminate duplication.
  */
-const STORAGE_KEYS = require('../config/constants.js')
 
 const { generateInteractionStats } = require('../utils/statsGenerator.js')
 const { getStorage, setStorage } = require('../utils/storageManager.js')
