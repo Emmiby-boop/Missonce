@@ -106,6 +106,10 @@ Component({
   pageLifetimes: {
     show() {
       this.setData({ _pageHidden: false })
+      // 激励广告：页面恢复时强制重置加载状态，防止 hide 期间残留的加载遮罩
+      if (this.data.kind === 'rewarded') {
+        this.setData({ isLoading: false })
+      }
       if (this.data.kind === 'interstitial' && interstitialAdManager) {
         interstitialAdManager.smartTriggerInterstitialAd(2000)
       }
@@ -461,7 +465,20 @@ Component({
           })
           this.videoAd.onClose && this.videoAd.onClose(async (res) => {
             console.log('[AD][Rewarded] onClose fired, res=', JSON.stringify(res), 'isAttached=', this.isAttached, '_pageHidden=', this.data._pageHidden)
-            if (!this.isAttached) return
+            // 🔥 无论如何先重置加载状态，防止 loading 永远不消失
+            if (this.isAttached && !this.data._pageHidden) {
+              this.setData({ isLoading: false })
+            } else if (this.isAttached) {
+              this.data.isLoading = false
+            }
+            if (!this.isAttached) {
+              // 组件已销毁，仍需 resolve 防止 Promise 泄漏
+              if (this._adResolve) {
+                this._adResolve({ success: false, error: '组件已销毁' })
+                this._adResolve = null
+              }
+              return
+            }
             if (this.data._pageHidden) return
             this.data._adShowing = false
             this.data._adWatched = (typeof res === 'undefined') ? true : !!(res && res.isEnded)
@@ -500,11 +517,7 @@ Component({
               wx.showToast({ title: '需要完整观看视频才可获得积分', icon: 'none' })
               this.triggerEvent('rewarded', { success: false, skipped: true })
             }
-            if (this.isAttached && !this.data._pageHidden) {
-              this.setData({ isLoading: false })
-            } else if (this.isAttached) {
-              this.data.isLoading = false // data-only，页面隐藏时不触发渲染
-            }
+            // _adResolve 在 onClose 开头已处理组件销毁的情况，此处处理正常流程
             if (this._adResolve) {
               this._adResolve({ success: this.data._adWatched })
               this._adResolve = null
@@ -582,6 +595,12 @@ Component({
             this.dlog('[AD][Rewarded] show directly')
             clearLoadTimeout()
             await this.videoAd.show()
+            // show() 成功 → 广告已在播放，立即隐藏加载遮罩
+            if (this.isAttached && !this.data._pageHidden) {
+              this.setData({ isLoading: false })
+            } else {
+              this.data.isLoading = false
+            }
           } else if (this.videoAd && this.videoAd.load) {
             this.dlog('[AD][Rewarded] load then show')
             await this.videoAd.load()
@@ -597,25 +616,39 @@ Component({
               return
             }
             await this.videoAd.show()
+            // show() 成功 → 广告已在播放，立即隐藏加载遮罩
+            if (this.isAttached && !this.data._pageHidden) {
+              this.setData({ isLoading: false })
+            } else {
+              this.data.isLoading = false
+            }
           }
+          // loading 遮罩已在上述两个分支中清除，onClose/onError 兜底重置
         } catch (e) {
           clearLoadTimeout()
-          // 忽略 AbortError（play interrupted by pause），这是页面切换时的预期行为
           const errMsg = e && (e.errMsg || e.message || '') + ''
-          if (errMsg.indexOf('interrupt') !== -1 || errMsg.indexOf('abort') !== -1) {
-            console.log('[AD][Rewarded] show aborted (page switch):', errMsg)
-            this.data._adShowing = false
-            this.data.isLoading = false // data-only，避免页面切换时触发渲染层 insert/remove 错误
-            if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
-            this._adResolve = null
-            resolve({ success: false, error: '页面切换，广告取消' })
-            return
-          }
+          // 判断是否是页面切换导致的异常（interrupt/abort）
+          const isPageSwitch = errMsg.indexOf('interrupt') !== -1 || errMsg.indexOf('abort') !== -1
+          
           this.data._adShowing = false
-          this.data.isLoading = false // data-only，避免页面切换时触发渲染层错误
           if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
           this._adResolve = null
-          resolve({ success: false, error: e.message })
+          
+          if (isPageSwitch) {
+            // 页面切换场景：使用 data-only 避免触发渲染层 insert/remove 错误
+            console.log('[AD][Rewarded] show aborted (page switch):', errMsg)
+            this.data.isLoading = false
+            resolve({ success: false, error: '页面切换，广告取消' })
+          } else {
+            // 正常异常（加载失败等）：必须通过 setData 重置 UI，否则加载动画永远不消失
+            console.error('[AD][Rewarded] show failed:', errMsg)
+            if (this.isAttached && !this.data._pageHidden) {
+              this.setData({ isLoading: false })
+            } else {
+              this.data.isLoading = false
+            }
+            resolve({ success: false, error: e.message || '广告播放失败' })
+          }
         }
       })
     },
