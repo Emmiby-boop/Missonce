@@ -191,12 +191,23 @@ Component({
       this.setData({ generating: true })
 
       try {
-        // ---- 并行：语录 + 图片 URL + 图片尺寸 ----
+        // ---- 提前并行：语录 + 图片尺寸 + 小程序码 URL ----
         let mainImgUrl = this.data.imageUrl
         if (mainImgUrl.startsWith('cloud://')) {
           const tempRes = await wx.cloud.getTempFileURL({ fileList: [mainImgUrl] })
           if (tempRes.fileList?.[0]?.tempFileURL) mainImgUrl = tempRes.fileList[0].tempFileURL
         }
+
+        // 小程序码 URL 提前发起（在 Canvas 之前，省掉后续等待时间）
+        const qrUrlPromise = this.data.qrCodeUrl
+          ? Promise.resolve(this.data.qrCodeUrl)
+          : wx.cloud.callFunction({
+              name: 'getQRCode',
+              data: { path: 'pages/index/index', scene: 's=p' }
+            }).then(res => {
+              if (res.result?.url) { this.data.qrCodeUrl = res.result.url; return res.result.url }
+              return null
+            }).catch(() => null)
 
         const [quotes, imgRatio] = await Promise.all([
           fetchQuotes(),
@@ -255,7 +266,15 @@ Component({
         const imgW = cardW - T.imgMargin * 2
         const imgH = cardH - T.imgMargin * 2
 
-        const mainImg = await this.loadImage(canvas, mainImgUrl)
+        // ---- Canvas 就绪后：主图 + 小程序码并行加载 ----
+        const mainImgP = this.loadImage(canvas, mainImgUrl)
+        const qrResultP = qrUrlPromise.then(async (url) => {
+          if (!url) return null
+          try { return { url, img: await this.loadImage(canvas, url) } }
+          catch { return null }
+        })
+
+        const [mainImg, qrResult] = await Promise.all([mainImgP, qrResultP])
         drawImageFill(ctx, mainImg, imgX, imgY, imgW, imgH, T.imageRadius)
         drawGradientOverlay(ctx, imgX, imgY, imgW, imgH)
 
@@ -330,42 +349,28 @@ Component({
         ctx.fillText(`${date.year}  ·  星期${date.weekday}`, dateX, dateCY + 6)
         ctx.restore()
 
-        // 小程序码
-        try {
-          let qrUrl = this.data.qrCodeUrl
-          if (!qrUrl) {
-            const qrRes = await wx.cloud.callFunction({
-              name: 'getQRCode',
-              data: { path: 'pages/index/index', scene: 's=p' }
-            })
-            if (qrRes.result?.url) {
-              qrUrl = qrRes.result.url
-              this.data.qrCodeUrl = qrUrl
-            }
-          }
-          if (qrUrl) {
-            const qrSz = 64
-            const qrX = W - T.padding - qrSz - 4
-            const qrY = bottomY + 2
-            drawCard(ctx, qrX, qrY, qrSz, qrSz, T.qrRadius, {
-              shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.06)', shadowOffsetY: 1
-            })
-            const qrImg = await this.loadImage(canvas, qrUrl)
-            const qp = 5
-            ctx.save()
-            roundRect(ctx, qrX + qp, qrY + qp, qrSz - qp * 2, qrSz - qp * 2, T.qrRadius - 2)
-            ctx.clip()
-            ctx.drawImage(qrImg, qrX + qp, qrY + qp, qrSz - qp * 2, qrSz - qp * 2)
-            ctx.restore()
-            ctx.save()
-            ctx.font = T.fontTiny
-            ctx.fillStyle = T.textLight
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'top'
-            ctx.fillText(UI_TEXT.scanHint, qrX + qrSz / 2, qrY + qrSz + 10)
-            ctx.restore()
-          }
-        } catch (e) { console.error('小程序码失败:', e) }
+        // 小程序码（已在前面并行加载完成，直接绘制）
+        if (qrResult) {
+          const qrSz = 64
+          const qrX = W - T.padding - qrSz - 4
+          const qrY = bottomY + 2
+          drawCard(ctx, qrX, qrY, qrSz, qrSz, T.qrRadius, {
+            shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.06)', shadowOffsetY: 1
+          })
+          const qp = 5
+          ctx.save()
+          roundRect(ctx, qrX + qp, qrY + qp, qrSz - qp * 2, qrSz - qp * 2, T.qrRadius - 2)
+          ctx.clip()
+          ctx.drawImage(qrResult.img, qrX + qp, qrY + qp, qrSz - qp * 2, qrSz - qp * 2)
+          ctx.restore()
+          ctx.save()
+          ctx.font = T.fontTiny
+          ctx.fillStyle = T.textLight
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'top'
+          ctx.fillText(UI_TEXT.scanHint, qrX + qrSz / 2, qrY + qrSz + 10)
+          ctx.restore()
+        }
 
         // === 6. 底部水印 ===
         ctx.save()

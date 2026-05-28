@@ -27,6 +27,13 @@
         >
           标签白名单
         </button>
+        <button 
+          @click="activeTab = 'writer'"
+          class="px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          :class="activeTab === 'writer' ? 'bg-[var(--primary)] text-white shadow-sm' : 'bg-[var(--bg-card)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-color)]'"
+        >
+          文案配置
+        </button>
       </div>
     </div>
 
@@ -416,6 +423,71 @@
           </button>
         </div>
       </div>
+
+      <!-- 海报文案库 -->
+      <div class="card p-6 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-[var(--text-main)]">海报分享文案库</h3>
+            <p class="text-xs text-[var(--text-sub)] mt-1">
+              管理海报生成时展示的语录 · 共 {{ posterQuotes.length }} 条
+            </p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button 
+              @click="aiGenerateQuotes" 
+              class="btn-soft text-sm px-3 py-1.5 flex items-center gap-1"
+              :disabled="generatingQuotes"
+            >
+              <span v-if="generatingQuotes" class="inline-block w-3.5 h-3.5 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin"></span>
+              {{ generatingQuotes ? 'AI 生成中...' : '🤖 AI 生成文案' }}
+            </button>
+            <button @click="addPosterQuote" class="btn-soft text-sm px-3 py-1.5">
+              + 添加文案
+            </button>
+          </div>
+        </div>
+
+        <!-- AI 生成结果预览 -->
+        <div v-if="generatedQuotes.length > 0" class="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-medium text-green-700 dark:text-green-400">AI 已生成 {{ generatedQuotes.length }} 条文案</span>
+            <button @click="saveGeneratedQuotes" class="btn-primary text-xs px-3 py-1.5" :disabled="savingPoster">
+              {{ savingPoster ? '保存中...' : '全部保存到库' }}
+            </button>
+          </div>
+          <div class="space-y-2 max-h-60 overflow-y-auto">
+            <div v-for="(q, i) in generatedQuotes" :key="i" 
+              class="flex items-start gap-2 text-sm text-[var(--text-main)] bg-white dark:bg-gray-800 rounded-lg px-3 py-2">
+              <span class="text-[var(--primary)] shrink-0 mt-0.5">{{ i + 1 }}.</span>
+              <span class="flex-1">{{ q }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="posterQuotes.length === 0 && generatedQuotes.length === 0" class="text-center py-8 text-[var(--text-sub)]">
+          暂无海报文案，点击"AI 生成文案"或手动添加
+        </div>
+
+        <div v-else-if="posterQuotes.length > 0" class="space-y-2">
+          <div 
+            v-for="(q, index) in posterQuotes" 
+            :key="q._id || index"
+            class="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-body)] border border-[var(--border-color)] group"
+          >
+            <span class="text-xs text-[var(--text-sub)] shrink-0 w-5">{{ index + 1 }}</span>
+            <input 
+              v-model="q.text" 
+              class="input text-sm flex-1 bg-transparent border-0 !p-1 focus:outline-none"
+              placeholder="输入文案..."
+            />
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button @click="savePosterQuote(q)" class="text-xs text-[var(--primary)] hover:underline px-2">保存</button>
+              <button @click="deletePosterQuote(q._id, index)" class="text-xs text-red-500 hover:underline px-2">删除</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Add/Edit Key Modal -->
@@ -517,6 +589,12 @@ const writerSelectedProvider = ref('aliyun');
 
 const writerScenes = ref<any[]>([]);
 const featuredQuotes = ref<any[]>([]);
+
+// 海报文案库
+const posterQuotes = ref<any[]>([]);
+const generatedQuotes = ref<string[]>([]);
+const generatingQuotes = ref(false);
+const savingPoster = ref(false);
 
 const DEFAULT_WRITER_PROMPT = `# 文案生成任务
 你是一位温暖且懂生活的文案助手，擅长撰写各种社交媒体文案。
@@ -810,9 +888,15 @@ const fetchData = async () => {
     }
   } catch (error) {
     console.error('[AIConfig] Fetch data failed', error);
-  } finally {
+    } finally {
     loading.value = false;
   }
+
+  // 单独加载海报文案（独立集合）
+  try {
+    const res = await db.collection('poster_quotes').limit(200).get()
+    posterQuotes.value = res.data || []
+  } catch (e) { console.log('海报文案加载失败:', e) }
 };
 
 const saveAIConfig = async () => {
@@ -1022,6 +1106,80 @@ const saveFeaturedQuotes = async () => {
     saving.value = false;
   }
 };
+
+// ======== 海报文案库管理 ========
+
+const addPosterQuote = () => {
+  posterQuotes.value.push({ text: '' })
+}
+
+const savePosterQuote = async (q: any) => {
+  if (!q.text.trim()) return
+  savingPoster.value = true
+  try {
+    if (q._id) {
+      await db.collection('poster_quotes').doc(q._id).update({ data: { text: q.text.trim() } })
+    } else {
+      const res = await db.collection('poster_quotes').add({ data: { text: q.text.trim(), createdAt: Date.now() } })
+      q._id = res._id  // 回填 ID
+    }
+    showMessage('文案已保存', 'success')
+  } catch (e: any) {
+    showMessage('保存失败: ' + e.message, 'error')
+  } finally {
+    savingPoster.value = false
+  }
+}
+
+const deletePosterQuote = async (id: string, index: number) => {
+  if (!confirm('确定删除这条文案？')) return
+  try {
+    if (id) await db.collection('poster_quotes').doc(id).remove()
+    posterQuotes.value.splice(index, 1)
+    showMessage('已删除', 'success')
+  } catch (e: any) {
+    showMessage('删除失败: ' + e.message, 'error')
+  }
+}
+
+const aiGenerateQuotes = async () => {
+  generatingQuotes.value = true
+  generatedQuotes.value = []
+  try {
+    const res = await callCloudFunction('generatePosterQuotes', { action: 'generate', count: 5 })
+    if (res && res.success && res.quotes) {
+      generatedQuotes.value = res.quotes
+      showMessage(`AI 已生成 ${res.quotes.length} 条文案`, 'success')
+    } else {
+      showMessage(res?.message || 'AI 生成失败，请检查模型配置', 'error')
+    }
+  } catch (e: any) {
+    showMessage('AI 调用失败: ' + e.message, 'error')
+  } finally {
+    generatingQuotes.value = false
+  }
+}
+
+const saveGeneratedQuotes = async () => {
+  if (generatedQuotes.value.length === 0) return
+  savingPoster.value = true
+  try {
+    for (const text of generatedQuotes.value) {
+      if (text.trim()) {
+        await db.collection('poster_quotes').add({ data: { text: text.trim(), createdAt: Date.now() } })
+      }
+    }
+    // 重新加载
+    const res = await db.collection('poster_quotes').limit(200).get()
+    posterQuotes.value = res.data || []
+    generatedQuotes.value = []
+    showMessage('全部保存成功！', 'success')
+  } catch (e: any) {
+    showMessage('保存失败: ' + e.message, 'error')
+  } finally {
+    savingPoster.value = false
+  }
+}
 
 onMounted(() => {
   fetchData();
