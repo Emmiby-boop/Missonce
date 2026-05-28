@@ -41,6 +41,10 @@ const PERFORMANCE_MARK = {
   firstScreenReady: 0
 }
 
+const DELAY_INVITE = 1000
+const DELAY_NON_CRITICAL = 3000
+const DELAY_INVITE_BIND = 2000
+
 App({
   onLaunch() {
     PERFORMANCE_MARK.launchStart = Date.now()
@@ -57,7 +61,7 @@ App({
     // 🔥 P1 优化：处理邀请链接（非关键，延迟执行）
     setTimeout(() => {
       this.handleInviteLink()
-    }, 1000)
+    }, DELAY_INVITE)
     
     // 🔥 记录启动完成时间（此时应该 < 30ms）
     this.performanceMonitor('launch')
@@ -75,7 +79,7 @@ App({
       this.preheatCloudFunctions()
       this.preloadOtherPagesData()
       this.initLoginStatus()
-    }, 3000)
+    }, DELAY_NON_CRITICAL)
   },
 
   async handleInviteLink() {
@@ -97,7 +101,7 @@ App({
               }
             })
           }
-        }, 2000)
+        }, DELAY_INVITE_BIND)
       }
     } catch (e) {
       console.error('处理邀请链接失败:', e)
@@ -138,7 +142,7 @@ App({
       }, 'app')
       
       if (launchTime > 3000) {
-  
+        console.warn(`[性能] 启动耗时过长: ${launchTime}ms`)
       }
     }
   },

@@ -480,7 +480,7 @@ const getAspectRatio = (type: string) => {
 
 onMounted(async () => {
   if (!topicId) {
-    alert("缺少参数");
+    ElMessage.warning("缺少参数");
     router.back();
     return;
   }
@@ -551,7 +551,7 @@ const loadTopic = async () => {
     }
   } catch (err) {
     console.error(err);
-    alert("加载失败");
+    ElMessage.error("加载失败");
   }
 };
 
@@ -733,7 +733,7 @@ const onCropConfirm = async (blob: Blob) => {
     }
   } catch (e) {
     console.error("Crop upload failed", e);
-    alert("图片上传失败");
+    ElMessage.error("图片上传失败");
   } finally {
     showCropper.value = false;
   }
@@ -815,14 +815,14 @@ const saveLayout = async () => {
     });
     
     if (res.result.success) {
-      alert("保存发布成功");
+      ElMessage.success("保存发布成功");
       loadHistory();
     } else {
-      alert("保存失败: " + res.result.error);
+      ElMessage.error("保存失败: " + res.result.error);
     }
   } catch (err) {
     console.error(err);
-    alert("保存出错");
+    ElMessage.error("保存出错");
   } finally {
     saving.value = false;
   }
@@ -842,11 +842,11 @@ const rollback = async (version: any) => {
     });
     
     if (res.result.success) {
-      alert("回滚成功");
+      ElMessage.success("回滚成功");
       await loadTopic();
       await loadHistory();
     } else {
-      alert("回滚失败");
+      ElMessage.error("回滚失败");
     }
   } catch (err) {
     console.error(err);

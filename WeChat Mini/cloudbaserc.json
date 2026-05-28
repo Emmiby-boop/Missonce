@@ -1,258 +1,155 @@
-﻿{
-    "envId":  "missonce-99-1gfaff6n002f6ac1",
-    "functionRoot":  "./cloudfunctions",
-    "projectName":  "wallpaper-avatar-app",
-    "appId":  "wx78c0b02bd2db5462",
-    "functions":  [
-                      {
-                          "name":  "adConfigManager",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  15,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "addAdmin",
-                          "runtime":  "Nodejs20.19",
-                          "timeout":  10,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "adminAuth",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  20,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "adminBanners",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  10,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "adminNotifications",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  10,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "batchDeleteResources",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  60,
-                          "memorySize":  512,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "batchUpdateStats",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  10,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "deleteResource",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  30,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getAdConfig",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getBanners",
-                          "runtime":  "Nodejs20.19",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getCategories",
-                          "runtime":  "Nodejs18.15",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getConfig",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getContactConfig",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getDailyPicks",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getHomeData",
-                          "timeout":  5,
-                          "envVariables":  {
+{
+  "envId": "missonce-99-1gfaff6n002f6ac1",
+  "functionRoot": "./cloudfunctions",
+  "projectName": "wallpaper-avatar-app",
+  "appId": "wx78c0b02bd2db5462",
+  "functions": [
+    {
+      "name": "getResources",
+      "runtime": "Nodejs18.15",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "uploadResource",
+      "runtime": "Nodejs20.19",
+      "timeout": 300,
+      "memorySize": 512
+    },
+    {
+      "name": "addAdmin",
+      "runtime": "Nodejs20.19",
+      "timeout": 10,
+      "memorySize": 256
+    },
+    {
+      "name": "initDB",
+      "runtime": "Nodejs18.15",
+      "timeout": 60,
+      "memorySize": 256
+    },
+    {
+      "name": "getBanners",
+      "runtime": "Nodejs20.19",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "getCategories",
+      "runtime": "Nodejs18.15",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "login",
+      "runtime": "Nodejs20.19",
+      "timeout": 5,
+      "memorySize": 256
+    },
+    {
+      "name": "logEvent",
+      "timeout": 5,
+      "envVariables": {},
+      "runtime": "Nodejs20.19"
+    },
+    {
+      "name": "getTopics",
+      "timeout": 5,
+      "envVariables": {},
+      "runtime": "Nodejs20.19"
+    },
+    {
+      "name": "getHomeData",
+      "timeout": 5,
+      "envVariables": {},
+      "runtime": "Nodejs18.15",
+      "memorySize": 256,
+      "installDependency": false
+    },
+    {
+      "name": "proxyDownload",
+      "timeout": 20,
+      "envVariables": {},
+      "runtime": "Nodejs16.13",
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "adminAuth",
+      "runtime": "Nodejs16.13",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "sendEmail",
+      "runtime": "Nodejs16.13",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "manageTopicLayout",
+      "runtime": "Nodejs20.19",
+      "timeout": 10,
+      "memorySize": 256,
+      "installDependency": true
+    },
 
-                                           },
-                          "runtime":  "Nodejs18.15",
-                          "memorySize":  256,
-                          "installDependency":  false
-                      },
-                      {
-                          "name":  "getNotifications",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getQuotes",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getResources",
-                          "runtime":  "Nodejs18.15",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getTags",
-                          "runtime":  "Nodejs18.15",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "getTopics",
-                          "timeout":  5,
-                          "envVariables":  {
-
-                                           },
-                          "runtime":  "Nodejs20.19"
-                      },
-                      {
-                          "name":  "initDatabase",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  60,
-                          "memorySize":  512,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "initInteractionCollections",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  30,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "logEvent",
-                          "timeout":  5,
-                          "envVariables":  {
-
-                                           },
-                          "runtime":  "Nodejs20.19"
-                      },
-                      {
-                          "name":  "login",
-                          "runtime":  "Nodejs20.19",
-                          "timeout":  5,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "manageAIConfig",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  30,
-                          "memorySize":  512,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "manageConfig",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  10,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "manageContactConfig",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  10,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "manageTopicLayout",
-                          "runtime":  "Nodejs20.19",
-                          "timeout":  10,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "operationsAssistant",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  15,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "proxyDownload",
-                          "timeout":  20,
-                          "envVariables":  {
-
-                                           },
-                          "runtime":  "Nodejs16.13",
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "resetDailyHotScore",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  30,
-                          "memorySize":  256
-                      },
-                      {
-                          "name":  "sendEmail",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  20,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "toggleInteraction",
-                          "runtime":  "Nodejs20.19",
-                          "timeout":  10,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      },
-                      {
-                          "name":  "updateResource",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  60,
-                          "memorySize":  512,
-                          "installDependency":  true
-                      },
-                      {
-                          "runtime":  "Nodejs20.19",
-                          "memorySize":  256,
-                          "name":  "updateUserInfo",
-                          "envVariables":  {
-
-                                           },
-                          "timeout":  5
-                      },
-                      {
-                          "name":  "uploadResource",
-                          "runtime":  "Nodejs20.19",
-                          "timeout":  300,
-                          "memorySize":  512
-                      },
-                      {
-                          "name":  "userPoints",
-                          "runtime":  "Nodejs16.13",
-                          "timeout":  15,
-                          "memorySize":  256,
-                          "installDependency":  true
-                      }
-                  ]
+    {
+      "name": "toggleInteraction",
+      "runtime": "Nodejs20.19",
+      "timeout": 10,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "adManager",
+      "runtime": "Nodejs16.13",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "userPoints",
+      "runtime": "Nodejs16.13",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "adConfigManager",
+      "runtime": "Nodejs16.13",
+      "timeout": 15,
+      "memorySize": 256,
+      "installDependency": true
+    },
+    {
+      "name": "updateResource",
+      "runtime": "Nodejs16.13",
+      "timeout": 60,
+      "memorySize": 512,
+      "installDependency": true
+    },
+    { "name": "getAdConfig", "runtime": "Nodejs16.13", "timeout": 5, "memorySize": 256 },
+    { "name": "getConfig", "runtime": "Nodejs16.13", "timeout": 5, "memorySize": 256 },
+    { "name": "manageConfig", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256, "installDependency": true },
+    { "name": "getDailyPicks", "runtime": "Nodejs16.13", "timeout": 5, "memorySize": 256 },
+    { "name": "getNotifications", "runtime": "Nodejs16.13", "timeout": 5, "memorySize": 256 },
+    { "name": "getQuotes", "runtime": "Nodejs16.13", "timeout": 5, "memorySize": 256 },
+    { "name": "getContactConfig", "runtime": "Nodejs16.13", "timeout": 5, "memorySize": 256 },
+    { "name": "manageContactConfig", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256, "installDependency": true },
+    { "name": "interactionManager", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256, "installDependency": true },
+    { "name": "initDatabase", "runtime": "Nodejs16.13", "timeout": 60, "memorySize": 512, "installDependency": true },
+    { "name": "initInteractionCollections", "runtime": "Nodejs16.13", "timeout": 30, "memorySize": 256 },
+    { "name": "batchDeleteResources", "runtime": "Nodejs16.13", "timeout": 60, "memorySize": 512, "installDependency": true },
+    { "name": "deleteResource", "runtime": "Nodejs16.13", "timeout": 30, "memorySize": 256 },
+    { "name": "batchUpdateStats", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256 },
+    { "name": "resetDailyHotScore", "runtime": "Nodejs16.13", "timeout": 30, "memorySize": 256 },
+    { "name": "commentManager", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256 },
+    { "name": "adminNotifications", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256 },
+    { "name": "adminBanners", "runtime": "Nodejs16.13", "timeout": 10, "memorySize": 256 },
+    { "name": "manageAIConfig", "runtime": "Nodejs16.13", "timeout": 30, "memorySize": 512, "installDependency": true },
+    { "name": "operationsAssistant", "runtime": "Nodejs16.13", "timeout": 15, "memorySize": 256, "installDependency": true }
+  ]
 }

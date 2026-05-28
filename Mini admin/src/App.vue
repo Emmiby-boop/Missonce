@@ -76,6 +76,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import AdminSidebar from "./components/AdminSidebar.vue";
 import AdminTopbar from "./components/AdminTopbar.vue";
 import { getLoginState, logout, changePassword } from "./utils/cloudbase";
@@ -105,11 +106,11 @@ const openPasswordModal = () => {
 
 const handlePasswordSubmit = async () => {
   if (!pwdForm.value.oldPassword || !pwdForm.value.newPassword) {
-    alert("请填写完整信息");
+    ElMessage.warning("请填写完整信息");
     return;
   }
   if (pwdForm.value.newPassword !== pwdForm.value.confirmPassword) {
-    alert("两次新密码输入不一致");
+    ElMessage.warning("两次新密码输入不一致");
     return;
   }
 
@@ -121,15 +122,15 @@ const handlePasswordSubmit = async () => {
   try {
     const res = await changePassword(username, pwdForm.value.oldPassword, pwdForm.value.newPassword);
     if (res.success) {
-      alert("密码修改成功，请重新登录");
+      ElMessage.success("密码修改成功，请重新登录");
       showPasswordModal.value = false;
       await handleLogout();
     } else {
-      alert(res.message || "修改失败");
+      ElMessage.error(res.message || "修改失败");
     }
   } catch (e: any) {
     console.error(e);
-    alert("修改失败: " + e.message);
+    ElMessage.error("修改失败: " + e.message);
   } finally {
     pwdLoading.value = false;
   }

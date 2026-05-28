@@ -176,7 +176,7 @@ const fetchList = async () => {
     list.value = items;
   } catch (err) {
     console.error(err);
-    alert('加载失败');
+    ElMessage.error('加载失败');
   } finally {
     loading.value = false;
   }
@@ -205,7 +205,7 @@ const toggleSelection = (item: any) => {
       selectedItems.value = [item];
     } else {
       if (props.limit && selectedIds.value.length >= props.limit) {
-        alert(`最多选择 ${props.limit} 项`);
+        ElMessage.warning(`最多选择 ${props.limit} 项`);
         return;
       }
       selectedIds.value.push(item._id);
@@ -254,10 +254,10 @@ const handleUploadFiles = async (files: FileList) => {
       });
     }
     await fetchList();
-    alert('上传成功');
+    ElMessage.success('上传成功');
   } catch (err) {
     console.error(err);
-    alert('上传失败');
+    ElMessage.error('上传失败');
   } finally {
     uploading.value = false;
   }

@@ -221,7 +221,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from "vue";
-import { db, app, serverDate } from "../utils/cloudbase";
+import { app, serverDate } from "../utils/cloudbase";
 import { useToast } from "../composables/useToast";
 import { useCache } from "../composables/useCache";
 
@@ -308,31 +308,24 @@ const fetchBanners = async () => {
   }
 
   try {
-    let res = await db.collection("banners").orderBy("sort", "asc").get();
-    
-    if (res && res.data) {
-      if (res.data.length === 0) {
-        const resNoSort = await db.collection("banners").get();
-        if (resNoSort && resNoSort.data && resNoSort.data.length > 0) {
-          res = resNoSort;
-        }
+    const res = await app.callFunction({
+      name: "adminBanners",
+      data: {
+        action: "getAll"
       }
-      const data = res.data || [];
+    });
+    
+    if (res.result && res.result.success) {
+      const data = res.result.data || [];
       banners.value = data;
       setCache(data);
     } else {
+      console.error("获取轮播图失败:", res.result?.message);
       banners.value = [];
     }
   } catch (error) {
     console.error("Fetch banners error:", error);
-    try {
-      const res = await db.collection("banners").get();
-      const data = (res && res.data) ? res.data : [];
-      banners.value = data;
-      setCache(data);
-    } catch (retryError) {
-       console.error("Retry fetch failed:", retryError);
-    }
+    banners.value = [];
   } finally {
     loading.value = false;
   }
@@ -346,15 +339,25 @@ const batchToggleStatus = async () => {
   if (!confirmed) return;
 
   try {
-    const promises = selectedBanners.value.map(id => 
-      db.collection("banners").doc(id).update({ status: newStatus, updatedAt: serverDate() })
-    );
-    await Promise.all(promises);
+    const res = await app.callFunction({
+      name: "adminBanners",
+      data: {
+        action: "batchToggleStatus",
+        data: {
+          ids: selectedBanners.value,
+          status: newStatus
+        }
+      }
+    });
     
-    success(`已成功${newStatus === 'active' ? '启用' : '停用'} ${selectedBanners.value.length} 个轮播图`);
-    selectedBanners.value = [];
-    clearCache();
-    await fetchBanners();
+    if (res.result && res.result.success) {
+      success(res.result.message);
+      selectedBanners.value = [];
+      clearCache();
+      await fetchBanners();
+    } else {
+      error('操作失败: ' + (res.result?.message || '未知错误'));
+    }
   } catch (err: any) {
     error('操作失败: ' + err.message);
   }
@@ -367,15 +370,24 @@ const batchDelete = async () => {
   if (!confirmed) return;
 
   try {
-    const promises = selectedBanners.value.map(id => 
-      db.collection("banners").doc(id).remove()
-    );
-    await Promise.all(promises);
+    const res = await app.callFunction({
+      name: "adminBanners",
+      data: {
+        action: "batchDelete",
+        data: {
+          ids: selectedBanners.value
+        }
+      }
+    });
     
-    success(`已成功删除 ${selectedBanners.value.length} 个轮播图`);
-    selectedBanners.value = [];
-    clearCache();
-    await fetchBanners();
+    if (res.result && res.result.success) {
+      success(res.result.message);
+      selectedBanners.value = [];
+      clearCache();
+      await fetchBanners();
+    } else {
+      error('删除失败: ' + (res.result?.message || '未知错误'));
+    }
   } catch (err: any) {
     error('删除失败: ' + err.message);
   }
@@ -418,7 +430,7 @@ const handleFileChange = async (e: Event) => {
     }
   } catch (error) {
     console.error("Upload failed:", error);
-    alert("上传失败");
+    ElMessage.error("上传失败");
   } finally {
     uploading.value = false;
   }
@@ -437,24 +449,37 @@ const saveBanner = async () => {
       type: form.type,
       target: form.target,
       sort: form.sort,
-      status: form.status,
-      updatedAt: serverDate(),
+      status: form.status
     };
 
+    let res;
     if (editingId.value) {
-      await db.collection("banners").doc(editingId.value).update(data);
-      success("更新成功");
+      res = await app.callFunction({
+        name: "adminBanners",
+        data: {
+          action: "update",
+          id: editingId.value,
+          data: data
+        }
+      });
     } else {
-      await db.collection("banners").add({
-        ...data,
-        createdAt: serverDate(),
-      }) as any;
-      success("创建成功");
+      res = await app.callFunction({
+        name: "adminBanners",
+        data: {
+          action: "add",
+          data: data
+        }
+      });
     }
 
-    closeModal();
-    clearCache();
-    await fetchBanners();
+    if (res.result && res.result.success) {
+      success(res.result.message || (editingId.value ? "更新成功" : "创建成功"));
+      closeModal();
+      clearCache();
+      await fetchBanners();
+    } else {
+      error("保存失败: " + (res.result?.message || "未知错误"));
+    }
   } catch (error: any) {
     console.error("Save banner error:", error);
     error("保存失败: " + (error.message || JSON.stringify(error)));
@@ -466,10 +491,21 @@ const removeBanner = async (id: string) => {
   if (!confirmed) return;
   
   try {
-    await db.collection("banners").doc(id).remove();
-    success("删除成功");
-    clearCache();
-    await fetchBanners();
+    const res = await app.callFunction({
+      name: "adminBanners",
+      data: {
+        action: "delete",
+        id: id
+      }
+    });
+    
+    if (res.result && res.result.success) {
+      success(res.result.message || "删除成功");
+      clearCache();
+      await fetchBanners();
+    } else {
+      error("删除失败: " + (res.result?.message || "未知错误"));
+    }
   } catch (error: any) {
     console.error("Remove banner error:", error);
     error("删除失败: " + error.message);

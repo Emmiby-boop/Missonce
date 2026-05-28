@@ -43,14 +43,17 @@ const navItems = [
   { path: '/', label: '概览' },
   { path: '/operations-dashboard', label: '智能运营助手' },
   { path: '/resources', label: '资源管理' },
+  { path: '/quotes', label: '文案管理' },
   { path: '/ai-config', label: 'AI配置' },
+  { path: '/notifications', label: '公告管理' },
   { path: '/banners', label: '轮播图管理' },
   { path: '/home-layout', label: '首页布局管理' },
   { path: '/topics', label: '专题管理' },
-  { path: '/page-layout', label: '头像/壁纸布局' },
-  { path: '/categories', label: '分类管理' },
-  { path: '/tags', label: '标签管理' },
-  { path: '/error-logs', label: '错误日志' },
+  { path: '/categories-tags', label: '分类与标签管理' },
+  { path: '/page-ads', label: '页面广告管理' },
+  { path: '/contact-config', label: '联系方式配置' },
+  { path: '/admins', label: '管理员管理' },
+  { path: '/logs', label: '日志管理' },
 ];
 
 defineProps<{

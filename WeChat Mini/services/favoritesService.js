@@ -1,6 +1,6 @@
 import { checkLoginStatus } from '../utils/auth.js'
 import { getStorage, setStorage } from '../utils/storageManager.js'
-import { getFavorites as apiGetFavorites, getFavoritesCount as apiGetFavoritesCount } from './api.js'
+import { getFavorites as apiGetFavorites, getFavoritesCount as apiGetFavoritesCount } from '../utils/api.js'
 import { cacheManager } from '../utils/cache.js'
 import { STORAGE_KEYS } from '../config/constants.js'
 

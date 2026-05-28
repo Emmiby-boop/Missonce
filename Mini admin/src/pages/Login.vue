@@ -276,7 +276,7 @@ const startTimer = () => {
 
 const handleLogin = async () => {
   if (!phone.value || !code.value) {
-    alert("请填写完整信息");
+    showToast("请填写完整信息", "error");
     return;
   }
 
@@ -286,7 +286,7 @@ const handleLogin = async () => {
     router.push("/");
   } catch (error: any) {
     console.error("登录失败", error);
-    alert("登录失败：" + error.message);
+    showToast("登录失败：" + error.message, "error");
   } finally {
     loading.value = false;
   }
@@ -294,7 +294,7 @@ const handleLogin = async () => {
 
 const handleAccountLogin = async () => {
   if (!username.value || !password.value) {
-    alert("请填写账号和密码");
+    showToast("请填写账号和密码", "error");
     return;
   }
   
@@ -306,11 +306,11 @@ const handleAccountLogin = async () => {
       localStorage.setItem('custom_admin_auth', JSON.stringify(res.admin));
       router.push("/");
     } else {
-      alert(res.message || "登录失败");
+      showToast(res.message || "登录失败", "error");
     }
   } catch (error: any) {
     console.error("登录失败", error);
-    alert("登录失败：" + error.message);
+    showToast("登录失败：" + error.message, "error");
   } finally {
     loading.value = false;
   }
@@ -325,7 +325,7 @@ const emailSendLabel = computed(() => {
 
 const sendEmailCode = async () => {
   if (!email.value || !email.value.includes('@')) {
-    alert("请输入正确的邮箱地址");
+    showToast("请输入正确的邮箱地址", "error");
     return;
   }
   
@@ -333,10 +333,10 @@ const sendEmailCode = async () => {
   try {
     await sendLoginEmail(email.value);
     startEmailTimer();
-    alert("验证码已发送，请检查邮箱");
+    showToast("验证码已发送，请检查邮箱", "success");
   } catch (error: any) {
     console.error("发送失败", error);
-    alert("发送失败：" + error.message);
+    showToast("发送失败：" + error.message, "error");
   } finally {
     isSendingEmailCode.value = false;
   }
@@ -354,7 +354,7 @@ const startEmailTimer = () => {
 
 const handleEmailLogin = async () => {
   if (!email.value || !emailCode.value) {
-    alert("请填写完整信息");
+    showToast("请填写完整信息", "error");
     return;
   }
 
@@ -366,11 +366,11 @@ const handleEmailLogin = async () => {
       localStorage.setItem('custom_admin_auth', JSON.stringify(res.admin));
       router.push("/");
     } else {
-      alert(res.message);
+      showToast(res.message || "登录失败", "error");
     }
   } catch (error: any) {
     console.error("登录失败", error);
-    alert("登录失败：" + error.message);
+    showToast("登录失败：" + error.message, "error");
   } finally {
     loading.value = false;
   }

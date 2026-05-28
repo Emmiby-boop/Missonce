@@ -311,17 +311,14 @@ const stats = reactive({
 const topResources = ref<any[]>([]);
 const loading = ref(false);
 
+// 真实流量数据
+const trafficData = ref<{ days: string[]; pvData: number[]; uvData: number[] }>({
+  days: [],
+  pvData: [],
+  uvData: [],
+});
+
 const trafficChartOption = computed(() => {
-  const days = [];
-  const pvData = [];
-  const uvData = [];
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    days.push(`${date.getMonth() + 1}/${date.getDate()}`);
-    pvData.push(Math.floor(Math.random() * 500) + 100);
-    uvData.push(Math.floor(Math.random() * 200) + 50);
-  }
   return {
     tooltip: {
       trigger: "axis",
@@ -343,7 +340,7 @@ const trafficChartOption = computed(() => {
     xAxis: {
       type: "category",
       boundaryGap: false,
-      data: days,
+      data: trafficData.value.days,
       axisLine: { lineStyle: { color: "var(--border-color)" } },
       axisLabel: { color: "var(--text-sub)" },
     },
@@ -358,7 +355,7 @@ const trafficChartOption = computed(() => {
         name: "PV",
         type: "line",
         smooth: true,
-        data: pvData,
+        data: trafficData.value.pvData,
         areaStyle: {
           color: {
             type: "linear",
@@ -379,7 +376,7 @@ const trafficChartOption = computed(() => {
         name: "UV",
         type: "line",
         smooth: true,
-        data: uvData,
+        data: trafficData.value.uvData,
         areaStyle: {
           color: {
             type: "linear",
@@ -456,6 +453,57 @@ const navigateTo = (page: string, params?: any) => {
   router.push({ path: pathMap[page] || pathMap.resources, query: params });
 };
 
+// 获取近7天真实流量数据
+const fetchTrafficData = async () => {
+  const days: string[] = [];
+  const pvData: number[] = [];
+  const uvData: number[] = [];
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+    days.push(dateStr);
+    
+    // 计算当天的开始和结束时间戳
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+    
+    try {
+      // 查询当天 PV
+      const pvRes = await dbAny
+        .collection("events")
+        .where({ 
+          type: "pv",
+          ts: _.gte(dayStart.getTime()).and(_.lte(dayEnd.getTime()))
+        })
+        .count();
+      pvData.push(pvRes.total || 0);
+      
+      // 查询当天 UV (按 openid 去重)
+      const uvRes = await dbAny
+        .collection("events")
+        .aggregate()
+        .match({ 
+          type: "pv",
+          ts: _.gte(dayStart.getTime()).and(_.lte(dayEnd.getTime()))
+        })
+        .group({ _id: "$_openid" })
+        .count("total")
+        .end();
+      uvData.push(uvRes?.data?.[0]?.total || 0);
+    } catch (e) {
+      console.warn("获取流量数据失败", e);
+      pvData.push(0);
+      uvData.push(0);
+    }
+  }
+  
+  trafficData.value = { days, pvData, uvData };
+};
+
 const fetchStats = async () => {
   loading.value = true;
   try {
@@ -522,7 +570,10 @@ const fetchStats = async () => {
   }
 };
 
-onMounted(fetchStats);
+onMounted(() => {
+  fetchStats();
+  fetchTrafficData();
+});
 </script>
 
 <style scoped>

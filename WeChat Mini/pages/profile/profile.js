@@ -65,31 +65,23 @@ Page({
     
     // Menu Configuration
     menuItems: [
-      { title: '联系我们', desc: '联系客服与关注公众号', iconPath: '/images/menu-contact.svg', color: '#ff9c6e' },
-      { title: '推荐给好友', desc: '分享给微信好友', iconPath: '/images/menu-share.svg', color: '#5cdbd3', isShare: true },
-      { title: '清除缓存', desc: '清理本地缓存数据', iconPath: '/images/menu-clear.svg', color: '#ff85c0' },
-      { title: '关于我们', desc: '版本信息与隐私政策', iconPath: '/images/menu-about.svg', color: '#69c0ff' }
-    ]
-  },
+      { title: '联系我们', iconPath: '/images/menu-contact.svg', color: '#ff9c6e' },
+      { title: '推荐给好友', iconPath: '/images/menu-share.svg', color: '#5cdbd3', isShare: true },
 
-  _refreshPageCache() {
-    this._openid = getStorage('openid')
-    this._userInfo = getStorage('userInfo')
-    this._token = getStorage('token')
-    this._favorites = getStorage('favorites') || []
-    this._downloadHistory = getStorage('downloadHistory') || []
+      { title: '清除缓存', iconPath: '/images/menu-clear.svg', color: '#ff85c0' },
+      { title: '关于我们', iconPath: '/images/menu-about.svg', color: '#69c0ff' }
+    ]
   },
 
   onLoad() {
     performanceMonitor.startPageLoad('个人中心')
-    this._initPageData()
+    this.initNavBar()
     performanceMonitor.markMilestone('个人中心', '初始化完成')
-    this._refreshPageCache()
-    performanceMonitor.markMilestone('个人中心', '缓存初始化完成')
     this.checkTodayCheckIn()
     performanceMonitor.markMilestone('个人中心', '签到检查完成')
     this.loadDownloadCount()
     performanceMonitor.markMilestone('个人中心', '下载数加载完成')
+    this.initVersion()
     performanceMonitor.endPageLoad('个人中心')
     
     const pageStats = performanceMonitor.getPageStats('个人中心')
@@ -102,32 +94,48 @@ Page({
     logger.logPageView('pages/profile/profile')
   },
 
-  // 🔥 优化：合并 initNavBar + initVersion → 1 次 setData（减少 1 次调用）
-  _initPageData() {
-    const windowInfo = getWindowInfo()
-    const patch = {
-      statusBarHeight: windowInfo.statusBarHeight,
-      navBarHeight: 44
-    }
+  initVersion() {
     try {
-      const { miniProgram } = wx.getAccountInfoSync()
+      const accountInfo = wx.getAccountInfoSync()
+      const { miniProgram } = accountInfo
+      
+      // miniProgram.version 仅在正式版有效
+      // miniProgram.envVersion 可能值为 develop, trial, release
       if (miniProgram.version) {
-        patch.version = miniProgram.version
+        this.setData({ version: miniProgram.version })
       } else if (miniProgram.envVersion !== 'release') {
-        const envMap = { develop: '开发版', trial: '体验版' }
-        patch.version = envMap[miniProgram.envVersion] || miniProgram.envVersion
+        const envMap = {
+          'develop': '开发版',
+          'trial': '体验版'
+        }
+        this.setData({ version: envMap[miniProgram.envVersion] || miniProgram.envVersion })
       }
-    } catch (e) {}
-    this.setData(patch)
+    } catch (e) {
+      console.error('获取版本信息失败', e)
+    }
+  },
+
+  initNavBar() {
+    // 🔥 优化：使用全局缓存的窗口信息，避免重复调用 wx.getWindowInfo/getSystemInfoSync
+    const windowInfo = getWindowInfo()
+    this.setData({
+      statusBarHeight: windowInfo.statusBarHeight,
+      navBarHeight: 44 // 标准导航栏高度
+    })
   },
 
   onShow() {
-    this._refreshPageCache()
     this.checkLoginStatus()
     this.loadFavoritesCount()
     this.syncUserInfo()
     this.checkTodayCheckIn()
-    this.setData({ theme: getTheme() })
+    this.syncTheme()
+  },
+
+  syncTheme() {
+    const theme = getTheme()
+    this.setData({ theme })
+    this.loadFavoritesCount()
   },
 
   async loadFavoritesCount() {
@@ -140,7 +148,7 @@ Page({
     }
 
     try {
-      const openid = this._openid  // 🔥 优化：页面级缓存
+      const openid = getStorage('openid')
       if (!openid) return
 
       const db = wx.cloud.database()
@@ -166,7 +174,7 @@ Page({
       console.error('加载统计数据失败:', e)
       // Fallback to local storage if cloud fails
       try {
-        const favorites = this._favorites  // 🔥 优化：页面级缓存
+        const favorites = getStorage('favorites') || []
         this.setData({ 
           'stats.favorites': favorites.length,
           favoriteCount: favorites.length 
@@ -177,7 +185,7 @@ Page({
 
   checkLoginStatus() {
     if (checkLoginStatus()) {
-      const userInfo = this._userInfo  // 🔥 优化：页面级缓存
+      const userInfo = getStorage('userInfo')
       // 格式化显示ID：优先使用userId，否则截取openid后6位
       if (userInfo) {
         userInfo.displayId = userInfo.userId || (userInfo.openid ? userInfo.openid.slice(-6).toUpperCase() : '')
@@ -365,7 +373,7 @@ Page({
 
   loadDownloadCount() {
     try {
-      const history = this._downloadHistory  // 🔥 优化：页面级缓存
+      const history = getStorage('downloadHistory') || []
       this.setData({ downloadCount: history.length })
     } catch (e) {
       this.setData({ downloadCount: 0 })
@@ -421,11 +429,13 @@ Page({
   },
 
   handleOfficialAccount() {
-    // 🔥 合并 3 次 setData → 1 次
-    this.setData({ showContactMenu: false, showOfficialAccount: true, qrcodeLoaded: this.data.officialAccount ? this.data.qrcodeLoaded : false })
+    this.setData({ showContactMenu: false })
+    
     if (!this.data.officialAccount) {
       this.loadOfficialAccountConfig()
     }
+    
+    this.setData({ showOfficialAccount: true })
   },
 
   closeOfficialAccount() {
@@ -657,7 +667,7 @@ Page({
 
     try {
       const db = wx.cloud.database()
-      const openid = this._openid  // 🔥 优化：页面级缓存
+      const openid = getStorage('openid')
 
       // 1. 清空云端数据
       if (openid) {
@@ -785,7 +795,7 @@ Page({
           wx.showLoading({ title: '正在清空...' })
           try {
             const db = wx.cloud.database()
-            const openid = this._openid  // 🔥 优化：页面级缓存
+            const openid = getStorage('openid')
 
             // 1. 清空云端数据
             if (openid) {
@@ -826,7 +836,7 @@ Page({
   },
 
   onShareAppMessage() {
-    const userInfo = this._userInfo  // 🔥 优化：页面级缓存
+    const userInfo = getStorage('userInfo')
     const inviterParam = userInfo && userInfo.openid ? '?inviter=' + userInfo.openid : ''
     return {
       title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
@@ -836,7 +846,7 @@ Page({
   },
 
   onShareTimeline() {
-    const userInfo = this._userInfo  // 🔥 优化：页面级缓存
+    const userInfo = getStorage('userInfo')
     const inviterParam = userInfo && userInfo.openid ? 'inviter=' + userInfo.openid : ''
     return {
       title: '小辣椒动态头像壁纸，海量精美素材免费下载！',

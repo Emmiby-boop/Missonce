@@ -12,6 +12,39 @@
           </button>
         </div>
       </div>
+      
+      <!-- 筛选区域 -->
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="text-sm text-[var(--text-sub)] mb-2 block">日志类型</label>
+          <select v-model="filters.type" class="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-main)]">
+            <option value="">全部</option>
+            <option value="error">错误</option>
+            <option value="warning">警告</option>
+            <option value="info">信息</option>
+            <option value="performance_slow">性能慢</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-[var(--text-sub)] mb-2 block">时间范围</label>
+          <select v-model="filters.timeRange" class="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-main)]">
+            <option value="">全部</option>
+            <option value="1h">最近1小时</option>
+            <option value="24h">最近24小时</option>
+            <option value="7d">最近7天</option>
+            <option value="30d">最近30天</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-[var(--text-sub)] mb-2 block">页面</label>
+          <input v-model="filters.page" placeholder="输入页面路径" class="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-main)]" />
+        </div>
+        <div class="flex items-end">
+          <button class="btn-primary w-full" @click="applyFilters">
+            应用筛选
+          </button>
+        </div>
+      </div>
     </section>
 
     <section class="glass-panel">
@@ -153,22 +186,76 @@ const hasMore = ref(true);
 const selectedLog = ref<any>(null);
 const pageSize = 20;
 
+const filters = ref({
+  type: '',
+  timeRange: '',
+  page: ''
+});
+
+const applyFilters = () => {
+  logs.value = [];
+  hasMore.value = true;
+  fetchLogs(false);
+};
+
 const fetchLogs = async (isLoadMore = false) => {
   if (loading.value) return;
   loading.value = true;
   
   if (!isLoadMore) {
     const cached = getCache();
-    if (cached) {
+    if (cached && !filters.value.type && !filters.value.timeRange && !filters.value.page) {
       logs.value = cached;
       loading.value = false;
+      return;
     }
   }
   
   try {
     let query = db.collection('error_logs')
-      .orderBy('createTime', 'desc')
-      .limit(pageSize);
+      .orderBy('createTime', 'desc');
+
+    // 应用筛选条件
+    if (filters.value.type) {
+      query = query.where({
+        type: filters.value.type
+      });
+    }
+
+    if (filters.value.page) {
+      query = query.where({
+        page: db.RegExp({
+          regexp: filters.value.page,
+          options: 'i'
+        })
+      });
+    }
+
+    if (filters.value.timeRange) {
+      const now = Date.now();
+      let startTime = 0;
+      switch (filters.value.timeRange) {
+        case '1h':
+          startTime = now - 3600 * 1000;
+          break;
+        case '24h':
+          startTime = now - 24 * 3600 * 1000;
+          break;
+        case '7d':
+          startTime = now - 7 * 24 * 3600 * 1000;
+          break;
+        case '30d':
+          startTime = now - 30 * 24 * 3600 * 1000;
+          break;
+      }
+      if (startTime > 0) {
+        query = query.where({
+          timestamp: db.command.gte(startTime)
+        });
+      }
+    }
+
+    query = query.limit(pageSize);
 
     if (isLoadMore && logs.value.length > 0) {
       query = query.skip(logs.value.length);
@@ -180,7 +267,9 @@ const fetchLogs = async (isLoadMore = false) => {
       logs.value = [...logs.value, ...(res.data || [])];
     } else {
       logs.value = res.data || [];
-      setCache(logs.value);
+      if (!filters.value.type && !filters.value.timeRange && !filters.value.page) {
+        setCache(logs.value);
+      }
     }
     
     hasMore.value = res.data && res.data.length === pageSize;

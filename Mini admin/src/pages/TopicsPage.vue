@@ -234,7 +234,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
-import { db, serverDate } from "../utils/cloudbase";
+import { db, serverDate, callCloudFunction } from "../utils/cloudbase";
 import { useToast } from '../composables/useToast';
 import { useCache } from '../composables/useCache';
 
@@ -272,15 +272,13 @@ onMounted(() => {
 const loadTopics = async () => {
   loading.value = true;
   
-  const cached = getCache();
-  if (cached) {
-    topics.value = cached;
-    loading.value = false;
-  }
+  console.log('开始加载专题数据...');
   
   try {
-    const res = await db.collection("topics").orderBy("sort", "asc").get();
+    const res = await callCloudFunction("getTopics", {});
+    console.log('云函数查询结果:', res);
     const data = res.data || [];
+    console.log('专题数据:', data);
     topics.value = data;
     setCache(data);
   } catch (err) {

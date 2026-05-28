@@ -88,7 +88,7 @@ const confirmCrop = () => {
     if (blob) {
       emit('confirm', blob);
     } else {
-      alert('裁剪失败');
+      ElMessage.error('裁剪失败');
     }
   }, 'image/jpeg', 0.9);
 };

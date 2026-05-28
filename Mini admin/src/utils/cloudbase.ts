@@ -2,17 +2,15 @@ import cloudbase from "@cloudbase/js-sdk";
 
 /**
  * CloudBase 配置
- * 注意：ACCESS_KEY 暴露在前端代码中是 CloudBase Web SDK 的限制
- * 生产环境建议：配置安全规则限制 IP/域名访问，或使用云函数中转
+ * 安全说明：ACCESS_KEY 已移除，敏感操作通过云函数中转
+ * 前端仅保留基础初始化，数据库操作依赖安全规则
  */
 export const ENV_ID = import.meta.env.VITE_ENV_ID || "missonce-99-1gfaff6n002f6ac1";
 export const REGION = import.meta.env.VITE_REGION || "ap-shanghai";
-export const ACCESS_KEY = import.meta.env.VITE_ACCESS_KEY || "";
 
 export const app = cloudbase.init({
   env: ENV_ID,
   region: REGION,
-  accessKey: ACCESS_KEY, 
   auth: { detectSessionInUrl: true },
   timeout: 300000 // 全局请求超时设置为 5 分钟 (300000ms)
 } as any);
@@ -27,15 +25,37 @@ export const db = app.database();
 export const _ = db.command;
 export const serverDate = () => (db as any).serverDate();
 
-export const getLoginState = async () => authClient.getLoginState();
+export const getLoginState = async () => {
+  const customAuth = localStorage.getItem('custom_admin_auth');
+  if (customAuth) {
+    try {
+       const admin = JSON.parse(customAuth);
+       if (admin) {
+         return {
+           user: {
+             uid: admin.uid || admin._openid || 'custom_admin',
+             phone: admin.phone || admin.username,
+             isAnonymous: false,
+             customAdmin: admin
+           },
+           loginType: 'CUSTOM'
+         };
+       }
+    } catch (e) {
+      console.error("Invalid custom auth token", e);
+      localStorage.removeItem('custom_admin_auth');
+    }
+  }
+  return authClient.getLoginState();
+};
 
 export const ensureLogin = async () => {
-  const state = await authClient.getLoginState();
+  const state = await getLoginState();
   return state || null;
 };
 
 export const ensureAuthUser = async () => {
-  const state = await authClient.getLoginState();
+  const state = await getLoginState();
   const isAnonymous = Boolean((state?.user as any)?.isAnonymous);
   
   // Check for custom admin auth (Email/Scan login)
@@ -83,13 +103,21 @@ export const signUpWithOtp = async (params: { phone: string; code: string; passw
 
 export const fetchAdminProfile = async () => {
   try {
-    const state = await ensureAuthUser();
-    
-    // If using custom auth, return the stored profile directly
-    if ((state as any).loginType === 'CUSTOM') {
-      return (state.user as any).customAdmin;
+    // First, try to get from localStorage directly for custom auth
+    const customAuth = localStorage.getItem('custom_admin_auth');
+    if (customAuth) {
+      try {
+        const admin = JSON.parse(customAuth);
+        if (admin) {
+          return admin;
+        }
+      } catch (e) {
+        console.error("Invalid custom auth token", e);
+        localStorage.removeItem('custom_admin_auth');
+      }
     }
 
+    const state = await ensureAuthUser();
     const uid = state.user?.uid;
     if (!uid) return null;
     const { data } = await db.collection("admins").where({ uid }).limit(1).get();
@@ -128,6 +156,20 @@ export const fetchAdminProfile = async () => {
 };
 
 export const requireAdmin = async () => {
+  // First, try to get from localStorage directly for custom auth
+  const customAuth = localStorage.getItem('custom_admin_auth');
+  if (customAuth) {
+    try {
+      const admin = JSON.parse(customAuth);
+      if (admin) {
+        return admin;
+      }
+    } catch (e) {
+      console.error("Invalid custom auth token", e);
+      localStorage.removeItem('custom_admin_auth');
+    }
+  }
+
   const profile = await fetchAdminProfile();
   if (!profile) {
     throw new Error("当前账号无管理员权限，请在 admins 集合配置");
@@ -194,14 +236,47 @@ export const loginWithPhoneCode = async (phone: string, code: string) => {
 
 // --- New Auth Methods ---
 
+// 确保 CloudBase 有登录态（匿名 or 正式），无则自动匿名登录
+// 关键：custom_admin_auth 只表示自定义账号登录成功，但 TCB SDK 本身可能没有有效 session
+const ensureCredentials = async () => {
+  try {
+    const state = await authClient.getLoginState();
+    
+    // 有 custom_admin_auth 说明用户已用自定义账号登录，但 TCB SDK session 可能不存在
+    // 此时强制匿名登录来获取 TCB 调用权限
+    if (!state) {
+      try {
+        console.log('[CloudBase] No login state, signing in anonymously...');
+        await authClient.signInAnonymously();
+      } catch (anonErr: any) {
+        // 如果匿名登录失败（如环境限制），尝试获取已有 anonymous 登录态
+        console.warn('[CloudBase] Anonymous sign-in failed:', anonErr?.message);
+      }
+    } else {
+      // 有 state 但检查是否是匿名且 TCB session 仍然有效
+      const isAnon = (state.user as any)?.isAnonymous;
+      if (isAnon) {
+        console.log('[CloudBase] Already have anonymous session');
+      }
+    }
+  } catch (e) {
+    console.warn('[CloudBase] ensureCredentials error:', e);
+  }
+};
+
 export const callCloudFunction = async (name: string, data: any) => {
   try {
+    await ensureCredentials();
     const res = await app.callFunction({
       name,
-      data
+      data: data || {}
     });
-    if (res.result && res.result.success === false) {
-      throw new Error(res.result.message || 'Unknown error in cloud function');
+    
+    if (res.result === null || res.result === undefined) {
+      throw new Error(`云函数 ${name} 不存在或调用失败`);
+    }
+    if (res.result.success === false) {
+      throw new Error((res.result as any).message || 'Cloud function error');
     }
     return res.result;
   } catch (error: any) {

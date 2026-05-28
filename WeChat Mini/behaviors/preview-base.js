@@ -3,9 +3,22 @@
  * Shared methods between avatar preview and wallpaper preview pages.
  * Extracted from preview.js / wallpaper-preview.js to eliminate duplication.
  */
+const STORAGE_KEYS = require('../config/constants.js')
+
 const { generateInteractionStats } = require('../utils/statsGenerator.js')
 const { getStorage, setStorage } = require('../utils/storageManager.js')
 const { checkLoginStatus } = require('../utils/auth.js')
+
+// Interaction data constants
+const VIEW_COUNT_MAX = 2000
+const VIEW_MULTIPLIER_MIN = 1.0
+const VIEW_MULTIPLIER_RANGE = 2.0
+const HOT_FACTOR_BASE = 0.95
+const HOT_FACTOR_RANGE = 0.10
+const LIKE_RATE_BASE = 0.03
+const LIKE_RATE_RANGE = 0.08
+const DAILY_GROWTH_BASE = 1.0
+const DAILY_GROWTH_RANGE = 0.03
 
 module.exports = Behavior({
   methods: {
@@ -43,18 +56,18 @@ module.exports = Behavior({
       const hasRealHot = hotScore != null && hotScore > 0
 
       if (hasRealHot) {
-        const hotFactor = 0.95 + (seed % 10) * 0.01
+        const hotFactor = HOT_FACTOR_BASE + (seed % 10) * (HOT_FACTOR_RANGE / 10)
         const finalHotScore = Math.floor(hotScore * hotFactor)
-        const viewMultiplier = 1 + (seed % 20) / 10
+        const viewMultiplier = VIEW_MULTIPLIER_MIN + (seed % 20) / 10
         let viewCount = Math.floor(finalHotScore * viewMultiplier)
-        viewCount = Math.min(viewCount, 2000)
-        const likeRate = 0.03 + (seed % 8) / 100
+        viewCount = Math.min(viewCount, VIEW_COUNT_MAX)
+        const likeRate = LIKE_RATE_BASE + (seed % 8) / 100
         let likeCount = Math.floor(viewCount * likeRate)
 
         if (storedData && storedData.date === today) {
           viewCount = Math.max(viewCount, storedData.baseViews)
           likeCount = Math.max(likeCount, storedData.baseLikes)
-          const dailyGrowth = 1 + (seed % 3 + 1) / 100
+          const dailyGrowth = DAILY_GROWTH_BASE + (seed % 3 + 1) / 100
           viewCount = Math.max(viewCount, Math.floor(storedData.baseViews * dailyGrowth))
           likeCount = Math.max(likeCount, Math.floor(storedData.baseLikes * dailyGrowth))
         }

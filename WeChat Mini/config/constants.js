@@ -36,4 +36,4 @@ export const CACHE_EXPIRE = {
 }
 
 // 云开发环境 ID
-export const ENV_ID = 'prod-2gfd169w229986b8'
+export const ENV_ID = 'missonce-99-1gfaff6n002f6ac1'

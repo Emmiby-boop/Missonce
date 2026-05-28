@@ -208,7 +208,7 @@
           <div v-if="activeTab === 'source'" class="space-y-5">
             <div class="flex p-1 bg-[var(--bg-body)] rounded-lg">
               <button 
-                v-for="st in ['automatic', 'recommendation', 'ai_personalized']" 
+                v-for="st in ['automatic', 'manual', 'recommendation', 'ai_personalized']" 
                 :key="st"
                 class="flex-1 py-1.5 text-sm font-medium rounded-md transition-all"
                 :class="form.dataSource.type === st ? 'bg-[var(--bg-card)] shadow text-[var(--primary)]' : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'"
@@ -216,6 +216,59 @@
               >
                 {{ getSourceTypeName(st) }}
               </button>
+            </div>
+
+            <div v-if="form.dataSource.type === 'manual'" class="space-y-4">
+              <div class="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                <div class="flex justify-between items-center mb-3">
+                  <h4 class="text-sm font-bold text-[var(--text-main)]">手动选择资源</h4>
+                  <button class="btn-soft text-sm px-3 py-1" @click="openResourcePicker">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    添加资源
+                  </button>
+                </div>
+                
+                <div v-if="form.dataSource.manualItems.length === 0" class="text-center py-6 text-[var(--text-sub)]">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2 text-[var(--text-sub)]/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p>暂无选择的资源</p>
+                  <p class="text-xs mt-1">点击上方按钮添加资源</p>
+                </div>
+                
+                <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  <div 
+                    v-for="(id, index) in form.dataSource.manualItems" 
+                    :key="index"
+                    class="relative group"
+                  >
+                    <div class="aspect-square bg-[var(--bg-body)] rounded-lg overflow-hidden border border-[var(--border-color)]">
+                      <img 
+                        v-if="manualItemsDetails[id]?.previewUrl" 
+                        :src="manualItemsDetails[id].previewUrl" 
+                        :alt="manualItemsDetails[id].title"
+                        class="w-full h-full object-cover"
+                      />
+                      <img 
+                        v-else 
+                        src="https://via.placeholder.com/150"
+                        alt="Default"
+                        class="w-full h-full object-cover opacity-50"
+                      />
+                    </div>
+                    <button 
+                      class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      @click="removeManualItem(index)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div v-if="form.dataSource.type === 'automatic'" class="space-y-4">
@@ -367,12 +420,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Resource Picker Modal -->
+    <ResourcePicker 
+      v-if="showPicker" 
+      :initial-selected="[]" 
+      :limit="0"
+      @close="showPicker = false" 
+      @select="handleResourceSelect" 
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from "vue";
 import { callCloudFunction } from "../utils/cloudbase";
+import ResourcePicker from "../components/ResourcePicker.vue";
 
 const CACHE_KEY = 'home_layout_cache';
 const CACHE_TTL = 5 * 60 * 1000;
@@ -383,6 +446,7 @@ const editingId = ref<string | null>(null);
 const submitting = ref(false);
 const showModal = ref(false);
 const activeTab = ref('basic');
+const showPicker = ref(false);
 
 const form = reactive({
   title: "",
@@ -414,6 +478,29 @@ const form = reactive({
     clickAction: "preview"
   }
 });
+
+// 存储手动选择资源的详细信息
+const manualItemsDetails = ref({});
+
+// 根据 ID 获取资源详细信息
+const fetchResourceDetails = async (ids) => {
+  if (!ids || ids.length === 0) return;
+  
+  try {
+    const res = await callCloudFunction('adminResource', {
+      action: 'batchGet',
+      ids: ids
+    });
+    
+    if (res.success && res.data) {
+      res.data.forEach(item => {
+        manualItemsDetails.value[item._id] = item;
+      });
+    }
+  } catch (error) {
+    console.error('获取资源详细信息失败:', error);
+  }
+};
 
 const tagsInput = computed({
   get: () => form.dataSource.tags?.join(',') || '',
@@ -595,7 +682,7 @@ const editSection = (item: any) => {
     limit: oldSource.limit || oldQuery.limit || 6,
     updateFrequency: oldSource.updateFrequency || "realtime",
     recommendationRule: oldSource.recommendationRule || "user_preference",
-    manualItems: oldSource.manualItems || []
+    manualItems: oldSource.manualItems ? oldSource.manualItems.map((item: any) => typeof item === 'string' ? item : item.id).filter((id: any) => id) : []
   };
   
   form.styleConfig = {
@@ -660,7 +747,7 @@ const saveSection = async () => {
     }
   } catch (error) {
     console.error("Save section error:", error);
-    alert("保存失败");
+    ElMessage.error("保存失败");
   } finally {
     submitting.value = false;
   }
@@ -679,7 +766,33 @@ const removeSection = async (id: string) => {
     }
   } catch (error) {
     console.error("Delete section error:", error);
-    alert("删除失败");
+    ElMessage.error("删除失败");
+  }
+};
+
+const openResourcePicker = () => {
+  showPicker.value = true;
+};
+
+const handleResourceSelect = (ids: string[], items: any[]) => {
+  // Add selected items to manualItems - only store IDs
+  form.dataSource.manualItems.push(...ids);
+  
+  // Store resource details for display
+  items.forEach(item => {
+    if (item._id) {
+      manualItemsDetails.value[item._id] = item;
+    }
+  });
+};
+
+const removeManualItem = (index: number) => {
+  const id = form.dataSource.manualItems[index];
+  form.dataSource.manualItems.splice(index, 1);
+  
+  // Remove resource details from store
+  if (id) {
+    delete manualItemsDetails.value[id];
   }
 };
 

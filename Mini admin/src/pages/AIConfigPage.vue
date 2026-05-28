@@ -27,13 +27,6 @@
         >
           标签白名单
         </button>
-        <button 
-          @click="activeTab = 'writer'"
-          class="px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
-          :class="activeTab === 'writer' ? 'bg-[var(--primary)] text-white shadow-sm' : 'bg-[var(--bg-card)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-color)]'"
-        >
-          文案配置
-        </button>
       </div>
     </div>
 
@@ -298,6 +291,7 @@
                 <option value="aliyun">阿里云百炼</option>
                 <option value="zhipu">智谱AI</option>
                 <option value="lingyi">零一万物</option>
+                <option value="xiaomi">小米（MiMo）</option>
               </select>
             </div>
             <div class="space-y-2">
@@ -447,6 +441,7 @@
               <option value="阿里云百炼">阿里云百炼</option>
               <option value="智谱AI">智谱AI</option>
               <option value="零一万物">零一万物</option>
+              <option value="小米（MiMo）">小米（MiMo）</option>
               <option value="其他">其他</option>
             </select>
           </div>
@@ -476,7 +471,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { db, serverDate } from '../utils/cloudbase';
+import { db, serverDate, callCloudFunction } from '../utils/cloudbase';
 
 const activeTab = ref<'model' | 'keys' | 'whitelist' | 'writer'>('model');
 const loading = ref(true);
@@ -545,7 +540,8 @@ const providers = [
   { id: 'volcengine', name: '火山方舟（豆包）' },
   { id: 'aliyun', name: '阿里云百炼' },
   { id: 'zhipu', name: '智谱AI' },
-  { id: 'lingyi', name: '零一万物' }
+  { id: 'lingyi', name: '零一万物' },
+  { id: 'xiaomi', name: '小米（MiMo）' }
 ];
 
 const allModels = {
@@ -584,6 +580,10 @@ const allModels = {
     { id: 'yi-vision', name: 'Yi-Vision' },
     { id: 'yi-vision-plus', name: 'Yi-Vision-Plus' },
     { id: 'yi-vision-turbo', name: 'Yi-Vision-Turbo' }
+  ],
+  xiaomi: [
+    { id: 'mimo-v2.5-pro', name: 'MiMo-V2.5-Pro' },
+    { id: 'mimo-v2.5', name: 'MiMo-V2.5' }
   ]
 };
 
@@ -613,6 +613,10 @@ const textModels = {
     { id: 'yi-turbo', name: 'Yi-Turbo' },
     { id: 'yi-plus', name: 'Yi-Plus' },
     { id: 'yi-large', name: 'Yi-Large' }
+  ],
+  xiaomi: [
+    { id: 'mimo-v2.5-pro', name: 'MiMo-V2.5-Pro' },
+    { id: 'mimo-v2.5', name: 'MiMo-V2.5' }
   ]
 };
 
@@ -665,6 +669,13 @@ const providerInfo = computed(() => {
     };
   }
 
+  if (selectedProvider.value === 'xiaomi' || url.includes('xiaomimimo.com')) {
+    return {
+      text: '点击前往小米 MiMo 控制台',
+      url: 'https://xiaomimimo.com'
+    };
+  }
+
   return null;
 });
 
@@ -678,6 +689,8 @@ const getDefaultApiUrl = (provider: string) => {
       return 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
     case 'lingyi':
       return 'https://api.lingyiwanwu.com/v1/chat/completions';
+    case 'xiaomi':
+      return 'https://api.xiaomimimo.com/v1/chat/completions';
     default:
       return '';
   }
@@ -694,7 +707,8 @@ const getProviderName = (providerId: string) => {
     'volcengine': '火山方舟',
     'aliyun': '阿里云百炼',
     'zhipu': '智谱AI',
-    'lingyi': '零一万物'
+    'lingyi': '零一万物',
+    'xiaomi': '小米（MiMo）'
   };
   return providerMap[providerId] || '';
 };
@@ -741,80 +755,59 @@ const fetchData = async () => {
   loading.value = true;
   try {
     console.log('[AIConfig] 开始获取数据...');
-    const [aiRes, catRes, tagRes, keysRes] = await Promise.all([
-      db.collection('sys_config').doc('ai_config').get().catch(() => null),
-      db.collection('sys_config').doc('categories_whitelist').get().catch(() => null),
-      db.collection('sys_config').doc('tags_whitelist').get().catch(() => null),
-      db.collection('api_keys').orderBy('createdAt', 'desc').get().catch((err) => {
-        console.warn('[AIConfig] api_keys 集合可能不存在，这是正常的:', err);
-        return { data: [] };
-      })
-    ]);
-
-    console.log('[AIConfig] aiRes:', aiRes);
-    console.log('[AIConfig] keysRes:', keysRes);
-
-    if (aiRes && aiRes.data) {
-      const data = (Array.isArray(aiRes.data) ? aiRes.data[0] : aiRes.data) as any;
-      config.value = {
-        API_KEY: data.API_KEY || '',
-        MODEL: data.MODEL || '',
-        API_URL: data.API_URL || '',
-        SYSTEM_PROMPT: data.SYSTEM_PROMPT || config.value.SYSTEM_PROMPT
-      };
-      if (!config.value.SYSTEM_PROMPT) resetPrompt();
-    } else {
-      resetPrompt();
-    }
-
-    if (catRes && catRes.data) {
-      const data = (Array.isArray(catRes.data) ? catRes.data[0] : catRes.data) as any;
-      if (Array.isArray(data.categories)) {
-        categoriesStr.value = data.categories.join(', ');
+    const result = await callCloudFunction('manageAIConfig', { action: 'get' });
+    
+    if (result && result.success && result.data) {
+      const { aiConfig, categories, tags, apiKeys: keysData, writerConfig: writerData } = result.data;
+      
+      if (aiConfig) {
+        config.value = {
+          API_KEY: aiConfig.API_KEY || '',
+          MODEL: aiConfig.MODEL || '',
+          API_URL: aiConfig.API_URL || '',
+          SYSTEM_PROMPT: aiConfig.SYSTEM_PROMPT || config.value.SYSTEM_PROMPT
+        };
+        if (!config.value.SYSTEM_PROMPT) resetPrompt();
+      } else {
+        resetPrompt();
       }
-    }
 
-    if (tagRes && tagRes.data) {
-      const data = (Array.isArray(tagRes.data) ? tagRes.data[0] : tagRes.data) as any;
-      if (Array.isArray(data.tags)) {
-        tagsStr.value = data.tags.join(', ');
+      if (categories && Array.isArray(categories.categories)) {
+        categoriesStr.value = categories.categories.join(', ');
       }
-    }
 
-    if (keysRes && keysRes.data) {
-      const keysData = Array.isArray(keysRes.data) ? keysRes.data : [keysRes.data];
-      console.log('[AIConfig] 原始 keys 数据:', keysData);
-      apiKeys.value = keysData.filter(Boolean).map((k: any) => ({
-        ...k,
-        _id: k._id || k.id,
-        maskedKey: maskKey(k.key)
-      }));
-      console.log('[AIConfig] 处理后的 keys:', apiKeys.value);
-    }
+      if (tags && Array.isArray(tags.tags)) {
+        tagsStr.value = tags.tags.join(', ');
+      }
 
-    try {
-      const writerDoc = await db.collection('sys_config').doc('ai_writer_config').get().catch(() => null);
-      if (writerDoc && writerDoc.data) {
-        const data = (Array.isArray(writerDoc.data) ? writerDoc.data[0] : writerDoc.data) as any;
-        writerConfig.value.SYSTEM_PROMPT = data.SYSTEM_PROMPT || DEFAULT_WRITER_PROMPT;
-        writerConfig.value.PROVIDER = data.PROVIDER || 'aliyun';
-        writerConfig.value.MODEL = data.MODEL || 'qwen-turbo';
-        writerConfig.value.API_URL = data.API_URL || '';
-        writerConfig.value.API_KEY = data.API_KEY || '';
+      if (keysData && Array.isArray(keysData)) {
+        apiKeys.value = keysData.filter(Boolean).map((k: any) => ({
+          ...k,
+          _id: k._id || k.id,
+          maskedKey: maskKey(k.key)
+        }));
+      }
+
+      if (writerData) {
+        writerConfig.value.SYSTEM_PROMPT = writerData.SYSTEM_PROMPT || DEFAULT_WRITER_PROMPT;
+        writerConfig.value.PROVIDER = writerData.PROVIDER || 'aliyun';
+        writerConfig.value.MODEL = writerData.MODEL || 'qwen-turbo';
+        writerConfig.value.API_URL = writerData.API_URL || '';
+        writerConfig.value.API_KEY = writerData.API_KEY || '';
         writerSelectedProvider.value = writerConfig.value.PROVIDER;
-        if (Array.isArray(data.scenes)) writerScenes.value = data.scenes;
-        if (Array.isArray(data.featuredQuotes)) featuredQuotes.value = data.featuredQuotes;
+        if (Array.isArray(writerData.scenes)) writerScenes.value = writerData.scenes;
+        if (Array.isArray(writerData.featuredQuotes)) featuredQuotes.value = writerData.featuredQuotes;
       } else {
         writerConfig.value.SYSTEM_PROMPT = DEFAULT_WRITER_PROMPT;
         writerConfig.value.MODEL = 'qwen-turbo';
         writerScenes.value = [...DEFAULT_WRITER_SCENES];
       }
-    } catch (e) {
+    } else {
+      resetPrompt();
       writerConfig.value.SYSTEM_PROMPT = DEFAULT_WRITER_PROMPT;
       writerConfig.value.MODEL = 'qwen-turbo';
       writerScenes.value = [...DEFAULT_WRITER_SCENES];
     }
-
   } catch (error) {
     console.error('[AIConfig] Fetch data failed', error);
   } finally {
@@ -826,9 +819,9 @@ const saveAIConfig = async () => {
   saving.value = true;
   message.value = '';
   try {
-    await db.collection('sys_config').doc('ai_config').set({
-      ...config.value,
-      updatedAt: serverDate()
+    await callCloudFunction('manageAIConfig', {
+      action: 'saveAIConfig',
+      config: config.value
     });
     showMessage('保存成功！', 'success');
   } catch (error) {
@@ -842,9 +835,9 @@ const saveCategories = async () => {
   saving.value = true;
   try {
     const categories = previewCategories.value;
-    await db.collection('sys_config').doc('categories_whitelist').set({
-      categories,
-      updatedAt: serverDate()
+    await callCloudFunction('manageAIConfig', {
+      action: 'saveCategories',
+      categories
     });
     showMessage('分类保存成功！', 'success');
   } catch (error) {
@@ -858,9 +851,9 @@ const saveTags = async () => {
   saving.value = true;
   try {
     const tags = previewTags.value;
-    await db.collection('sys_config').doc('tags_whitelist').set({
-      tags,
-      updatedAt: serverDate()
+    await callCloudFunction('manageAIConfig', {
+      action: 'saveTags',
+      tags
     });
     showMessage('标签保存成功！', 'success');
   } catch (error) {
@@ -990,14 +983,16 @@ const saveWriterConfig = async () => {
   saving.value = true;
   message.value = '';
   try {
-    await db.collection('sys_config').doc('ai_writer_config').set({
-      SYSTEM_PROMPT: writerConfig.value.SYSTEM_PROMPT,
-      PROVIDER: writerSelectedProvider.value,
-      MODEL: writerConfig.value.MODEL,
-      API_URL: writerConfig.value.API_URL,
-      API_KEY: writerConfig.value.API_KEY,
-      scenes: writerScenes.value,
-      updatedAt: serverDate()
+    await callCloudFunction('manageAIConfig', {
+      action: 'saveWriterConfig',
+      config: {
+        SYSTEM_PROMPT: writerConfig.value.SYSTEM_PROMPT,
+        PROVIDER: writerSelectedProvider.value,
+        MODEL: writerConfig.value.MODEL,
+        API_URL: writerConfig.value.API_URL,
+        API_KEY: writerConfig.value.API_KEY
+      },
+      scenes: writerScenes.value
     });
     showMessage('文案配置保存成功！', 'success');
   } catch (error) {
@@ -1016,9 +1011,9 @@ const saveFeaturedQuotes = async () => {
   saving.value = true;
   message.value = '';
   try {
-    await db.collection('sys_config').doc('ai_writer_config').update({
-      featuredQuotes: featuredQuotes.value,
-      updatedAt: serverDate()
+    await callCloudFunction('manageAIConfig', {
+      action: 'saveFeaturedQuotes',
+      featuredQuotes: featuredQuotes.value
     });
     showMessage('文案库保存成功！', 'success');
   } catch (error) {

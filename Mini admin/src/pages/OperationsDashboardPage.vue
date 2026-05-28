@@ -220,7 +220,7 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card cursor-pointer hover:shadow-lg transition-shadow" @click="openQualityDetail">
           <h3 class="text-base font-semibold text-[var(--text-main)] mb-4">✅ 内容质量检查</h3>
           <div v-if="qualityLoading" class="text-center py-4 text-[var(--text-sub)]">检查中...</div>
           <div v-else class="space-y-4">
@@ -229,15 +229,16 @@
                 <div class="text-xl font-bold text-[var(--text-main)]">{{ qualityCheck.recentCount || 0 }}</div>
                 <div class="text-xs text-[var(--text-sub)]">近7天新增</div>
               </div>
-              <div class="p-3 bg-[var(--bg-body)] rounded-lg">
+              <div class="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                 <div class="text-xl font-bold text-orange-500">{{ qualityCheck.lowQualityCount || 0 }}</div>
-                <div class="text-xs text-[var(--text-sub)]">需要优化</div>
+                <div class="text-xs text-orange-500">需要优化</div>
               </div>
               <div class="p-3 bg-[var(--bg-body)] rounded-lg">
                 <div class="text-xl font-bold text-blue-500">{{ qualityCheck.aiPendingCount || 0 }}</div>
                 <div class="text-xs text-[var(--text-sub)]">待AI分析</div>
               </div>
             </div>
+
             <div v-if="qualityCheck.suggestions?.length > 0" class="p-3 bg-[var(--bg-body)] rounded-lg">
               <ul class="text-sm text-[var(--text-sub)] space-y-1">
                 <li v-for="(s, i) in qualityCheck.suggestions" :key="i">• {{ s }}</li>
@@ -428,12 +429,181 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showQualityDetail" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click="showQualityDetail = false">
+      <div class="bg-[var(--bg-card)] rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-auto m-4" @click.stop>
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-xl font-bold text-[var(--text-main)]">需要优化的内容</h3>
+              <p class="text-sm text-[var(--text-sub)] mt-1">共 {{ qualityCheck.lowQualityResources?.length || 0 }} 项</p>
+            </div>
+            <button @click="showQualityDetail = false" class="p-2 rounded-lg hover:bg-[var(--bg-body)] transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-sub)]"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button 
+              @click="toggleSelectAll" 
+              class="px-3 py-1.5 text-xs rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+            >
+              {{ isAllSelected ? '取消全选' : '全选' }}
+            </button>
+            <button 
+              @click="batchAIAnalyze" 
+              :disabled="(qualityCheck.aiPendingCount === 0 && selectedResources.length === 0) || aiAnalyzing"
+              class="px-3 py-1.5 text-xs rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <svg v-if="aiAnalyzing" class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              {{ aiAnalyzing ? '分析中...' : '批量AI识别' }}
+            </button>
+            <button 
+              @click="batchUnpublish" 
+              :disabled="(qualityCheck.lowQualityCount === 0 && selectedResources.length === 0) || batchOperating"
+              class="px-3 py-1.5 text-xs rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              {{ batchOperating ? '处理中...' : '批量下架' }}
+            </button>
+            <button 
+              @click="batchDelete" 
+              :disabled="(qualityCheck.lowQualityCount === 0 && selectedResources.length === 0) || batchOperating"
+              class="px-3 py-1.5 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              {{ batchOperating ? '删除中...' : '批量删除' }}
+            </button>
+            <button 
+              @click="jumpToResourceManage" 
+              class="px-3 py-1.5 text-xs rounded-lg bg-[var(--bg-body)] text-[var(--text-main)] hover:bg-[var(--border-color)] flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+              资源管理
+            </button>
+          </div>
+
+          <div v-if="qualityCheck.lowQualityResources?.length === 0" class="text-center py-12">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 text-[var(--text-sub)]"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <p class="text-[var(--text-sub)]">暂无需要优化的内容</p>
+          </div>
+
+          <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            <div 
+              v-for="item in qualityCheck.lowQualityResources" 
+              :key="item._id"
+              class="bg-[var(--bg-body)] rounded-xl border border-[var(--border-color)] overflow-hidden hover:shadow-lg hover:border-[var(--primary)] transition-all duration-300 flex flex-col"
+            >
+              <div class="p-2">
+                <div class="flex items-start gap-2 mb-2">
+                  <input 
+                    type="checkbox" 
+                    :checked="selectedResources.includes(item._id)"
+                    @click.stop="toggleResourceSelection(item._id)"
+                    class="w-3.5 h-3.5 rounded accent-[var(--primary)] mt-0.5 flex-shrink-0"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-[var(--text-main)] truncate">{{ item.title || '未命名' }}</div>
+                    <div class="text-[10px] text-[var(--text-sub)] mt-0.5">
+                      <span class="px-1.5 py-0.5 rounded-full" :class="{
+                        'bg-pink-500/20 text-pink-500': item.type === 'avatar',
+                        'bg-indigo-500/20 text-indigo-500': item.type === 'wallpaper'
+                      }">
+                        {{ item.type === 'avatar' ? '头像' : '壁纸' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="rounded-lg overflow-hidden bg-[var(--border-color)] mb-2">
+                  <img v-if="getImageUrl(item)" :src="getImageUrl(item)" class="w-full h-32 object-cover" @error="handleImageError($event)" />
+                  <div v-else class="w-full h-32 flex items-center justify-center text-[var(--text-sub)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+                  </div>
+                </div>
+                <button 
+                  @click="editResource(item)"
+                  class="w-full px-2 py-1.5 text-xs rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity font-medium"
+                >
+                  编辑
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showEditModal && editingResource" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click="showEditModal = false">
+      <div class="bg-[var(--bg-card)] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto m-4" @click.stop>
+        <div class="p-6 border-b border-[var(--border-color)] flex justify-between items-center">
+          <h3 class="text-xl font-bold text-[var(--text-main)]">编辑资源</h3>
+          <button @click="showEditModal = false" class="p-2 rounded-lg hover:bg-[var(--bg-body)] transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-sub)]"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+          </button>
+        </div>
+        
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+          <div class="grid gap-5">
+            <div class="rounded-xl overflow-hidden bg-[var(--bg-body)]">
+              <img v-if="editingResource && getImageUrl(editingResource)" :src="getImageUrl(editingResource)" class="w-full h-64 object-cover" @error="handleImageError($event)" />
+              <div v-else class="w-full h-64 flex items-center justify-center text-[var(--text-sub)]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+              </div>
+            </div>
+
+            <label class="block">
+              <span class="text-sm font-medium text-[var(--text-main)] mb-1.5 block">标题</span>
+              <input v-model="editingResource.title" class="w-full px-4 py-2 rounded-lg bg-[var(--bg-body)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--primary)] transition-colors" placeholder="素材名称" />
+            </label>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <label class="block">
+                <span class="text-sm font-medium text-[var(--text-main)] mb-1.5 block">类型</span>
+                <select v-model="editingResource.type" class="w-full px-4 py-2 rounded-lg bg-[var(--bg-body)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--primary)] transition-colors">
+                  <option value="avatar">头像</option>
+                  <option value="wallpaper">壁纸</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-sm font-medium text-[var(--text-main)] mb-1.5 block">状态</span>
+                <select v-model="editingResource.status" class="w-full px-4 py-2 rounded-lg bg-[var(--bg-body)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--primary)] transition-colors">
+                  <option value="draft">草稿</option>
+                  <option value="review">待审</option>
+                  <option value="published">已发布</option>
+                  <option value="offline">已下线</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="block">
+              <span class="text-sm font-medium text-[var(--text-main)] mb-1.5 block">
+                分类 
+                <span class="text-xs text-[var(--text-sub)] font-normal ml-1">(点击下方标签添加)</span>
+              </span>
+              <input v-model="editingResource.categoriesStr" class="w-full px-4 py-2 rounded-lg bg-[var(--bg-body)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--primary)] transition-colors" placeholder="例如：动态头像,女生" />
+            </label>
+            
+            <label class="block">
+              <span class="text-sm font-medium text-[var(--text-main)] mb-1.5 block">标签（逗号分隔）</span>
+              <textarea v-model="editingResource.tags" class="w-full px-4 py-2 rounded-lg bg-[var(--bg-body)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-[var(--primary)] transition-colors min-h-[100px]" placeholder="例如：治愈,简约,几何"></textarea>
+            </label>
+          </div>
+        </div>
+        
+        <div class="p-6 bg-[var(--bg-body)] border-t border-[var(--border-color)] flex justify-end gap-3">
+          <button class="px-4 py-2 text-sm font-medium text-[var(--text-main)] hover:bg-[var(--border-color)] rounded-lg transition-colors" @click="showEditModal = false">取消</button>
+          <button class="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2" @click="saveResource">
+            <span>保存更改</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { app, db } from '../utils/cloudbase';
+import { app, db, callCloudFunction } from '../utils/cloudbase';
+
+declare const wx: any;
 
 const loading = ref(true);
 const qualityLoading = ref(false);
@@ -441,6 +611,10 @@ const hotResourcesLoading = ref(false);
 const dashboard = ref<any>({ overview: {}, trends: [], hotResources: [], categoryDistribution: [] });
 const trendPrediction = ref<any>(null);
 const qualityCheck = ref<any>(null);
+
+const selectedResources = ref<string[]>([]);
+const aiAnalyzing = ref(false);
+const batchOperating = ref(false);
 
 const resourceCache = ref<Map<string, any>>(new Map());
 const previewImageUrl = ref<string | null>(null);
@@ -457,6 +631,11 @@ const functionRecords = ref<any[]>([]);
 const functionRecordsLoading = ref(false);
 const functionCurrentPage = ref(1);
 const FUNCTION_PAGE_SIZE = 12;
+
+const showQualityDetail = ref(false);
+const isAllSelected = ref(false);
+const showEditModal = ref(false);
+const editingResource = ref<any | null>(null);
 
 const behaviorStats = ref({
   favorites: 0,
@@ -532,9 +711,10 @@ const displayFunctionPages = computed(() => {
   return pages;
 });
 
+const isDev = import.meta.env.DEV;
+
 const getTempImageUrls = async (fileIDs: string[]): Promise<Map<string, string>> => {
   const validIDs = fileIDs.filter(id => id && id.startsWith('cloud://'));
-  console.log('[图片加载] 需要转换的云存储ID数量:', validIDs.length, '全部ID:', fileIDs);
   
   if (validIDs.length === 0) return new Map();
   
@@ -546,34 +726,31 @@ const getTempImageUrls = async (fileIDs: string[]): Promise<Map<string, string>>
     batches.push(validIDs.slice(i, i + BATCH_SIZE));
   }
   
-  console.log('[图片加载] 分批处理，共', batches.length, '批');
+  // 并行处理所有批次，而非串行
+  const results = await Promise.all(
+    batches.map(async (batch, batchIndex) => {
+      if (!batch) return [];
+      try {
+        const tempRes = await app.getTempFileURL({
+          fileList: batch.map((fileID) => ({ fileID, maxAge: 3600 })),
+        });
+        return (tempRes.fileList || []).map((file: any) => {
+          if (file.tempFileURL) {
+            return { fileID: file.fileID, url: file.tempFileURL };
+          }
+          return null;
+        }).filter(Boolean);
+      } catch (error) {
+        if (isDev) console.error(`[图片加载] 第 ${batchIndex + 1} 批获取临时URL失败:`, error);
+        return [];
+      }
+    })
+  );
   
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex];
-    if (!batch) continue;
-    console.log(`[图片加载] 处理第 ${batchIndex + 1}/${batches.length} 批，数量:`, batch.length);
-    
-    try {
-      const tempRes = await app.getTempFileURL({
-        fileList: batch.map((fileID) => ({ fileID, maxAge: 3600 })),
-      });
-      
-      console.log(`[图片加载] 第 ${batchIndex + 1} 批响应:`, tempRes);
-      
-      (tempRes.fileList || []).forEach((file: any) => {
-        if (file.tempFileURL) {
-          urlMap.set(file.fileID, file.tempFileURL);
-          console.log('[图片加载] 转换成功:', file.fileID, '→', file.tempFileURL);
-        } else {
-          console.warn('[图片加载] 转换失败:', file);
-        }
-      });
-    } catch (error) {
-      console.error(`[图片加载] 第 ${batchIndex + 1} 批获取临时图片URL失败:`, error);
-    }
-  }
+  results.flat().forEach((item: any) => {
+    if (item) urlMap.set(item.fileID, item.url);
+  });
   
-  console.log('[图片加载] 转换完成，共', urlMap.size, '个URL');
   return urlMap;
 };
 
@@ -585,6 +762,7 @@ const getImageUrl = (item: any): string => {
   
   const allCandidates = [
     item.tempImageUrl,
+    item.resourceCover,
     item.previewUrl,
     item.url,
     item.coverUrl,
@@ -655,33 +833,24 @@ const openFunctionDetail = async (type: 'favorite' | 'download') => {
 const loadFunctionRecords = async (type: 'favorite' | 'download') => {
   functionRecordsLoading.value = true;
   try {
-    const collection = type === 'favorite' ? 'favorites' : 'downloads';
-    console.log('[图片加载] 开始加载记录，集合:', collection);
+    const action = type === 'favorite' ? 'favoriteRecords' : 'downloadRecords';
+    console.log('[运营助手] 开始加载记录，类型:', type, 'action:', action);
     
-    const res = await db.collection(collection)
-      .orderBy('createTime', 'desc')
-      .limit(100)
-      .get();
+    const res = await callCloudFunction('operationsAssistant', { 
+      action,
+      limit: 100
+    });
+    
+    console.log('[运营助手] 云函数响应:', res);
+    
+    if (!res.success) {
+      throw new Error(res.message || '获取记录失败');
+    }
     
     const records = res.data || [];
-    console.log('[图片加载] 原始记录数据:', records);
-    
-    const resourceIds = records.map((item: any) => item.resourceId).filter(Boolean);
-    console.log('[图片加载] 需要查询的资源ID:', resourceIds);
-    await fetchResources(resourceIds);
-    
-    let processedRecords = records.map((item: any) => {
-      const resource = resourceCache.value.get(item.resourceId);
-      return {
-        ...item,
-        resourceTitle: resource?.title,
-        resourceType: resource?.type,
-        resourceCover: resource?.url || resource?.coverUrl,
-        resource
-      };
-    });
+    console.log('[运营助手] 记录数据:', records);
 
-    console.log('[图片加载] 处理后的记录（含资源数据）:', processedRecords);
+    let processedRecords = [...records];
 
     const fileIDs: string[] = [];
     processedRecords.forEach((item: any) => {
@@ -691,12 +860,18 @@ const loadFunctionRecords = async (type: 'favorite' | 'download') => {
       if (item.resource?.coverUrl) {
         fileIDs.push(item.resource.coverUrl);
       }
+      if (item.resourceCover) {
+        fileIDs.push(item.resourceCover);
+      }
       if (item.url) {
         fileIDs.push(item.url);
       }
+      if (item.coverUrl) {
+        fileIDs.push(item.coverUrl);
+      }
     });
 
-    console.log('[图片加载] 收集到的文件ID:', fileIDs);
+    console.log('[运营助手] 收集到的文件ID:', fileIDs);
 
     if (fileIDs.length > 0) {
       const urlMap = await getTempImageUrls(fileIDs);
@@ -705,8 +880,14 @@ const loadFunctionRecords = async (type: 'favorite' | 'download') => {
         if (item.resource) {
           tempUrl = urlMap.get(item.resource.url || item.resource.coverUrl) || '';
         }
+        if (!tempUrl && item.resourceCover) {
+          tempUrl = urlMap.get(item.resourceCover) || '';
+        }
         if (!tempUrl && item.url) {
           tempUrl = urlMap.get(item.url) || '';
+        }
+        if (!tempUrl && item.coverUrl) {
+          tempUrl = urlMap.get(item.coverUrl) || '';
         }
         return {
           ...item,
@@ -816,11 +997,17 @@ const loadDashboard = async () => {
 const loadDashboardDirect = async () => {
   hotResourcesLoading.value = true;
   try {
-    const [usersRes, resourcesRes, eventsRes, hotRes] = await Promise.all([
-      db.collection('sys_user').count(),
+    // 并行查询所有数据
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const [usersRes, resourcesRes, eventsRes, hotRes, activeUsersRes, categoryRes] = await Promise.all([
+      db.collection('users').count(),
       db.collection('resources').count(),
       db.collection('events').limit(100).get(),
-      db.collection('resources').orderBy('hotScore', 'desc').limit(50).get()
+      db.collection('resources').orderBy('hotScore', 'desc').limit(50).get(),
+      db.collection('users').where({ lastLoginAt: db.command.gte(sevenDaysAgo) }).count(),
+      db.collection('resources').limit(100).get()
     ]);
 
     const trends = [];
@@ -839,10 +1026,6 @@ const loadDashboardDirect = async () => {
       });
     }
 
-    const categoryRes = await db.collection('resources')
-      .limit(100)
-      .get();
-
     const categoryCount = new Map();
     categoryRes.data?.forEach((r: any) => {
       const cats = r.categories || [r.category].filter(Boolean);
@@ -857,21 +1040,9 @@ const loadDashboardDirect = async () => {
       viewCount: item.views || item.viewCount || 0
     }));
 
-    console.log('[图片加载] 原始热门资源数据:', hotRes.data);
-    console.log('[图片加载] 第一个资源对象:', hotResources[0]);
-    if (hotResources[0]) {
-      console.log('[图片加载] 第一个资源的所有键:', Object.keys(hotResources[0]));
-    }
-
     const fileIDs = hotResources
-      .map((item: any) => {
-        const id = item.url || item.coverUrl || item.originUrl || item.cover || item.fileUrl;
-        if (id) console.log('[图片加载] 找到文件ID:', id, '来自资源:', item.title);
-        return id;
-      })
+      .map((item: any) => item.url || item.coverUrl || item.originUrl || item.cover || item.fileUrl)
       .filter(Boolean);
-    
-    console.log('[图片加载] 收集到的文件ID列表:', fileIDs);
     
     if (fileIDs.length > 0) {
       const urlMap = await getTempImageUrls(fileIDs);
@@ -889,7 +1060,7 @@ const loadDashboardDirect = async () => {
     dashboard.value = {
       overview: {
         totalUsers: usersRes.total || 0,
-        activeUsers: Math.min((usersRes.total || 0), 10),
+        activeUsers: activeUsersRes.total || 0,
         totalResources: resourcesRes.total || 0,
         totalViews: eventsRes.data?.length || 0
       },
@@ -942,7 +1113,30 @@ const loadQualityCheck = async () => {
     });
     
     if (res.result?.success) {
-      qualityCheck.value = res.result.data;
+      let data = res.result.data;
+      
+      if (data.lowQualityResources && data.lowQualityResources.length > 0) {
+        const fileIDs = data.lowQualityResources
+          .map((item: any) => {
+            const id = item.url || item.coverUrl || item.originUrl || item.cover || item.fileUrl;
+            return id;
+          })
+          .filter(Boolean);
+        
+        if (fileIDs.length > 0) {
+          const urlMap = await getTempImageUrls(fileIDs);
+          data.lowQualityResources = data.lowQualityResources.map((item: any) => {
+            const fileId = item.url || item.coverUrl || item.originUrl || item.cover || item.fileUrl;
+            const tempUrl = urlMap.get(fileId) || '';
+            return {
+              ...item,
+              tempImageUrl: tempUrl
+            };
+          });
+        }
+      }
+      
+      qualityCheck.value = data;
     } else {
       await loadQualityCheckDirect();
     }
@@ -963,15 +1157,214 @@ const loadQualityCheckDirect = async () => {
       .limit(100)
       .get();
 
+    let lowQualityResources = (recentRes.data || []).map((item: any) => ({
+      ...item,
+      qualityIssues: []
+    }));
+
+    const fileIDs = lowQualityResources
+      .map((item: any) => {
+        const id = item.url || item.coverUrl || item.originUrl || item.cover || item.fileUrl;
+        return id;
+      })
+      .filter(Boolean);
+    
+    if (fileIDs.length > 0) {
+      const urlMap = await getTempImageUrls(fileIDs);
+      lowQualityResources = lowQualityResources.map((item: any) => {
+        const fileId = item.url || item.coverUrl || item.originUrl || item.cover || item.fileUrl;
+        const tempUrl = urlMap.get(fileId) || '';
+        return {
+          ...item,
+          tempImageUrl: tempUrl
+        };
+      });
+    }
+
     qualityCheck.value = {
       recentCount: recentRes.data?.length || 0,
-      lowQualityCount: 0,
+      lowQualityCount: lowQualityResources.length,
       aiPendingCount: 0,
-      suggestions: [],
-      lowQualityResources: []
+      suggestions: [
+        '建议为资源添加更丰富的标签',
+        '建议补充分类信息'
+      ],
+      lowQualityResources: lowQualityResources
     };
   } catch (error) {
     console.error('直接查询质量检查失败:', error);
+  }
+};
+
+const toggleResourceSelection = (id: string) => {
+  const index = selectedResources.value.indexOf(id);
+  if (index === -1) {
+    selectedResources.value.push(id);
+  } else {
+    selectedResources.value.splice(index, 1);
+  }
+  
+  const total = qualityCheck.value?.lowQualityResources?.length || 0;
+  isAllSelected.value = selectedResources.value.length === total && total > 0;
+};
+
+const batchAIAnalyze = async () => {
+  const targetIds = selectedResources.value.length > 0 
+    ? selectedResources.value 
+    : qualityCheck.value?.lowQualityResources?.map((r: any) => r._id) || [];
+  
+  if (targetIds.length === 0) return;
+  
+  aiAnalyzing.value = true;
+  let successCount = 0;
+  let failCount = 0;
+  
+  for (const id of targetIds) {
+    try {
+      await app.callFunction({
+        name: 'analyzeResource',
+        data: { id }
+      });
+      successCount++;
+    } catch (err) {
+      console.error(`AI分析失败: ${id}`, err);
+      failCount++;
+    }
+  }
+  
+  aiAnalyzing.value = false;
+  ElMessage.success(`批量AI识别完成！成功: ${successCount}, 失败: ${failCount}`);
+  selectedResources.value = [];
+  await loadQualityCheck();
+};
+
+const batchUnpublish = async () => {
+  const targetIds = selectedResources.value.length > 0 
+    ? selectedResources.value 
+    : qualityCheck.value?.lowQualityResources?.map((r: any) => r._id) || [];
+  
+  if (targetIds.length === 0) return;
+  
+  if (!confirm(`确定要下架选中的 ${targetIds.length} 个资源吗？`)) return;
+  
+  batchOperating.value = true;
+  let successCount = 0;
+  
+  for (const id of targetIds) {
+    try {
+      await db.collection('resources').doc(id).update({
+        data: { status: 'unpublished', updatedAt: db.serverDate() }
+      });
+      successCount++;
+    } catch (err) {
+      console.error(`下架失败: ${id}`, err);
+    }
+  }
+  
+  batchOperating.value = false;
+  ElMessage.success(`批量下架完成！成功: ${successCount}`);
+  selectedResources.value = [];
+  await loadQualityCheck();
+};
+
+const batchDelete = async () => {
+  const targetIds = selectedResources.value.length > 0 
+    ? selectedResources.value 
+    : qualityCheck.value?.lowQualityResources?.map((r: any) => r._id) || [];
+  
+  if (targetIds.length === 0) return;
+  
+  if (!confirm(`确定要删除选中的 ${targetIds.length} 个资源吗？此操作不可恢复！`)) return;
+  
+  batchOperating.value = true;
+  let successCount = 0;
+  
+  for (const id of targetIds) {
+    try {
+      await db.collection('resources').doc(id).remove();
+      successCount++;
+    } catch (err) {
+      console.error(`删除失败: ${id}`, err);
+    }
+  }
+  
+  batchOperating.value = false;
+  ElMessage.success(`批量删除完成！成功: ${successCount}`);
+  selectedResources.value = [];
+  await loadQualityCheck();
+};
+
+const jumpToResourceManage = () => {
+  window.location.hash = '#/resources';
+};
+
+const openQualityDetail = () => {
+  showQualityDetail.value = true;
+};
+
+const toggleSelectAll = () => {
+  if (!qualityCheck.value?.lowQualityResources?.length) return;
+  
+  if (isAllSelected.value) {
+    selectedResources.value = [];
+  } else {
+    selectedResources.value = qualityCheck.value.lowQualityResources.map((r: any) => r._id);
+  }
+  isAllSelected.value = !isAllSelected.value;
+};
+
+const editResource = (item: any) => {
+  console.log('Editing resource:', item);
+  try {
+    const resourceCopy = JSON.parse(JSON.stringify(item));
+    
+    editingResource.value = {
+      ...resourceCopy,
+      tags: Array.isArray(resourceCopy.tags) ? resourceCopy.tags.join(",") : resourceCopy.tags || "",
+      categoriesStr: Array.isArray(resourceCopy.categories) ? resourceCopy.categories.join(",") : (resourceCopy.category || ""),
+    };
+    showEditModal.value = true;
+  } catch (err) {
+    console.error('Error preparing edit modal:', err);
+    ElMessage.error('打开编辑框失败');
+  }
+};
+
+const saveResource = async () => {
+  if (!editingResource.value) return;
+  
+  const tagsStr = String(editingResource.value.tags || "");
+  const tags = tagsStr
+    .split(/[,，]/)
+    .map((t: string) => t.trim())
+    .filter(Boolean);
+  
+  const categoriesStr = String(editingResource.value.categoriesStr || "");
+  const categories = categoriesStr
+    .split(/[,，]/)
+    .map((t: string) => t.trim())
+    .filter(Boolean);
+    
+  const mainCategory = categories.length > 0 ? categories[0] : "";
+  
+  try {
+    await db.collection('resources').doc(editingResource.value._id).update({
+      title: editingResource.value.title,
+      type: editingResource.value.type,
+      status: editingResource.value.status,
+      category: mainCategory, 
+      categories: categories,
+      tags,
+      updatedAt: db.serverDate(),
+    });
+    
+    ElMessage.success("更新成功");
+    showEditModal.value = false;
+    editingResource.value = null;
+    await loadQualityCheck();
+  } catch (err: any) {
+    console.error("更新失败", err);
+    ElMessage.error("更新失败: " + err.message);
   }
 };
 
@@ -994,28 +1387,38 @@ const fetchResources = async (resourceIds: string[]) => {
 
 const updateBehaviorStats = async () => {
   try {
-    const [favCount, downCount] = await Promise.all([
-      db.collection('favorites').count(),
-      db.collection('downloads').count()
-    ]);
-
-    behaviorStats.value = {
-      favorites: favCount.total || 0,
-      downloads: downCount.total || 0,
-      uniqueUsers: 0,
-      popularResources: 0
-    };
+    console.log('[运营助手] 开始加载行为统计...');
+    const res = await callCloudFunction('operationsAssistant', { 
+      action: 'behaviorStats'
+    });
+    
+    console.log('[运营助手] 行为统计响应:', res);
+    
+    if (res.success) {
+      behaviorStats.value = {
+        favorites: res.data.totalFavorites || 0,
+        downloads: res.data.totalDownloads || 0,
+        uniqueUsers: 0,
+        popularResources: 0
+      };
+      console.log('[运营助手] 行为统计已更新:', behaviorStats.value);
+    } else {
+      throw new Error(res.message || '获取行为统计失败');
+    }
   } catch (error) {
     console.error('更新行为统计失败:', error);
   }
 };
 
-const refreshAll = () => {
+const refreshAll = async () => {
   hotCurrentPage.value = 1;
-  loadDashboard();
-  loadTrendPrediction();
-  loadQualityCheck();
-  updateBehaviorStats();
+  // 并行加载所有数据，减少等待时间
+  await Promise.all([
+    loadDashboard(),
+    loadTrendPrediction(),
+    loadQualityCheck(),
+    updateBehaviorStats()
+  ]);
 };
 
 onMounted(() => {

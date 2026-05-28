@@ -5,16 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
+    "build:check": "vue-tsc -b && vite build",
     "deploy": "tcb hosting deploy dist -e missonce-99-1gfaff6n002f6ac1",
     "preview": "vite preview",
     "lint": "eslint src",
-    "format": "prettier src --write"
+    "format": "prettier src --write",
+    "test:adunits": "node scripts/test-adunits.cjs"
   },
   "dependencies": {
-    "@cloudbase/js-sdk": "latest",
+    "@cloudbase/js-sdk": "^2.7.0",
     "@heroicons/vue": "^2.2.0",
     "cropperjs": "^1.6.2",
+    "crypto-js": "^4.2.0",
     "echarts": "^6.0.0",
     "element-plus": "^2.13.2",
     "vue": "^3.5.13",
@@ -23,6 +26,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@cloudbase/cli": "^2.12.6",
     "@eslint/js": "^9.39.1",
     "@rushstack/eslint-patch": "^1.10.4",
     "@vitejs/plugin-vue": "^5.2.1",

@@ -7,8 +7,6 @@ let startupSyncFallbackDisabled = true
 let _windowInfo = null
 let _appBaseInfo = null
 let _deviceInfo = null
-// 🔥 优化：缓存 wx.getSystemInfoSync() 结果，避免多次同步调用阻塞线程
-let _cachedSystemInfo = null
 
 const DEFAULT_WINDOW_INFO = {
   statusBarHeight: 20,
@@ -39,8 +37,7 @@ const getDefaultStorageKeys = () => [
   STORAGE_KEYS.CHECK_IN_DAYS,
   STORAGE_KEYS.LAST_CHECK_IN_DATE,
   'favorites',
-  'local_read_notification_ids',
-  'home_data_api_cache'
+  'local_read_notification_ids'
 ]
 
 const readStorageAsync = (key) => {
@@ -76,38 +73,8 @@ setTimeout(() => {
   startupSyncFallbackDisabled = false
 }, 5000)
 
-// 🔥 优化：使用 wx.batchGetStorage 批量预加载（1次 API 调用 vs N次）
-// 首次调用时同步创建 Promise 的开销从 7 个降到 1 个
-const _batchPreloadStorage = (keys) => {
-  // wx.batchGetStorage 在基础库 2.21.0 以上可用
-  if (typeof wx.batchGetStorage === 'function') {
-    wx.batchGetStorage({
-      keyList: keys,
-      success: (res) => {
-        (res.dataList || []).forEach((item, i) => {
-          if (item !== undefined && item !== null) {
-            storageCache[keys[i]] = item
-          }
-        })
-      },
-      fail: () => {
-        // 降级：逐个读取
-        preloadStorageCache(keys)
-      }
-    })
-  } else {
-    preloadStorageCache(keys)
-  }
-}
-
 export const initStorageCache = () => {
-  _batchPreloadStorage(getDefaultStorageKeys())
-  // 首页缓存同步预加载：确保页面 onLoad 时 getStorage 能立即命中
-  // 避免 startupSyncFallbackDisabled 期间漏掉缓存
-  try {
-    const homeCache = wx.getStorageSync('home_data_api_cache')
-    if (homeCache) storageCache['home_data_api_cache'] = homeCache
-  } catch (e) {}
+  preloadStorageCache(getDefaultStorageKeys())
 }
 
 export const preloadStorageCache = (keys = []) => {
@@ -120,16 +87,6 @@ export const getStorageAsync = (key) => {
   return readStorageAsync(key)
 }
 
-const _getSystemInfoCached = () => {
-  if (_cachedSystemInfo) return _cachedSystemInfo
-  try {
-    _cachedSystemInfo = wx.getSystemInfoSync()
-  } catch (e) {
-    _cachedSystemInfo = {}
-  }
-  return _cachedSystemInfo
-}
-
 export const getWindowInfo = () => {
   if (_windowInfo) return _windowInfo
 
@@ -137,7 +94,7 @@ export const getWindowInfo = () => {
     if (typeof wx.getWindowInfo === 'function') {
       _windowInfo = wx.getWindowInfo()
     } else {
-      const sysInfo = _getSystemInfoCached()
+      const sysInfo = wx.getSystemInfoSync()
       _windowInfo = {
         statusBarHeight: sysInfo.statusBarHeight,
         screenWidth: sysInfo.screenWidth,
@@ -161,7 +118,7 @@ export const getAppBaseInfo = () => {
     if (typeof wx.getAppBaseInfo === 'function') {
       _appBaseInfo = wx.getAppBaseInfo()
     } else {
-      const sysInfo = _getSystemInfoCached()
+      const sysInfo = wx.getSystemInfoSync()
       _appBaseInfo = {
         SDKVersion: sysInfo.SDKVersion || '',
         version: sysInfo.version || '',
@@ -182,7 +139,7 @@ export const getDeviceInfo = () => {
     if (typeof wx.getDeviceInfo === 'function') {
       _deviceInfo = wx.getDeviceInfo()
     } else {
-      const sysInfo = _getSystemInfoCached()
+      const sysInfo = wx.getSystemInfoSync()
       _deviceInfo = {
         model: sysInfo.model || '',
         system: sysInfo.system || '',

@@ -13,6 +13,10 @@
           <button class="btn-soft" @click="toggleUploader">
             {{ showUploader ? "收起上传" : "上传素材" }}
           </button>
+          <button class="btn-soft" :disabled="backingUp" @click="handleBackup">
+            <span v-if="backingUp" class="inline-block animate-spin mr-2">⟳</span>
+            {{ backingUp ? `备份中 ${backupProgress}%` : "备份所有素材" }}
+          </button>
         </div>
       </div>
 
@@ -112,13 +116,8 @@
           </select>
         </label>
         <label class="field sm:col-span-2 lg:col-span-2">
-          <span>标签</span>
-          <select v-model="filters.tag" class="input">
-            <option value="">全部</option>
-            <option v-for="item in tags" :key="item._id" :value="item.name">
-              {{ item.name }}
-            </option>
-          </select>
+          <span>标签（逗号分隔）</span>
+          <input v-model="filters.tags" class="input" placeholder="例如：治愈,简约,几何" />
         </label>
         <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-2">
 <button class="btn-soft" @click="applyFilters">筛选</button>
@@ -415,6 +414,43 @@
               <span class="text-sm font-medium text-[var(--text-main)] mb-1.5 block">标签（逗号分隔）</span>
               <textarea v-model="editingResource.tags" class="input-base min-h-[80px]" placeholder="例如：治愈,简约,几何"></textarea>
             </label>
+
+            <div class="border-t border-[var(--border-color)] pt-5 mt-2">
+              <p class="text-sm font-medium text-[var(--text-sub)] mb-3">热门数据（手动调整）</p>
+              <div class="grid grid-cols-3 gap-4">
+                <label class="block">
+                  <span class="text-xs font-medium text-[var(--text-main)] mb-1 block">热度值</span>
+                  <input 
+                    v-model.number="editingResource.hotScore" 
+                    type="number" 
+                    min="0"
+                    class="input-base" 
+                    placeholder="如：5000" 
+                  />
+                </label>
+                <label class="block">
+                  <span class="text-xs font-medium text-[var(--text-main)] mb-1 block">下载量</span>
+                  <input 
+                    v-model.number="editingResource.downloads" 
+                    type="number" 
+                    min="0"
+                    class="input-base" 
+                    placeholder="如：1000" 
+                  />
+                </label>
+                <label class="block">
+                  <span class="text-xs font-medium text-[var(--text-main)] mb-1 block">收藏数</span>
+                  <input 
+                    v-model.number="editingResource.favorites" 
+                    type="number" 
+                    min="0"
+                    class="input-base" 
+                    placeholder="如：500" 
+                  />
+                </label>
+              </div>
+              <p class="text-xs text-[var(--text-sub)] mt-2">调整后会直接影响首页热门排行榜数据</p>
+            </div>
           </div>
         </div>
         
@@ -431,7 +467,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from "vue";
-import { app, db, _, ensureAuthUser, serverDate } from "../utils/cloudbase";
+import { app, db, _, ensureAuthUser, serverDate, callCloudFunction } from "../utils/cloudbase";
 import { ElMessageBox, ElMessage } from "element-plus";
 
 const _Any = _ as any;
@@ -478,13 +514,9 @@ const toggleSelect = (id: string) => {
 const batchUpdateStatus = async (status: string) => {
   if (selectedResources.value.length === 0) return;
 
-  try {
-    await ElMessageBox.confirm(
-      `确定要将选中的 ${selectedResources.value.length} 个资源设置为「${status === 'published' ? '已发布' : status === 'offline' ? '已下线' : '草稿'}」吗？`,
-      '批量修改状态',
-      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
-    );
+  if (!confirm(`确定要将选中的 ${selectedResources.value.length} 个资源设置为「${status === 'published' ? '已发布' : status === 'offline' ? '已下线' : '草稿'}」吗？`)) return;
 
+  try {
     loading.value = true;
     const updatePromises = selectedResources.value.map(id =>
       db.collection("resources").doc(id).update({
@@ -498,10 +530,8 @@ const batchUpdateStatus = async (status: string) => {
     selectedResources.value = [];
     await fetchList();
   } catch (err: any) {
-    if (err !== 'cancel') {
-      console.error('批量修改失败', err);
-      ElMessage.error('批量修改失败: ' + err.message);
-    }
+    console.error('批量修改失败', err);
+    ElMessage.error('批量修改失败: ' + err.message);
   } finally {
     loading.value = false;
   }
@@ -544,48 +574,30 @@ const batchAddTags = async () => {
 const batchDelete = async () => {
   if (selectedResources.value.length === 0) return;
 
+  if (!confirm(`确定要删除选中的 ${selectedResources.value.length} 个资源吗？\n\n此操作不可恢复！`)) return;
+
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedResources.value.length} 个资源吗？此操作不可恢复。`,
-      '批量删除',
-      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
-    );
-    // 1. Delete files from Cloud Storage
-    const itemsToDelete = list.value.filter(item => selectedResources.value.includes(item._id));
-    const fileListToDelete: string[] = [];
+    console.log('准备批量删除资源:', selectedResources.value);
     
-    itemsToDelete.forEach(item => {
-      if (item.coverUrl && item.coverUrl.startsWith('cloud://')) {
-        fileListToDelete.push(item.coverUrl);
-      }
-      if (item.originUrl && item.originUrl.startsWith('cloud://')) {
-        fileListToDelete.push(item.originUrl);
+    const result = await app.callFunction({
+      name: 'batchDeleteResources',
+      data: {
+        resourceIds: selectedResources.value
       }
     });
     
-    // Deduplicate
-    const uniqueFiles = [...new Set(fileListToDelete)];
+    console.log('云函数批量删除结果:', result);
     
-    if (uniqueFiles.length > 0) {
-      await app.deleteFile({
-        fileList: uniqueFiles
-      });
+    if (result.result && result.result.success) {
+      ElMessage.success(result.result.message || '批量删除成功');
+      selectedResources.value = [];
+      await fetchList();
+    } else {
+      ElMessage.error('批量删除失败: ' + (result.result?.message || '未知错误'));
     }
-
-    // 2. Delete documents from Database
-    const deletePromises = selectedResources.value.map((id) =>
-      db.collection("resources").doc(id).remove()
-    );
-    await Promise.all(deletePromises);
-
-    ElMessage.success('批量删除成功');
-    selectedResources.value = [];
-    await fetchList();
   } catch (err: any) {
-    if (err !== 'cancel') {
-      console.error("批量删除失败", err);
-      ElMessage.error('批量删除失败: ' + err.message);
-    }
+    console.error("批量删除失败", err);
+    ElMessage.error('批量删除失败: ' + err.message);
   } finally {
     loading.value = false;
   }
@@ -650,7 +662,7 @@ const batchAnalyzeAI = async () => {
     });
     
     // 不等待所有完成，直接提示
-    window.alert(`已触发 ${selectedResources.value.length} 个任务，请稍后刷新查看结果。`);
+    ElMessage.success(`已触发 ${selectedResources.value.length} 个任务，请稍后刷新查看结果。`);
     selectedResources.value = [];
     
     // 稍后自动刷新一次
@@ -670,7 +682,7 @@ const filters = reactive({
   type: "",
   status: "",
   category: "",
-  tag: "",
+  tags: "",
 });
 
 const uploadForm = reactive({
@@ -685,34 +697,46 @@ const approveAllPending = async () => {
   if (!confirm("确定要将所有【待审】状态的资源更改为【已发布】吗？")) return;
 
   try {
-    // 1. 查询所有待审资源 (一次最多 100 条，如果更多建议使用云函数)
-    const res = await db.collection("resources")
-      .where({ status: "review" })
-      .limit(100)
-      .get();
-    
-    const pendingItems = res.data || [];
-    if (pendingItems.length === 0) {
-      window.alert("暂无待审资源");
-      return;
+    loading.value = true;
+    let totalApproved = 0;
+    let hasMore = true;
+
+    // 循环处理，每次最多处理 100 条，直到全部完成
+    while (hasMore) {
+      const res = await db.collection("resources")
+        .where({ status: "review" })
+        .limit(100)
+        .get();
+
+      const pendingItems = res.data || [];
+      if (pendingItems.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      const updatePromises = pendingItems.map(item =>
+        db.collection("resources").doc(item._id).update({
+          status: "published",
+          updatedAt: serverDate()
+        })
+      );
+
+      await Promise.all(updatePromises);
+      totalApproved += pendingItems.length;
+      hasMore = pendingItems.length === 100; // 如果正好100条，可能还有更多
     }
 
-    // 2. 批量更新 (客户端 SDK 只能逐条更新或使用云函数，这里使用 Promise.all 并发更新)
-    // 注意：大量并发可能会受限，这里分批处理
-    const updatePromises = pendingItems.map(item => 
-      db.collection("resources").doc(item._id).update({
-        status: "published",
-        updatedAt: serverDate()
-      })
-    );
-
-    await Promise.all(updatePromises);
-    
-    window.alert(`已成功通过 ${pendingItems.length} 个资源`);
-    await fetchList();
+    if (totalApproved === 0) {
+      ElMessage.info("暂无待审资源");
+    } else {
+      ElMessage.success(`已成功通过 ${totalApproved} 个资源`);
+      await fetchList();
+    }
   } catch (err: any) {
     console.error("一键通过失败", err);
-    window.alert("操作失败: " + err.message);
+    ElMessage.error("操作失败: " + err.message);
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -734,7 +758,18 @@ const buildWhere = () => {
   if (filters.type) where.type = filters.type;
   if (filters.status) where.status = filters.status;
   if (filters.category) where.categories = _Any.in([filters.category]);
-  if (filters.tag) where.tags = _Any.in([filters.tag]);
+  
+  // 标签筛选：支持多个标签（逗号分隔）
+  if (filters.tags) {
+    const tagList = filters.tags
+      .split(/[,，]/)
+      .map((t: string) => t.trim())
+      .filter(Boolean);
+    if (tagList.length > 0) {
+      // 使用 or 条件，只要包含任一标签即可
+      where.tags = _Any.in(tagList);
+    }
+  }
 
   if (filters.keyword) {
     where.title = db.RegExp({ regexp: filters.keyword, options: "i" });
@@ -793,7 +828,7 @@ const resetFilters = async () => {
   filters.type = "";
   filters.status = "";
   filters.category = "";
-  filters.tag = "";
+  filters.tags = "";
   await applyFilters();
 };
 
@@ -806,15 +841,23 @@ const editResource = (item: any) => {
     // Ensure deep copy to avoid reactivity issues with original list item
     const resourceCopy = JSON.parse(JSON.stringify(item));
     
+    // 确保 type 字段有默认值
+    let resourceType = resourceCopy.type;
+    if (!resourceType || (resourceType !== 'avatar' && resourceType !== 'wallpaper')) {
+      resourceType = 'wallpaper';
+    }
+    
     editingResource.value = {
       ...resourceCopy,
+      type: resourceType,
       tags: Array.isArray(resourceCopy.tags) ? resourceCopy.tags.join(",") : resourceCopy.tags || "",
       categoriesStr: Array.isArray(resourceCopy.categories) ? resourceCopy.categories.join(",") : (resourceCopy.category || ""),
     };
+    console.log('编辑表单数据:', editingResource.value);
     showEditModal.value = true;
   } catch (err) {
     console.error('Error preparing edit modal:', err);
-    window.alert('打开编辑框失败');
+    ElMessage.error('打开编辑框失败');
   }
 };
 
@@ -831,14 +874,33 @@ const addCategoryToEdit = (catName: string) => {
 };
 
 const removeResource = async (id: string) => {
-  if (!confirm('确定要删除这个资源吗？')) return;
+  if (!confirm('确定要删除这个资源吗？\n\n这将同时删除云存储中的文件！')) return;
   
-  await db.collection("resources").doc(id).remove();
-  await fetchList();
+  try {
+    const res = await app.callFunction({
+      name: 'deleteResource',
+      data: {
+        resourceId: id
+      }
+    });
+    
+    console.log('删除结果:', res.result);
+    
+    if (res.result && res.result.success) {
+      await fetchList();
+    } else {
+      ElMessage.error('删除失败: ' + (res.result?.message || '未知错误'));
+    }
+  } catch (err: any) {
+    console.error("删除失败", err);
+    ElMessage.error("删除失败: " + err.message);
+  }
 };
 
 const saveResource = async () => {
   if (!editingResource.value) return;
+  
+  console.log('保存前的数据:', editingResource.value);
   
   const tagsStr = String(editingResource.value.tags || "");
   const tags = tagsStr
@@ -854,24 +916,45 @@ const saveResource = async () => {
     
   const mainCategory = categories.length > 0 ? categories[0] : "";
   
+  // 确保 type 字段有效
+  let saveType = editingResource.value.type;
+  if (!saveType || (saveType !== 'avatar' && saveType !== 'wallpaper')) {
+    saveType = 'wallpaper';
+  }
+  
+  const updateData = {
+    title: editingResource.value.title,
+    type: saveType,
+    status: editingResource.value.status,
+    category: mainCategory, 
+    categories: categories,
+    tags,
+    hotScore: Number(editingResource.value.hotScore) || 0,
+    downloads: Number(editingResource.value.downloads) || 0,
+    favorites: Number(editingResource.value.favorites) || 0,
+  };
+  
+  console.log('准备更新的数据:', updateData);
+  
   try {
-    await db.collection("resources").doc(editingResource.value._id).update({
-      title: editingResource.value.title,
-      type: editingResource.value.type,
-      status: editingResource.value.status,
-      category: mainCategory, 
-      categories: categories,
-      tags,
-      updatedAt: serverDate(),
+    const res = await callCloudFunction('updateResource', {
+      resourceId: editingResource.value._id,
+      updateData: updateData
     });
     
-    window.alert("更新成功");
-    showEditModal.value = false;
-    editingResource.value = null;
-    await fetchList();
+    console.log('云函数更新结果:', res);
+    
+    if (res && res.success) {
+      ElMessage.success("更新成功");
+      showEditModal.value = false;
+      editingResource.value = null;
+      await fetchList();
+    } else {
+      ElMessage.error("更新失败: " + (res?.message || '未知错误'));
+    }
   } catch (err: any) {
     console.error("更新失败", err);
-    window.alert("更新失败: " + err.message);
+    ElMessage.error("更新失败: " + err.message);
   }
 };
 
@@ -884,6 +967,143 @@ const handleFileChange = () => {
 
 const aiTotal = ref(0);
 const aiCompleted = ref(0);
+const migrating = ref(false);
+const backingUp = ref(false);
+const backupProgress = ref(0);
+
+const handleBackup = async () => {
+  if (!confirm('确定要备份所有素材吗？\n\n这会下载所有素材到本地，按头像/壁纸分类。\n\n注意：浏览器会逐个下载文件，请允许下载！')) return;
+  
+  backingUp.value = true;
+  backupProgress.value = 0;
+  
+  try {
+    console.log('开始获取所有资源...');
+    
+    let allResources = [];
+    let currentPage = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      console.log('获取第 ' + currentPage + ' 页...');
+      const res = await db.collection('resources')
+        .orderBy('createdAt', 'desc')
+        .skip((currentPage - 1) * pageSize.value)
+        .limit(pageSize.value)
+        .get();
+      
+      if (res.data.length > 0) {
+        allResources = allResources.concat(res.data);
+        currentPage++;
+        hasMore = res.data.length === pageSize.value;
+      } else {
+        hasMore = false;
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+    
+    console.log('共获取 ' + allResources.length + ' 个资源');
+    
+    const avatarResources = allResources.filter(function(r) { return r.type === 'avatar'; });
+    const wallpaperResources = allResources.filter(function(r) { return r.type !== 'avatar'; });
+    
+    console.log('头像: ' + avatarResources.length + ' 个, 壁纸: ' + wallpaperResources.length + ' 个');
+    
+    const allToDownload = avatarResources.concat(wallpaperResources);
+    let downloaded = 0;
+    const failed = [];
+    
+    for (let i = 0; i < allToDownload.length; i++) {
+      const resource = allToDownload[i];
+      try {
+        const fileUrl = resource.coverUrl || resource.originUrl;
+        if (!fileUrl) {
+          console.log('资源没有文件URL，跳过:', resource._id, resource.title);
+          failed.push({ id: resource._id, title: resource.title, reason: '无文件URL' });
+          continue;
+        }
+        
+        const tempUrlRes = await app.getTempFileURL({
+          fileList: [fileUrl]
+        });
+        
+        if (tempUrlRes.fileList && tempUrlRes.fileList[0] && tempUrlRes.fileList[0].tempFileURL) {
+          const tempUrl = tempUrlRes.fileList[0].tempFileURL;
+          
+          const folder = resource.type === 'avatar' ? 'avatar' : 'wallpaper';
+          const fileName = resource.title || 'resource_' + resource._id;
+          const extParts = fileUrl.split('.');
+          const ext = extParts[extParts.length - 1] || 'jpg';
+          const downloadFileName = folder + '_' + fileName + '.' + ext;
+          
+          const link = document.createElement('a');
+          link.href = tempUrl;
+          link.download = downloadFileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          downloaded++;
+          console.log('下载成功: ' + folder + '/' + fileName);
+        } else {
+          failed.push({ id: resource._id, title: resource.title, reason: '获取临时URL失败' });
+        }
+      } catch (downloadErr) {
+        console.error('下载失败:', resource._id, resource.title, downloadErr);
+        failed.push({ id: resource._id, title: resource.title, reason: downloadErr.message || '未知错误' });
+      }
+      
+      backupProgress.value = Math.round((downloaded / allToDownload.length) * 100);
+      
+      await new Promise(r => setTimeout(r, 500));
+    }
+    
+    let message = '备份完成！\n\n';
+    message += '成功: ' + downloaded + ' 个\n';
+    message += '失败: ' + failed.length + ' 个\n';
+    message += '头像: ' + avatarResources.length + ' 个\n';
+    message += '壁纸: ' + wallpaperResources.length + ' 个';
+
+    if (failed.length > 0) {
+      message += '\n\n失败详情:\n';
+      const showFailed = failed.slice(0, 10);
+      for (let j = 0; j < showFailed.length; j++) {
+        message += '- ' + showFailed[j].title + ': ' + showFailed[j].reason + '\n';
+      }
+      if (failed.length > 10) {
+        message += '...还有 ' + (failed.length - 10) + ' 个';
+      }
+    }
+
+    ElMessage.success(message.replace(/\n/g, ' '));
+    if (failed.length > 0) {
+      console.log('失败详情:', failed);
+    }
+  } catch (err) {
+    console.error('备份出错:', err);
+    ElMessage.error('备份出错: ' + err.message);
+  } finally {
+    backingUp.value = false;
+    backupProgress.value = 0;
+  }
+};
+
+const generateRandomFileName = (file: File, type: string) => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  const randomStr = Math.random().toString(36).substring(2, 8);
+  
+  const ext = file.name.split('.').pop() || '';
+  const folder = type === 'avatar' ? 'avatar' : 'wallpaper';
+  
+  return `resources/${folder}/${year}${month}${day}-${hours}${minutes}${seconds}-${randomStr}.${ext}`;
+};
 
 const handleUpload = async () => {
   console.log('Starting Async Upload v2...'); // Force file hash change
@@ -907,18 +1127,27 @@ const handleUpload = async () => {
       // 检查文件名是否已存在
       const checkRes = await db.collection('resources')
         .where({ 
-          title: file.name 
+          originalFileName: file.name 
         })
         .count();
         
       if (checkRes.total > 0) {
         console.warn(`文件已存在，跳过上传: ${file.name}`);
-        const continueUpload = confirm(`文件 "${file.name}" 似乎已存在（数据库中有同名资源）。\n是否继续上传？\n(取消则跳过此文件)`);
+        const continueUpload = confirm(`文件 "${file.name}" 已存在。\n是否继续上传？\n(取消则跳过此文件)`);
         if (!continueUpload) continue;
       }
 
       let fileType = uploadForm.type;
-      const cloudPath = `resources/${Date.now()}-${file.name}`;
+      
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      
+      let folderType = fileType;
+      if (fileType === 'auto') {
+        folderType = 'wallpaper';
+      }
+      
+      const cloudPath = generateRandomFileName(file, folderType);
       
       try {
           const uploadRes = await app.uploadFile({
@@ -930,6 +1159,7 @@ const handleUpload = async () => {
             name: "uploadResource",
             data: {
               title: uploadForm.title || file.name,
+              originalFileName: file.name,
               type: fileType,
               status: uploadForm.status,
               category: uploadForm.category,
@@ -955,7 +1185,7 @@ const handleUpload = async () => {
           }
       } catch (e) {
           console.error(`上传文件 ${file.name} 失败:`, e);
-          alert(`上传文件 ${file.name} 失败`);
+          ElMessage.error(`上传文件 ${file.name} 失败`);
       }
     }
 
@@ -968,7 +1198,7 @@ const handleUpload = async () => {
     
     // 延迟一下刷新，让部分数据写入完成
     setTimeout(() => fetchList(), 1000);
-    window.alert(`批量上传任务已提交！共 ${files.length} 个文件。\nAI 识别将在后台自动进行，稍后刷新列表即可查看标签。`);
+    ElMessage.success(`批量上传任务已提交！共 ${files.length} 个文件，AI 识别将在后台自动进行。`);
     
   } finally {
     uploading.value = false;
