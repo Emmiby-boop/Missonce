@@ -4,6 +4,7 @@ import { reportError } from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
 import interstitialAdManager from '../../utils/interstitialAdManager.js'
 import { getStorage, getTheme, getWindowInfo, setStorage } from '../../utils/storageManager.js'
+import { optimizeImageUrls } from '../../utils/image.js'
 
 const previewBase = require('../../behaviors/preview-base.js')
 const previewCommon = require('../../behaviors/preview-common.js')
@@ -23,6 +24,7 @@ Page({
     navBarHeight: 44,
     currentUrl: '',
     imageList: [],
+    displayImageList: [],
     currentIndex: 0,
     isFavorite: false,
     favorites: [],
@@ -198,6 +200,29 @@ Page({
     }
   },
 
+  // ─── Image CDN optimization ──────────────────────────
+  _previewImageWidth() {
+    const info = getWindowInfo()
+    return Math.floor((info.windowWidth || 375) * (info.pixelRatio || 2))
+  },
+
+  _optimizeUrl(url) {
+    if (!url || typeof url !== 'string') return url
+    if (url.startsWith('cloud://')) return url
+    if (url.includes('imageMogr2')) return url
+    const w = this._previewImageWidth()
+    const sep = url.includes('?') ? '&' : '?'
+    if (url.toLowerCase().endsWith('.gif')) {
+      return `${url}${sep}imageMogr2/thumbnail/${w}x/interlace/1/quality/80`
+    }
+    return `${url}${sep}imageMogr2/thumbnail/${w}x/format/webp/interlace/1/quality/82`
+  },
+
+  _optimizeImageList(list) {
+    if (!list || !list.length) return list
+    return list.map(url => this._optimizeUrl(url))
+  },
+
   onLoad(options) {
     // 合并 initNavBar + getIconSet -> 1 次 setData
     this._initViewData()
@@ -241,6 +266,7 @@ Page({
       this.setData({
         currentUrl: imageList[index],
         imageList: imageList,
+        displayImageList: this._optimizeImageList(imageList),
         currentIndex: index,
         loadedImages: {},
         rawUrl: rawUrl ? decodeURIComponent(rawUrl) : ''
@@ -298,11 +324,12 @@ Page({
         const filteredSimilarList = similarList.filter(item => !currentUrls.has(item.url));
         
         if (filteredSimilarList.length > 0) {
-           const filteredImages = filteredSimilarList.map(item => item.url);
+           const filteredImages = filteredSimilarList.map(item => this._optimizeUrl(item.url));
            
            this.setData({
              similarList: similarList,
-             imageList: this.data.imageList.concat(filteredImages),
+             imageList: this.data.imageList.concat(filteredSimilarList.map(item => item.url)),
+             displayImageList: this.data.displayImageList.concat(filteredImages),
              itemsList: this.data.itemsList.concat(filteredSimilarList)
            });
         } else {

@@ -4,6 +4,7 @@ import { reportError } from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
 import interstitialAdManager from '../../utils/interstitialAdManager.js'
 import { getStorage, getTheme, getWindowInfo, setStorage } from '../../utils/storageManager.js'
+import { optimizeImageUrls } from '../../utils/image.js'
 
 const previewBase = require('../../behaviors/preview-base.js')
 const previewCommon = require('../../behaviors/preview-common.js')
@@ -25,6 +26,7 @@ Page({
     navBarHeight: 39,
     currentUrl: '',
     imageList: [],
+    displayImageList: [],
     currentIndex: 0,
     isCircular: true,
     isAvatar: true,
@@ -167,6 +169,29 @@ Page({
     }
   },
 
+  // ─── Image CDN optimization ──────────────────────────
+  _previewImageWidth() {
+    const info = getWindowInfo()
+    return Math.floor((info.windowWidth || 375) * (info.pixelRatio || 2))
+  },
+
+  _optimizeUrl(url) {
+    if (!url || typeof url !== 'string') return url
+    if (url.startsWith('cloud://')) return url
+    if (url.includes('imageMogr2')) return url
+    const w = this._previewImageWidth()
+    const sep = url.includes('?') ? '&' : '?'
+    if (url.toLowerCase().endsWith('.gif')) {
+      return `${url}${sep}imageMogr2/thumbnail/${w}x/interlace/1/quality/80`
+    }
+    return `${url}${sep}imageMogr2/thumbnail/${w}x/format/webp/interlace/1/quality/82`
+  },
+
+  _optimizeImageList(list) {
+    if (!list || !list.length) return list
+    return list.map(url => this._optimizeUrl(url))
+  },
+
   onLoad(options) {
     // 🔥 合并 initNavBar + syncTheme + getIconSet → 1 次 setData（减少 2 次调用）
     this._initViewData()
@@ -214,6 +239,7 @@ Page({
       this.setData({
         currentUrl: imageList[index],
         imageList: imageList,
+        displayImageList: this._optimizeImageList(imageList),
         currentIndex: index,
         rawUrl: options.rawUrl ? decodeURIComponent(options.rawUrl) : '',
         isCircular: isAvatar === 'false' ? false : true,
@@ -269,11 +295,12 @@ Page({
         const filteredSimilarList = similarList.filter(item => !currentUrls.has(item.url));
         
         if (filteredSimilarList.length > 0) {
-           const filteredImages = filteredSimilarList.map(item => item.url);
+           const filteredImages = filteredSimilarList.map(item => this._optimizeUrl(item.url));
            
            this.setData({
              similarList: similarList, // 保持底部相似列表不变，或者也可以更新
-             imageList: this.data.imageList.concat(filteredImages),
+             imageList: this.data.imageList.concat(filteredSimilarList.map(item => item.url)),
+             displayImageList: this.data.displayImageList.concat(filteredImages),
              itemsList: this.data.itemsList.concat(filteredSimilarList)
            });
         } else {
@@ -1005,7 +1032,8 @@ Page({
         const stats = this._computeInteractionData(newItem, itemUrl)
         
         this.setData({ 
-          imageList: newImageList, 
+          imageList: newImageList,
+          displayImageList: this._optimizeImageList(newImageList),
           currentUrl: url,
           itemsList: newItemsList,
           currentAvatar: newItem,

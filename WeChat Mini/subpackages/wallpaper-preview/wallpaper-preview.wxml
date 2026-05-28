@@ -34,7 +34,7 @@
               bindtouchstart="onTouchStart"
               bindtouchend="onTouchEnd">
 
-        <swiper-item wx:for="{{imageList}}" wx:key="index" wx:for-item="imageUrl" wx:for-index="index">
+        <swiper-item wx:for="{{displayImageList}}" wx:key="index" wx:for-item="imageUrl" wx:for-index="index">
           <view class="hero-inner">
             <view class="photo-mask mask-9-16">
               <image class="hero-image {{loadedImages[index] ? 'show' : ''}}" 
