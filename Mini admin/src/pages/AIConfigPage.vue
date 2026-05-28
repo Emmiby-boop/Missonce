@@ -854,11 +854,20 @@ const maskKey = (key: string) => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    console.log('[AIConfig] 开始获取数据...');
-    const result = await callCloudFunction('manageAIConfig', { action: 'get' });
-    
-    if (result && result.success && result.data) {
-      const { aiConfig, categories, tags, apiKeys: keysData, writerConfig: writerData } = result.data;
+    console.log('[AIConfig] 直接读库获取数据...');
+    const [aiRes, catRes, tagRes, keysRes, writerRes] = await Promise.all([
+      db.collection('sys_config').doc('ai_config').get().catch(() => null),
+      db.collection('sys_config').doc('categories_whitelist').get().catch(() => null),
+      db.collection('sys_config').doc('tags_whitelist').get().catch(() => null),
+      db.collection('api_keys').orderBy('createdAt', 'desc').get().catch(() => null),
+      db.collection('sys_config').doc('ai_writer_config').get().catch(() => null),
+    ]);
+
+    const aiConfig = aiRes?.data ? (Array.isArray(aiRes.data) ? aiRes.data[0] : aiRes.data) : null;
+    const categories = catRes?.data ? (Array.isArray(catRes.data) ? catRes.data[0] : catRes.data) : null;
+    const tags = tagRes?.data ? (Array.isArray(tagRes.data) ? tagRes.data[0] : tagRes.data) : null;
+    const keysData = keysRes?.data || [];
+    const writerData = writerRes?.data ? (Array.isArray(writerRes.data) ? writerRes.data[0] : writerRes.data) : null;
       
       if (aiConfig) {
         config.value = {
@@ -888,22 +897,7 @@ const fetchData = async () => {
         }));
       }
 
-      if (writerData) {
-        writerConfig.value.SYSTEM_PROMPT = writerData.SYSTEM_PROMPT || DEFAULT_WRITER_PROMPT;
-        writerConfig.value.PROVIDER = writerData.PROVIDER || 'aliyun';
-        writerConfig.value.MODEL = writerData.MODEL || 'qwen-turbo';
-        writerConfig.value.API_URL = writerData.API_URL || '';
-        writerConfig.value.API_KEY = writerData.API_KEY || '';
-        writerSelectedProvider.value = writerConfig.value.PROVIDER;
-        if (Array.isArray(writerData.scenes)) writerScenes.value = writerData.scenes;
-        if (Array.isArray(writerData.featuredQuotes)) featuredQuotes.value = writerData.featuredQuotes;
-      } else {
-        writerConfig.value.SYSTEM_PROMPT = DEFAULT_WRITER_PROMPT;
-        writerConfig.value.MODEL = 'qwen-turbo';
-        writerScenes.value = [...DEFAULT_WRITER_SCENES];
-      }
-    } else {
-      resetPrompt();
+    if (!writerData) {
       writerConfig.value.SYSTEM_PROMPT = DEFAULT_WRITER_PROMPT;
       writerConfig.value.MODEL = 'qwen-turbo';
       writerScenes.value = [...DEFAULT_WRITER_SCENES];
@@ -925,9 +919,12 @@ const saveAIConfig = async () => {
   saving.value = true;
   message.value = '';
   try {
-    await callCloudFunction('manageAIConfig', {
-      action: 'saveAIConfig',
-      config: config.value
+    await db.collection('sys_config').doc('ai_config').set({
+      API_KEY: config.value.API_KEY || '',
+      MODEL: config.value.MODEL || '',
+      API_URL: config.value.API_URL || '',
+      SYSTEM_PROMPT: config.value.SYSTEM_PROMPT || '',
+      updatedAt: new Date()
     });
     showMessage('保存成功！', 'success');
   } catch (error) {
@@ -940,10 +937,8 @@ const saveAIConfig = async () => {
 const saveCategories = async () => {
   saving.value = true;
   try {
-    const categories = previewCategories.value;
-    await callCloudFunction('manageAIConfig', {
-      action: 'saveCategories',
-      categories
+    await db.collection('sys_config').doc('categories_whitelist').set({
+      categories: previewCategories.value
     });
     showMessage('分类保存成功！', 'success');
   } catch (error) {
@@ -956,10 +951,8 @@ const saveCategories = async () => {
 const saveTags = async () => {
   saving.value = true;
   try {
-    const tags = previewTags.value;
-    await callCloudFunction('manageAIConfig', {
-      action: 'saveTags',
-      tags
+    await db.collection('sys_config').doc('tags_whitelist').set({
+      tags: previewTags.value
     });
     showMessage('标签保存成功！', 'success');
   } catch (error) {
@@ -1089,16 +1082,13 @@ const saveWriterConfig = async () => {
   saving.value = true;
   message.value = '';
   try {
-    await callCloudFunction('manageAIConfig', {
-      action: 'saveWriterConfig',
-      config: {
-        SYSTEM_PROMPT: writerConfig.value.SYSTEM_PROMPT,
-        PROVIDER: writerSelectedProvider.value,
-        MODEL: writerConfig.value.MODEL,
-        API_URL: writerConfig.value.API_URL,
-        API_KEY: writerConfig.value.API_KEY
-      },
-      scenes: writerScenes.value
+    await db.collection('sys_config').doc('ai_writer_config').set({
+      SYSTEM_PROMPT: writerConfig.value.SYSTEM_PROMPT || '',
+      PROVIDER: writerSelectedProvider.value,
+      MODEL: writerConfig.value.MODEL || '',
+      API_URL: writerConfig.value.API_URL || '',
+      API_KEY: writerConfig.value.API_KEY || '',
+      scenes: writerScenes.value || []
     });
     showMessage('文案配置保存成功！', 'success');
   } catch (error) {
@@ -1117,8 +1107,7 @@ const saveFeaturedQuotes = async () => {
   saving.value = true;
   message.value = '';
   try {
-    await callCloudFunction('manageAIConfig', {
-      action: 'saveFeaturedQuotes',
+    await db.collection('sys_config').doc('ai_writer_config').update({
       featuredQuotes: featuredQuotes.value
     });
     showMessage('文案库保存成功！', 'success');
