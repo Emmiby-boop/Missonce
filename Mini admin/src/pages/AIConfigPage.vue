@@ -34,6 +34,13 @@
         >
           文案配置
         </button>
+        <button 
+          @click="activeTab = 'quotes'"
+          class="px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          :class="activeTab === 'quotes' ? 'bg-[var(--primary)] text-white shadow-sm' : 'bg-[var(--bg-card)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-color)]'"
+        >
+          文案管理
+        </button>
       </div>
     </div>
 
@@ -538,14 +545,20 @@
         </div>
       </div>
     </div>
+
+    <!-- 文案管理 Tab（复用 QuotesPage 组件） -->
+    <section v-if="activeTab === 'quotes'">
+      <QuotesPage />
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { db, serverDate, callCloudFunction } from '../utils/cloudbase';
+import QuotesPage from './QuotesPage.vue';
 
-const activeTab = ref<'model' | 'keys' | 'whitelist' | 'writer'>('model');
+const activeTab = ref<'model' | 'keys' | 'whitelist' | 'writer' | 'quotes'>('model');
 const loading = ref(true);
 const saving = ref(false);
 const showKey = ref(false);
