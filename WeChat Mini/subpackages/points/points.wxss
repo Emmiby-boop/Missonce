@@ -85,6 +85,11 @@
   font-size: 44rpx;
 }
 
+.member-icon-img {
+  width: 44rpx;
+  height: 44rpx;
+}
+
 .member-text-wrap {
   display: flex;
   flex-direction: column;
@@ -215,8 +220,9 @@
   background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
 }
 
-.action-icon {
-  font-size: 36rpx;
+.action-icon-img {
+  width: 36rpx;
+  height: 36rpx;
 }
 
 .action-content {
@@ -292,8 +298,10 @@
   margin-top: 20rpx;
 }
 
-.empty-icon {
-  font-size: 80rpx;
+.empty-icon-img {
+  width: 80rpx;
+  height: 80rpx;
+  opacity: 0.35;
   margin-bottom: 20rpx;
 }
 
@@ -323,8 +331,23 @@
   gap: 20rpx;
 }
 
-.record-icon {
-  font-size: 40rpx;
+.record-dot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.record-dot.dot-checkin {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.record-dot.dot-earn {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.record-dot.dot-spend {
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
 }
 
 .record-info {
@@ -396,8 +419,9 @@
   margin-bottom: 20rpx;
 }
 
-.rule-icon {
-  font-size: 36rpx;
+.rule-icon-img {
+  width: 36rpx;
+  height: 36rpx;
 }
 
 .rule-title {
@@ -425,6 +449,10 @@
   border-radius: 50%;
   margin-top: 10rpx;
   flex-shrink: 0;
+}
+
+.rule-dot.warning-dot {
+  background: #ff9500;
 }
 
 .rule-text {
@@ -482,8 +510,9 @@
   margin-bottom: 16rpx;
 }
 
-.vip-badge-icon {
-  font-size: 28rpx;
+.vip-badge-icon-img {
+  width: 28rpx;
+  height: 28rpx;
 }
 
 .vip-badge-text {
@@ -701,13 +730,20 @@
   gap: 10rpx;
 }
 
-.benefit-icon {
-  font-size: 28rpx;
-  color: #43e97b;
+.benefit-dot {
+  width: 14rpx;
+  height: 14rpx;
+  background: #43e97b;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.member-option.lifetime .benefit-icon {
-  color: #fff;
+.benefit-dot.lifetime-dot {
+  background: #fff;
+}
+
+.member-option.lifetime .benefit-dot {
+  background: #fff;
 }
 
 .benefit-text {
@@ -969,8 +1005,9 @@
   margin: 0 auto 20rpx;
 }
 
-.invite-modal-icon {
-  font-size: 50rpx;
+.invite-modal-icon-img {
+  width: 50rpx;
+  height: 50rpx;
 }
 
 .invite-modal-title {
