@@ -71,6 +71,15 @@ Component({
         clearTimeout(this._autoShowTimer)
         this._autoShowTimer = null
       }
+      if (this._showRaceCheck) {
+        clearTimeout(this._showRaceCheck)
+        this._showRaceCheck = null
+      }
+      if (this._hideAdTimer) {
+        clearTimeout(this._hideAdTimer)
+        this._hideAdTimer = null
+      }
+      this._initRewarding = false
       if (this._lazyInitTimer) {
         clearTimeout(this._lazyInitTimer)
         this._lazyInitTimer = null
@@ -100,9 +109,67 @@ Component({
       if (this.data.kind === 'interstitial' && interstitialAdManager) {
         interstitialAdManager.smartTriggerInterstitialAd(2000)
       }
+      // 激励广告组件：如果已销毁则重新初始化，避免旧实例残留
+      if (this.data.kind === 'rewarded' && !this.videoAd && this.isAttached) {
+        this.dlog('[AD][Rewarded] page show, re-init')
+        this.initRewarded()
+      }
     },
     hide() {
+      // 标记页面隐藏，外层 wx:if="{{!_pageHidden}}" 会销毁整个内容区域（包括 ad-custom）
+      // 不在此处设置 showAd=false，避免与 _pageHidden 同时触发导致 "updateTextView not found" 竞态
+      // 原生广告组件会随父容器一起被移除，无需单独控制 hidden
       this.setData({ _pageHidden: true })
+
+      // 取消所有待执行的定时器，防止回调触发 setData 导致渲染层错误
+      if (this._initTimer) { clearTimeout(this._initTimer); this._initTimer = null }
+      if (this._autoShowTimer) { clearTimeout(this._autoShowTimer); this._autoShowTimer = null }
+      if (this._showRaceCheck) { clearTimeout(this._showRaceCheck); this._showRaceCheck = null }
+      if (this._hideAdTimer) { clearTimeout(this._hideAdTimer); this._hideAdTimer = null } // 清理上一次遗留的延迟隐藏定时器
+      this._initRewarding = false
+
+      // 延迟设置 showAd=false，确保 _pageHidden 触发的 DOM 销毁已完成
+      // 使用较短延迟即可，因为 wx:if 的 DOM 移除是同步的
+      if (this.data.showAd) {
+        this._hideAdTimer = setTimeout(() => {
+          this._hideAdTimer = null
+          if (this.data.kind === 'native') {
+            // 仅在组件仍 attached 时才 setData，防止 detached 后的无效渲染调用
+            if (this.isAttached) {
+              this.setData({ showAd: false })
+            }
+          }
+        }, 50)
+      }
+      // 断开交叉观察器，防止页面隐藏后继续触发回调
+      if (this._observer) {
+        try { this._observer.disconnect() } catch (e) {}
+        this._observer = null
+      }
+      // 激励广告：页面隐藏时安全销毁广告实例
+      // 先暂停再销毁，避免 destroy 内部 pause 与正在进行的 play 产生竞态
+      // 这个错误发生在原生渲染层，JS try-catch 无法完全捕获
+      if (this.videoAd) {
+        this.dlog('[AD][Rewarded] page hide, safe destroy videoAd')
+        const ad = this.videoAd
+        this.videoAd = null
+        this.data._adReady = false
+        this.data._adShowing = false
+        this.data.isLoading = false // data-only，不触发setData渲染
+        if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
+        if (this._adResolve) {
+          this._adResolve({ success: false, error: '页面隐藏' })
+          this._adResolve = null
+        }
+        // 分步销毁：先暂停（如果支持），再延迟 destroy
+        // 这样给播放器足够时间完成当前的 play/pause 状态机转换
+        try {
+          if (ad.pause) { ad.pause() }
+        } catch (e) {}
+        setTimeout(() => {
+          try { if (ad.destroy) ad.destroy() } catch (e) {}
+        }, 100)
+      }
     }
   },
   methods: {
@@ -170,8 +237,10 @@ Component({
         this.setupScrollListener()
       } catch (e) {
         console.error('[AD][Unit] init error:', e)
-        // 异常时隐藏广告
-        this.setData({ showAd: false })
+        // 异常时隐藏广告（页面已隐藏则跳过，避免 insertTextView 错误）
+        if (this.isAttached && !this.data._pageHidden) {
+          this.setData({ showAd: false })
+        }
       }
     },
     setupObserver() {
@@ -191,7 +260,7 @@ Component({
           this.dlog('[AD][Unit] top ad uses scroll listener instead of intersection observer')
         } else {
           // 其他位置的广告使用交叉观察器
-          const obs = wx.createIntersectionObserver(this, { observeAll: false })
+          const obs = wx.createIntersectionObserver(this, { observeAll: false, nativeMode: true })
           this.dlog('[AD][Unit] setupObserver position=', this.data.position, 'threshold=', threshold)
           obs.relativeToViewport({ bottom: 0 }).observe('#ad-anchor', (res) => {
             if (!this.isAttached) return
@@ -305,6 +374,15 @@ Component({
       }
       this.dlog('[AD][Unit] showIfNeeded trigger position=', this.data.position, 'adUnitId=', this.data.adUnitId)
       this.setData({ showAd: true })
+      // 竞态兜底：setData 异步渲染期间页面可能隐藏，延迟检查
+      if (this._showRaceCheck) { clearTimeout(this._showRaceCheck) }
+      this._showRaceCheck = setTimeout(() => {
+        this._showRaceCheck = null
+        if (this.data._pageHidden && this.data.showAd) {
+          this.dlog('[AD][Unit] race detected after showIfNeeded, hiding ad')
+          this.setData({ showAd: false })
+        }
+      }, 100)
       if (!this.data._exposed) {
         this.data._exposed = true
         try {
@@ -321,6 +399,7 @@ Component({
     },
     onAdError(e) {
       if (!this.isAttached) return
+      if (this.data._pageHidden) return
       this.dlog('[AD][Unit] ad-custom error=', e && e.detail ? e.detail : e)
       if (this.data.showAd) {
         this.setData({ showAd: false })
@@ -337,7 +416,13 @@ Component({
       } catch (e) {}
     },
     async initRewarded() {
+      if (this._initRewarding) return // 防止并发重复初始化
+      this._initRewarding = true
       try {
+        if (this.videoAd) {
+          try { this.videoAd.destroy && this.videoAd.destroy() } catch (e) {}
+          this.videoAd = null
+        }
         const pages = getCurrentPages()
         const current = pages && pages.length ? pages[pages.length - 1] : null
         const route = this.data.pagePath || (current?.route || '')
@@ -351,17 +436,23 @@ Component({
           this.data._adShowing = false
           this.videoAd.onLoad && this.videoAd.onLoad(() => { 
             this.data._adReady = true
-            if (this.isAttached && this.data.isLoading) {
+            if (this.isAttached && !this.data._pageHidden && this.data.isLoading) {
               this.setData({ isLoading: false })
             }
           })
           this.videoAd.onError && this.videoAd.onError((err) => { 
             this.data._adReady = false
-            if (this.isAttached && this.data.isLoading) {
+            if (this.isAttached && !this.data._pageHidden && this.data.isLoading) {
               this.setData({ isLoading: false })
             }
             if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
             console.log('[AD][Rewarded] onError:', err, '_adShowing:', this.data._adShowing)
+            // Ignore AbortError (play interrupted by pause) - expected when page hides
+            const errMsg = err && (err.errMsg || err.message || '')
+            if (errMsg && errMsg.indexOf('interrupt') !== -1) {
+              console.log('[AD][Rewarded] onError ignored (interrupt)')
+              return
+            }
             if (this._adResolve && this.data._adShowing) {
               this.data._adShowing = false
               this._adResolve({ success: false, error: '广告播放失败' })
@@ -369,8 +460,9 @@ Component({
             }
           })
           this.videoAd.onClose && this.videoAd.onClose(async (res) => {
-            console.log('[AD][Rewarded] onClose fired, res=', JSON.stringify(res), 'isAttached=', this.isAttached)
+            console.log('[AD][Rewarded] onClose fired, res=', JSON.stringify(res), 'isAttached=', this.isAttached, '_pageHidden=', this.data._pageHidden)
             if (!this.isAttached) return
+            if (this.data._pageHidden) return
             this.data._adShowing = false
             this.data._adWatched = (typeof res === 'undefined') ? true : !!(res && res.isEnded)
             console.log('[AD][Rewarded] _adWatched=', this.data._adWatched, 'rewardCloud=', this.data.rewardCloudName, this.data.rewardCloudAction)
@@ -408,23 +500,44 @@ Component({
               wx.showToast({ title: '需要完整观看视频才可获得积分', icon: 'none' })
               this.triggerEvent('rewarded', { success: false, skipped: true })
             }
-            if (this.isAttached) {
+            if (this.isAttached && !this.data._pageHidden) {
               this.setData({ isLoading: false })
+            } else if (this.isAttached) {
+              this.data.isLoading = false // data-only，页面隐藏时不触发渲染
             }
             if (this._adResolve) {
               this._adResolve({ success: this.data._adWatched })
               this._adResolve = null
             }
           })
-          this.videoAd.load && this.videoAd.load().catch(() => {})
+          // 延迟加载：仅在页面显示且组件 attached 时才 load。
+          // 立即 load 会导致"play interrupted by pause"错误（页面切换时内部视频播放器冲突）
+          // 保存 timer 引用供 hide() 清除，避免页面切换时 load 仍触发
+          if (!this.data._pageHidden) {
+            this._initTimer = setTimeout(() => {
+              this._initTimer = null
+              if (this.isAttached && !this.data._pageHidden && this.videoAd && this.videoAd.load) {
+                this.videoAd.load().catch((err) => {
+                  console.log('[AD][Rewarded] init load failed:', err && (err.errMsg || err.message))
+                })
+              }
+            }, 500)
+          }
         }
-      } catch (e) {}
+      } catch (e) {} finally {
+        this._initRewarding = false
+      }
     },
     async onRewardTap() {
-      console.log('[AD][Rewarded] onRewardTap called, videoAd=', !!this.videoAd, 'isLoading=', this.data.isLoading)
+      console.log('[AD][Rewarded] onRewardTap called, videoAd=', !!this.videoAd, 'isLoading=', this.data.isLoading, '_pageHidden=', this.data._pageHidden)
       return new Promise(async (resolve, reject) => {
         if (!this.isAttached) {
           resolve({ success: false, error: '组件已销毁' })
+          return
+        }
+        if (this.data._pageHidden) {
+          console.log('[AD][Rewarded] onRewardTap skipped, page hidden')
+          resolve({ success: false, error: '页面已隐藏' })
           return
         }
         if (!this.videoAd) {
@@ -436,29 +549,71 @@ Component({
           resolve({ success: false, error: '广告正在加载' })
           return
         }
+        if (this.data._pageHidden) {
+          resolve({ success: false, error: '页面已隐藏' })
+          return
+        }
         this.setData({ isLoading: true })
         this.data._adWatched = false
         this.data._adShowing = false
         this._adResolve = null
+
+        // 🔥 10 秒超时兜底，防止 load/show 挂住导致 loading 永远不消失
+        let _loadTimeout = null
+        const clearLoadTimeout = () => {
+          if (_loadTimeout) { clearTimeout(_loadTimeout); _loadTimeout = null }
+        }
+        const onTimeout = () => {
+          _loadTimeout = null
+          console.log('[AD][Rewarded] load timeout, resolving')
+          this.data._adShowing = false
+          if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
+          this.setData({ isLoading: false })
+          this._adResolve = null
+          resolve({ success: false, error: '广告加载超时' })
+        }
+        _loadTimeout = setTimeout(onTimeout, 10000)
+
         try {
           if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(true)
           this._adResolve = resolve
           this.data._adShowing = true
-          if (this.data._adReady && this.videoAd.show) {
+          if (this.data._adReady && this.videoAd && this.videoAd.show) {
             this.dlog('[AD][Rewarded] show directly')
+            clearLoadTimeout()
             await this.videoAd.show()
-          } else if (this.videoAd.load) {
+          } else if (this.videoAd && this.videoAd.load) {
             this.dlog('[AD][Rewarded] load then show')
             await this.videoAd.load()
+            clearLoadTimeout()
+            // 再次检查页面状态，避免 load 等待期间页面切换
+            if (this.data._pageHidden) {
+              console.log('[AD][Rewarded] page hidden after load, abort show')
+              this.data._adShowing = false
+              if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
+              this.setData({ isLoading: false })
+              this._adResolve = null
+              resolve({ success: false, error: '页面已隐藏' })
+              return
+            }
             await this.videoAd.show()
           }
         } catch (e) {
-          this.data._adShowing = false
-          if (this.isAttached) {
-            this.setData({ isLoading: false })
+          clearLoadTimeout()
+          // 忽略 AbortError（play interrupted by pause），这是页面切换时的预期行为
+          const errMsg = e && (e.errMsg || e.message || '') + ''
+          if (errMsg.indexOf('interrupt') !== -1 || errMsg.indexOf('abort') !== -1) {
+            console.log('[AD][Rewarded] show aborted (page switch):', errMsg)
+            this.data._adShowing = false
+            this.data.isLoading = false // data-only，避免页面切换时触发渲染层 insert/remove 错误
+            if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
+            this._adResolve = null
+            resolve({ success: false, error: '页面切换，广告取消' })
+            return
           }
+          this.data._adShowing = false
+          this.data.isLoading = false // data-only，避免页面切换时触发渲染层错误
           if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
-          // 不显示错误提示，让调用方处理
           this._adResolve = null
           resolve({ success: false, error: e.message })
         }
