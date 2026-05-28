@@ -6,7 +6,8 @@ export const COLLECTIONS = {
   LIKES: 'likes',
   DOWNLOADS: 'downloads',
   BROWSE_HISTORY: 'browse_history',
-  BANNERS: 'banners'
+  BANNERS: 'banners',
+  POSTER_QUOTES: 'poster_quotes'
 }
 
 // 存储键名
