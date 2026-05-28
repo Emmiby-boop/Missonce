@@ -1,144 +1,132 @@
-<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
-  <view class="nav-bar">
-    <text class="nav-title">我的</text>
+<!-- 顶部渐变背景区 -->
+<view class="header-banner" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <!-- 导航栏 -->
+  <view class="custom-nav">
+    <view class="nav-bar">
+      <text class="nav-title">我的</text>
+    </view>
+  </view>
+
+  <!-- 用户信息 -->
+  <view class="header-profile">
+    <view class="avatar-wrapper" bindtap="handleLogin" wx:if="{{!isLoggingIn}}">
+      <block wx:if="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}">
+        <image class="avatar-img" src="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}" mode="aspectFill" binderror="onAvatarImageError"></image>
+      </block>
+      <block wx:else>
+        <view class="avatar-placeholder">
+          <view class="avatar-head"></view>
+          <view class="avatar-body"></view>
+        </view>
+      </block>
+    </view>
+    <view class="avatar-wrapper logging-in" wx:if="{{isLoggingIn}}">
+      <view class="loading-spinner"></view>
+    </view>
+
+    <block wx:if="{{userInfo}}">
+      <text class="profile-name">{{userInfo.nickName}}</text>
+      <text class="profile-id" wx:if="{{userInfo.displayId}}">ID: {{userInfo.displayId}}</text>
+      <view class="profile-badge" wx:if="{{memberStatus.isMember}}">
+        <text class="badge-text">{{memberStatus.memberName || 'VIP'}}</text>
+      </view>
+      <view class="edit-btn" bindtap="goEditProfile">编辑资料</view>
+    </block>
+    <block wx:else>
+      <button class="login-btn" bindtap="handleLogin" disabled="{{isLoggingIn}}">{{isLoggingIn ? '登录中...' : '立即登录'}}</button>
+      <text class="login-tip">登录后同步收藏与下载记录</text>
+    </block>
+  </view>
+
+  <!-- 签到 + 积分双卡片 -->
+  <view class="dual-cards" wx:if="{{userInfo}}">
+    <view class="action-card sign-card {{isCheckedIn ? 'checked' : ''}}" catchtap="handleCheckIn">
+      <view class="card-icon-row">
+        <view class="card-icon-box sign-icon-box">
+          <text class="card-icon-emoji">{{isCheckedIn ? '✅' : '⚡'}}</text>
+        </view>
+        <text class="card-badge" wx:if="{{!isCheckedIn}}">+积分</text>
+      </view>
+      <text class="card-title">{{isCheckedIn ? '已签到' : '每日签到'}}</text>
+      <text class="card-sub" wx:if="{{isCheckedIn}}">连续 {{checkInDays}} 天</text>
+      <text class="card-sub" wx:else>签到领积分</text>
+    </view>
+
+    <view class="action-card points-card" bindtap="goToPoints">
+      <view class="card-icon-row">
+        <view class="card-icon-box points-icon-box">
+          <text class="card-icon-emoji">💎</text>
+        </view>
+        <text class="card-badge points-badge">详情</text>
+      </view>
+      <text class="card-value">{{points}}</text>
+      <text class="card-sub">我的积分</text>
+    </view>
   </view>
 </view>
-<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
 
-<view class="container {{theme === 'dark' ? 'dark' : ''}}">
-  <!-- 用户信息区域 -->
+<!-- 内容区域 -->
+<view class="content-body {{theme === 'dark' ? 'dark' : ''}}">
 
-  <view class="user-section">
-    <view class="user-content-wrapper">
-      <view class="user-split-left">
-        <view class="user-avatar" bindtap="handleLogin" wx:if="{{!isLoggingIn}}">
-          <block wx:if="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}">
-            <!-- 🔥 新增：图片加载失败时显示默认图 -->
-            <image 
-              class="avatar-img" 
-              src="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}" 
-              mode="aspectFill"
-              binderror="onAvatarImageError"
-            ></image>
-          </block>
-          <block wx:else>
-            <view class="avatar-placeholder">
-              <view class="avatar-head"></view>
-              <view class="avatar-body"></view>
-            </view>
-          </block>
-        </view>
-        <view class="user-avatar logging-in-avatar" wx:if="{{isLoggingIn}}">
-          <view class="loading-spinner"></view>
-        </view>
-      </view>
-
-      <view class="user-split-right">
-        <view class="user-info" wx:if="{{userInfo}}">
-          <view class="user-name-row">
-            <text class="user-name">{{userInfo.nickName}}</text>
-            <view class="member-badge {{memberStatus.memberLevel}}" wx:if="{{memberStatus.isMember}}">
-              <text class="member-badge-icon">💎</text>
-              <text class="member-badge-text">{{memberStatus.memberName || 'VIP'}}</text>
-            </view>
-          </view>
-          <text class="user-id">{{userInfo.displayId ? 'ID: ' + userInfo.displayId : ''}}</text>
-          <view class="edit-link" bindtap="goEditProfile">编辑资料</view>
-        </view>
-        <view class="login-wrapper" wx:else>
-          <button class="login-btn" bindtap="handleLogin" disabled="{{isLoggingIn}}">
-            <text class="login-text">{{isLoggingIn ? '登录中...' : '立即登录'}}</text>
-          </button>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 签到和积分区域 -->
-  <view class="action-card" wx:if="{{userInfo}}">
-    <view class="checkin-area">
-      <view class="checkin-btn {{isCheckedIn ? 'checked' : ''}}" catchtap="handleCheckIn">
-        <view class="checkin-icon-box">
-           <text class="checkin-icon">{{isCheckedIn ? '✓' : '⚡'}}</text>
-        </view>
-        <text class="checkin-text">{{isCheckedIn ? '已签到 ' + checkInDays + ' 天' : '每日签到'}}</text>
-      </view>
-      <view class="points-entry" bindtap="goToPoints">
-        <view class="points-entry-icon">💎</view>
-        <view class="points-entry-info">
-          <text class="points-entry-value">{{points}}</text>
-          <text class="points-entry-label">积分</text>
-        </view>
-        <text class="points-entry-arrow">›</text>
-      </view>
-    </view>
-  </view>
-
-
-
-
-  <view class="stats-card" wx:if="{{userInfo}}">
+  <!-- 数据统计 -->
+  <view class="stats-row" wx:if="{{userInfo}}">
     <view class="stat-item" bindtap="openFavorites">
       <text class="stat-num">{{stats.favorites || 0}}</text>
       <text class="stat-label">收藏</text>
     </view>
     <view class="stat-divider"></view>
-    <!-- 暂时下线点赞统计
-    <view class="stat-item" bindtap="openLikes">
-      <text class="stat-num">{{stats.likes || 0}}</text>
-      <text class="stat-label">点赞</text>
-    </view>
-    <view class="stat-divider"></view>
-    -->
     <view class="stat-item" bindtap="openDownloadHistory">
       <text class="stat-num">{{downloadCount || 0}}</text>
       <text class="stat-label">下载</text>
     </view>
   </view>
-  <view class="login-hint" wx:if="{{!userInfo}}">
-    <text>请先登录查看数据</text>
+
+  <!-- 未登录提示 -->
+  <view class="login-hint-card" wx:if="{{!userInfo}}">
+    <text class="hint-icon">🔐</text>
+    <text class="hint-text">登录后可查看收藏与下载记录</text>
   </view>
 
   <!-- 菜单列表 -->
   <view class="menu-section">
     <block wx:for="{{menuItems}}" wx:key="title">
-      <!-- 普通菜单项 -->
       <block wx:if="{{!item.isShare && !(item.title === '清除缓存' && !userInfo)}}">
         <view class="menu-item" bindtap="onMenuItemTap" data-title="{{item.title}}">
           <view class="menu-left">
-            <view class="menu-icon" style="background: {{item.color}};">
+            <view class="menu-icon-box" style="background: {{item.color}};">
               <image class="menu-icon-img" src="{{item.iconPath}}"></image>
             </view>
-            <view class="menu-texts">
-              <text class="menu-title">{{item.title}}</text>
-              <text class="menu-desc">轻触查看</text>
-            </view>
+            <text class="menu-title">{{item.title}}</text>
           </view>
-          <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
+          <view class="menu-right">
+            <text class="menu-desc">{{item.desc || ''}}</text>
+            <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
+          </view>
         </view>
       </block>
-      
-      <!-- 分享按钮菜单项 -->
-      <button class="menu-item share-menu-btn" open-type="share" wx:if="{{item.isShare}}">
+      <button class="menu-item share-item" open-type="share" wx:if="{{item.isShare}}">
         <view class="menu-left">
-          <view class="menu-icon" style="background: {{item.color}};">
+          <view class="menu-icon-box" style="background: {{item.color}};">
             <image class="menu-icon-img" src="{{item.iconPath}}"></image>
           </view>
-          <view class="menu-texts">
-            <text class="menu-title">{{item.title}}</text>
-            <text class="menu-desc">分享给好友</text>
-          </view>
+          <text class="menu-title">{{item.title}}</text>
         </view>
-        <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
+        <view class="menu-right">
+          <text class="menu-desc">分享给好友</text>
+          <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
+        </view>
       </button>
     </block>
   </view>
-  
-  <!-- 退出登录按钮 (底部弱化显示) -->
-  <view class="logout-link" bindtap="handleLogout" wx:if="{{userInfo}}">
-    <text>退出当前账号</text>
+
+  <!-- 退出登录 -->
+  <view class="logout-area" wx:if="{{userInfo}}">
+    <view class="logout-btn" bindtap="handleLogout">退出当前账号</view>
   </view>
+
 </view>
+
+<!-- ====== 弹层保持不变 ====== -->
 
 <!-- 收藏弹层 -->
 <view class="download-mask" wx:if="{{showFavorites && userInfo}}" bindtap="closeFavoritesPanel">
@@ -192,10 +180,6 @@
   </view>
 </view>
 
-<view class="login-hint" wx:if="{{!userInfo && showDownload}}">
-  <text>请先登录查看下载记录</text>
-</view>
-
 <!-- 关于我们弹层 -->
 <view class="download-mask" wx:if="{{showAbout}}" bindtap="closeAboutPanel">
   <view class="about-panel" catchtap="noop">
@@ -243,14 +227,7 @@
         <view class="loading-spinner"></view>
         <text class="qrcode-loading-text">加载中...</text>
       </view>
-      <image 
-        class="qrcode-img {{qrcodeLoaded ? '' : 'hidden'}}"
-        src="{{officialAccount.qrcodeUrl}}" 
-        mode="aspectFit"
-        show-menu-by-longpress="{{true}}"
-        bindload="onQrcodeLoad"
-        binderror="onQrcodeError"
-      ></image>
+      <image class="qrcode-img {{qrcodeLoaded ? '' : 'hidden'}}" src="{{officialAccount.qrcodeUrl}}" mode="aspectFit" show-menu-by-longpress="{{true}}" bindload="onQrcodeLoad" binderror="onQrcodeError"></image>
       <text class="qrcode-desc">{{officialAccount.description || '长按二维码识别关注'}}</text>
     </view>
     <view class="action-sheet-body official-account-body" wx:else>
@@ -264,4 +241,3 @@
 
 <!-- 悬浮消息按钮 -->
 <floating-notification></floating-notification>
-
