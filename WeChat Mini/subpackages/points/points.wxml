@@ -27,7 +27,7 @@
       </view>
       <view class="member-arrow-wrap">
         <text class="member-arrow">立即兑换</text>
-        <text class="arrow-icon">&#8594;</text>
+        <text class="arrow-icon">→</text>
       </view>
     </view>
 
@@ -179,7 +179,7 @@
         </view>
         <view class="vip-cta" bindtap="switchTab" data-tab="vip">
           <text>查看会员详情</text>
-          <text class="cta-arrow">&#8594;</text>
+          <text class="cta-arrow">→</text>
         </view>
       </view>
 
