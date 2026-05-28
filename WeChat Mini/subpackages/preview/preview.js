@@ -175,21 +175,45 @@ Page({
     return Math.floor((info.windowWidth || 375) * (info.pixelRatio || 2))
   },
 
-  _optimizeUrl(url) {
+  _addCdnParams(url) {
     if (!url || typeof url !== 'string') return url
-    if (url.startsWith('cloud://')) return url
     if (url.includes('imageMogr2')) return url
     const w = this._previewImageWidth()
     const sep = url.includes('?') ? '&' : '?'
-    if (url.toLowerCase().endsWith('.gif')) {
+    if (url.toLowerCase().endsWith('.gif') || url.includes('.gif?')) {
       return `${url}${sep}imageMogr2/thumbnail/${w}x/interlace/1/quality/80`
     }
     return `${url}${sep}imageMogr2/thumbnail/${w}x/format/webp/interlace/1/quality/82`
   },
 
+  _optimizeUrl(url) {
+    if (!url || typeof url !== 'string') return url
+    if (url.startsWith('cloud://')) return null // 需要异步解析，返回 null 标记
+    return this._addCdnParams(url)
+  },
+
   _optimizeImageList(list) {
     if (!list || !list.length) return list
-    return list.map(url => this._optimizeUrl(url))
+    const optimized = list.map(url => this._optimizeUrl(url))
+    // 如果全是 cloud:// 链接，异步解析后更新 displayImageList
+    const cloudUrls = list.filter(url => url && typeof url === 'string' && url.startsWith('cloud://'))
+    if (cloudUrls.length > 0) {
+      this._resolveCloudUrls(cloudUrls, optimized, list)
+    }
+    return optimized
+  },
+
+  _resolveCloudUrls(cloudUrls, displayList, rawList) {
+    wx.cloud.getTempFileURL({ fileList: cloudUrls }).then(res => {
+      if (!res.fileList) return
+      res.fileList.forEach((item, i) => {
+        if (item.tempFileURL) {
+          const idx = rawList.indexOf(cloudUrls[i])
+          if (idx >= 0) displayList[idx] = this._addCdnParams(item.tempFileURL)
+        }
+      })
+      this.setData({ displayImageList: displayList.filter(u => u !== null) })
+    }).catch(() => {})
   },
 
   onLoad(options) {
