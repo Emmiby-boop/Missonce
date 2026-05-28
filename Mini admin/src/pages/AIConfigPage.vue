@@ -41,6 +41,13 @@
         >
           灵感文案
         </button>
+        <button 
+          @click="activeTab = 'poster'"
+          class="px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          :class="activeTab === 'poster' ? 'bg-[var(--primary)] text-white shadow-sm' : 'bg-[var(--bg-card)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-color)]'"
+        >
+          海报语录
+        </button>
       </div>
     </div>
 
@@ -430,14 +437,17 @@
           </button>
         </div>
       </div>
+    </section>
 
-      <!-- 海报语录 -->
+    <!-- 海报语录 Tab -->
+    <section v-else-if="activeTab === 'poster'" class="space-y-6">
       <div class="card p-6 space-y-6">
         <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h3 class="text-lg font-bold text-[var(--text-main)]">海报语录</h3>
             <p class="text-xs text-[var(--text-sub)] mt-1">
-              管理海报生成时展示的语录 · 共 {{ posterQuotes.length }} 条
+              管理海报生成时展示的语录 · 共 {{ posterQuotes.length }} 条 · 
+              使用 <span class="text-[var(--primary)]">{{ writerConfig.PROVIDER }}/{{ writerConfig.MODEL }}</span>
             </p>
           </div>
           <div class="flex items-center gap-2 shrink-0">
@@ -450,12 +460,11 @@
               {{ generatingQuotes ? 'AI 生成中...' : '🤖 AI 生成语录' }}
             </button>
             <button @click="addPosterQuote" class="btn-soft text-sm px-3 py-1.5">
-              + 添加文案
+              + 添加语录
             </button>
           </div>
         </div>
 
-        <!-- AI 生成结果预览 -->
         <div v-if="generatedQuotes.length > 0" class="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-green-700 dark:text-green-400">AI 已生成 {{ generatedQuotes.length }} 条语录</span>
@@ -473,7 +482,7 @@
         </div>
 
         <div v-if="posterQuotes.length === 0 && generatedQuotes.length === 0" class="text-center py-8 text-[var(--text-sub)]">
-          暂无海报语录，点击"AI 生成文案"或手动添加
+          暂无海报语录，点击「AI 生成语录」或手动添加
         </div>
 
         <div v-else-if="posterQuotes.length > 0" class="space-y-2">
@@ -486,7 +495,7 @@
             <input 
               v-model="q.text" 
               class="input text-sm flex-1 bg-transparent border-0 !p-1 focus:outline-none"
-              placeholder="输入文案..."
+              placeholder="输入语录..."
             />
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               <button @click="savePosterQuote(q)" class="text-xs text-[var(--primary)] hover:underline px-2">保存</button>
@@ -558,7 +567,7 @@ import { ref, onMounted, computed } from 'vue';
 import { db, serverDate, callCloudFunction } from '../utils/cloudbase';
 import QuotesPage from './QuotesPage.vue';
 
-const activeTab = ref<'model' | 'keys' | 'whitelist' | 'writer' | 'quotes'>('model');
+const activeTab = ref<'model' | 'keys' | 'whitelist' | 'writer' | 'quotes' | 'poster'>('model');
 const loading = ref(true);
 const saving = ref(false);
 const showKey = ref(false);
