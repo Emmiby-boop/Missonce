@@ -28,6 +28,12 @@ export default defineConfig({
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router'],
+          'echarts-vendor': ['echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers', 'vue-echarts'],
+          'element-plus': ['element-plus'],
+          'cloudbase': ['@cloudbase/js-sdk'],
+        },
       },
     },
     chunkSizeWarningLimit: 500,

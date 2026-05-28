@@ -14,7 +14,7 @@ export default {
     daisyui,
   ],
   daisyui: {
-    themes: true, // Enable all themes
+    themes: ["light", "dark"], // 只用亮暗两套
   },
 }
 
