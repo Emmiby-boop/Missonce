@@ -431,11 +431,11 @@
         </div>
       </div>
 
-      <!-- 海报文案库 -->
+      <!-- 海报语录 -->
       <div class="card p-6 space-y-6">
         <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
-            <h3 class="text-lg font-bold text-[var(--text-main)]">海报分享文案库</h3>
+            <h3 class="text-lg font-bold text-[var(--text-main)]">海报语录</h3>
             <p class="text-xs text-[var(--text-sub)] mt-1">
               管理海报生成时展示的语录 · 共 {{ posterQuotes.length }} 条
             </p>
@@ -447,7 +447,7 @@
               :disabled="generatingQuotes"
             >
               <span v-if="generatingQuotes" class="inline-block w-3.5 h-3.5 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin"></span>
-              {{ generatingQuotes ? 'AI 生成中...' : '🤖 AI 生成文案' }}
+              {{ generatingQuotes ? 'AI 生成中...' : '🤖 AI 生成语录' }}
             </button>
             <button @click="addPosterQuote" class="btn-soft text-sm px-3 py-1.5">
               + 添加文案
@@ -458,7 +458,7 @@
         <!-- AI 生成结果预览 -->
         <div v-if="generatedQuotes.length > 0" class="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-green-700 dark:text-green-400">AI 已生成 {{ generatedQuotes.length }} 条文案</span>
+            <span class="text-sm font-medium text-green-700 dark:text-green-400">AI 已生成 {{ generatedQuotes.length }} 条语录</span>
             <button @click="saveGeneratedQuotes" class="btn-primary text-xs px-3 py-1.5" :disabled="savingPoster">
               {{ savingPoster ? '保存中...' : '全部保存到库' }}
             </button>
@@ -473,7 +473,7 @@
         </div>
 
         <div v-if="posterQuotes.length === 0 && generatedQuotes.length === 0" class="text-center py-8 text-[var(--text-sub)]">
-          暂无海报文案，点击"AI 生成文案"或手动添加
+          暂无海报语录，点击"AI 生成文案"或手动添加
         </div>
 
         <div v-else-if="posterQuotes.length > 0" class="space-y-2">
@@ -603,7 +603,7 @@ const writerSelectedProvider = ref('aliyun');
 const writerScenes = ref<any[]>([]);
 const featuredQuotes = ref<any[]>([]);
 
-// 海报文案库
+// 海报语录
 const posterQuotes = ref<any[]>([]);
 const generatedQuotes = ref<string[]>([]);
 const generatingQuotes = ref(false);
@@ -905,11 +905,11 @@ const fetchData = async () => {
     loading.value = false;
   }
 
-  // 单独加载海报文案（独立集合）
+  // 单独加载海报语录（独立集合）
   try {
     const res = await db.collection('poster_quotes').limit(200).get()
     posterQuotes.value = res.data || []
-  } catch (e) { console.log('海报文案加载失败:', e) }
+  } catch (e) { console.log('海报语录加载失败:', e) }
 };
 
 const saveAIConfig = async () => {
@@ -1120,7 +1120,7 @@ const saveFeaturedQuotes = async () => {
   }
 };
 
-// ======== 海报文案库管理 ========
+// ======== 海报语录管理 ========
 
 const addPosterQuote = () => {
   posterQuotes.value.push({ text: '' })
@@ -1136,7 +1136,7 @@ const savePosterQuote = async (q: any) => {
       const res = await db.collection('poster_quotes').add({ data: { text: q.text.trim(), createdAt: Date.now() } })
       q._id = res._id  // 回填 ID
     }
-    showMessage('文案已保存', 'success')
+    showMessage('语录已保存', 'success')
   } catch (e: any) {
     showMessage('保存失败: ' + e.message, 'error')
   } finally {
@@ -1145,7 +1145,7 @@ const savePosterQuote = async (q: any) => {
 }
 
 const deletePosterQuote = async (id: string, index: number) => {
-  if (!confirm('确定删除这条文案？')) return
+  if (!confirm('确定删除这条语录？')) return
   try {
     if (id) await db.collection('poster_quotes').doc(id).remove()
     posterQuotes.value.splice(index, 1)
