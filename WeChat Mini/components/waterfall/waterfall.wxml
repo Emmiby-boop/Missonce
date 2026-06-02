@@ -1,22 +1,22 @@
 <wxs module="utils">
 var optimizeUrl = function(url, type) {
   if (!url) return '';
-  // 如果是云文件ID (cloud://)，直接返回，交给小程序原生组件处理
-  if (url.indexOf('cloud://') === 0) {
-    return url;
-  }
+  // cloud:// 云文件ID直接返回，小程序原生组件处理最优
+  if (url.indexOf('cloud://') === 0) return url;
   
-  // 简单判断是否为 HTTP 链接
   if (url.indexOf('http') === 0) {
-    // 壁纸使用更大尺寸 (500px)，头像使用较小尺寸 (300px)
-    var size = type === 'wallpaper' ? '500x' : '300x';
+    // 已包含 imageMogr2 参数，跳过避免重复
+    if (url.indexOf('imageMogr2') > -1) return url;
     
-    // 如果已经包含查询参数，使用 & 连接
-    if (url.indexOf('?') > -1) {
-      if (url.indexOf('imageMogr2') > -1) return url;
-      return url + '&imageMogr2/thumbnail/' + size;
+    // 头像 300px，壁纸/其他 500px
+    var size = type === 'avatar' ? '300x' : '500x';
+    var sep = url.indexOf('?') > -1 ? '&' : '?';
+    
+    // GIF 不转 WebP，保持动画特性
+    if (url.indexOf('.gif') > -1) {
+      return url + sep + 'imageMogr2/thumbnail/' + size + '/interlace/1/quality/80';
     }
-    return url + '?imageMogr2/thumbnail/' + size;
+    return url + sep + 'imageMogr2/thumbnail/' + size + '/format/webp/interlace/1/quality/80';
   }
   
   return url;
@@ -31,7 +31,7 @@ module.exports = {
     <view class="waterfall-item {{item.type === 'avatar' ? 'avatar-item' : 'wallpaper-item'}}" wx:for="{{col}}" wx:key="id" wx:for-item="item" bindtap="onItemTap" data-item="{{item}}">
       <image 
         class="waterfall-image" 
-        src="{{item.coverUrl || item.url}}" 
+        src="{{utils.optimizeUrl(item.coverUrl || item.url, item.resourceType || item.type)}}" 
         mode="aspectFill" 
         lazy-load
         binderror="onImageError"

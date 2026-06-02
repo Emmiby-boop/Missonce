@@ -812,6 +812,7 @@ Page({
     
     wx.downloadFile({
       url,
+      timeout: 30000,
       success(res) {
         if (res.statusCode === 200) {
           const tempFilePath = res.filePath || res.tempFilePath
@@ -911,6 +912,7 @@ Page({
                         } else {
                           wx.downloadFile({
                             url,
+                            timeout: 30000,
                             success(res2) {
                               if (res2.statusCode === 200) {
                                 that.saveToAlbum(res2.tempFilePath || res2.filePath, url, downloadMethod)

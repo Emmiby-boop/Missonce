@@ -227,18 +227,21 @@ Page({
   async syncUserInfo() {
     const dbUser = await syncUserFromCloud()
     if (dbUser) {
-      // 强制更新页面数据，确保视图刷新
-      const localUserInfo = getStorage('userInfo')
-      // 格式化显示ID
+      // 🔥 优化：复用已有的 userInfo，避免重复 getStorage + setData
+      let localUserInfo = this.data.userInfo
+      if (!localUserInfo) {
+        localUserInfo = getStorage('userInfo')
+      }
       if (localUserInfo) {
         localUserInfo.displayId = localUserInfo.userId || (localUserInfo.openid ? localUserInfo.openid.slice(-6).toUpperCase() : '')
       }
       this.setData({
         userInfo: localUserInfo
       })
-      this.resolveAvatarUrl(localUserInfo.avatarUrl)
-      
-      this.checkTodayCheckIn() // 刷新签到状态
+      if (localUserInfo) {
+        this.resolveAvatarUrl(localUserInfo.avatarUrl)
+      }
+      this.checkTodayCheckIn()
     }
   },
 

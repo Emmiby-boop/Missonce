@@ -2,8 +2,6 @@ import { STORAGE_KEYS } from '../config/constants'
 
 const storageCache = {}
 const storagePending = {}
-// 启动阶段标记：启动后 5 秒内禁用同步回退（wx.getStorageSync），避免阻塞渲染线程
-let _isStartupPhase = true
 
 let _windowInfo = null
 let _appBaseInfo = null
@@ -30,15 +28,23 @@ const DEFAULT_DEVICE_INFO = {
   platform: ''
 }
 
-const getDefaultStorageKeys = () => [
+const getCriticalStorageKeys = () => [
   STORAGE_KEYS.TOKEN,
-  STORAGE_KEYS.USER,
-  STORAGE_KEYS.OPENID,
   STORAGE_KEYS.USER_INFO,
+  STORAGE_KEYS.OPENID
+]
+
+const getDeferredStorageKeys = () => [
+  STORAGE_KEYS.USER,
   STORAGE_KEYS.CHECK_IN_DAYS,
   STORAGE_KEYS.LAST_CHECK_IN_DATE,
   'favorites',
   'local_read_notification_ids'
+]
+
+const getDefaultStorageKeys = () => [
+  ...getCriticalStorageKeys(),
+  ...getDeferredStorageKeys()
 ]
 
 const readStorageAsync = (key) => {
@@ -70,12 +76,13 @@ const readStorageAsync = (key) => {
   return storagePending[key]
 }
 
-setTimeout(() => {
-  _isStartupPhase = false
-}, 5000)
-
 export const initStorageCache = () => {
-  preloadStorageCache(getDefaultStorageKeys())
+  // 🔥 关键 key 立即预热（TOKEN, USER_INFO, OPENID）
+  preloadStorageCache(getCriticalStorageKeys())
+  // 🔥 非关键 key 延迟 2 秒加载，不阻塞启动路径
+  setTimeout(() => {
+    preloadStorageCache(getDeferredStorageKeys())
+  }, 2000)
 }
 
 export const preloadStorageCache = (keys = []) => {
@@ -159,24 +166,15 @@ export const getTheme = () => {
 }
 
 export const getStorage = (key) => {
+  // 内存缓存命中 → 直接返回（O(1)）
   if (storageCache.hasOwnProperty(key)) {
     return storageCache[key]
   }
 
+  // 缓存未命中 → 触发异步读取并缓存，返回 null
+  // 下次调用时缓存已就绪，即可命中
   readStorageAsync(key).catch(() => {})
-
-  if (_isStartupPhase) {
-    return null
-  }
-
-  try {
-    const data = wx.getStorageSync(key)
-    storageCache[key] = data
-    return data
-  } catch (e) {
-    console.error(`get storage ${key} failed`, e)
-    return null
-  }
+  return null
 }
 
 export const setStorage = (key, data) => {

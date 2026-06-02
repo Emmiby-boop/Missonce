@@ -1130,6 +1130,7 @@ Page({
     // const filePath = `${wx.env.USER_DATA_PATH}/${Date.now()}${Math.random().toString(36).slice(2)}${ext}`
     wx.downloadFile({
       url,
+      timeout: 30000,
       // filePath,
       success(res) {
         if (res.statusCode === 200) {
@@ -1234,6 +1235,7 @@ Page({
                         } else {
                           wx.downloadFile({
                             url,
+                            timeout: 30000,
                             success(res2) {
                               if (res2.statusCode === 200) {
                                 that.saveToAlbum(res2.tempFilePath || res2.filePath, url, downloadMethod)

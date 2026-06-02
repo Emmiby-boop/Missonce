@@ -107,6 +107,12 @@
     }
   },
   "simulatorPluginLibVersion": {},
+  "networkTimeout": {
+    "request": 15000,
+    "connectSocket": 15000,
+    "uploadFile": 30000,
+    "downloadFile": 30000
+  },
   "editorSetting": {},
   "miniprogramRoot": "./",
   "cloudfunctionRoot": "cloudfunctions/",

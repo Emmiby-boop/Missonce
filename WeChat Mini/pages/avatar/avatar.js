@@ -188,7 +188,8 @@ Page({
           ...item,
           id: item._id,
           url: item.optimizedUrl || item.coverUrl || item.url,
-          originalUrl: item.originUrl || item.originalUrl || item.url
+          originalUrl: item.originUrl || item.originalUrl || item.url,
+          resourceType: 'avatar'
         }))
         
         // 预处理瀑布流列

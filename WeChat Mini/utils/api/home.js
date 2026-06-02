@@ -23,6 +23,7 @@ const _fetchHomeDataFromCloud = () => {
         wx.request({
           url: tempUrl,
           dataType: 'json',
+          timeout: 10000,
           success: (reqRes) => {
             if (reqRes.data && reqRes.data.success) {
               console.log('[API] 云存储直连成功，跳过 callFunction 链路')
