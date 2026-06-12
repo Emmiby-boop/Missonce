@@ -15,7 +15,11 @@ async function isFreeDownloadUsedToday(openid) {
   return downloadRes.total > 0
 }
 
-async function recordDownload(openid, resourceId, resourceType, downloadMethod) {
+async function recordDownload(openid, event) {
+  const resourceId = event.resourceId || ''
+  const resourceType = event.resourceType || 'wallpaper'
+  const downloadMethod = event.downloadMethod || 'free'
+  
   try {
     const userRes = await db.collection('user_points').where({ _openid: openid }).limit(1).get()
     let user = userRes.data[0]

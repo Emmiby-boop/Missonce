@@ -1,6 +1,7 @@
 const { db, _, POINTS_CONFIG, createPointRecord, getOrCreateUser } = require('../shared')
 
-async function exchangeDownloads(openid, count) {
+async function exchangeDownloads(openid, event) {
+  const count = event.count
   const countMap = {
     1: { points: POINTS_CONFIG.singleDownloadPoints, name: '单次下载' },
     3: { points: POINTS_CONFIG.threeDownloadPoints, name: '3次下载' },

@@ -1,6 +1,7 @@
 const { db, _, MEMBER_CONFIG, POINTS_CONFIG, capitalize, checkMemberStatus, createPointRecord } = require('../shared')
 
-async function exchangeMember(openid, level) {
+async function exchangeMember(openid, event) {
+  const level = event.level
   const config = MEMBER_CONFIG[level]
   if (!config) {
     return { success: false, error: '无效的会员等级' }

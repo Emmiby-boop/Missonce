@@ -59,7 +59,8 @@ async function getInviteStatus(openid) {
   }
 }
 
-async function bindInviter(openid, inviterOpenid) {
+async function bindInviter(openid, event) {
+  const inviterOpenid = event.inviterOpenid
   try {
     if (!inviterOpenid || openid === inviterOpenid) {
       return { success: false, error: '无效的邀请人' }

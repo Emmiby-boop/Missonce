@@ -1,6 +1,10 @@
 const { db, _, createPointRecord, getOrCreateUser } = require('../shared')
 
-async function addPoints(openid, amount, type, description) {
+async function addPoints(openid, event) {
+  const amount = event.amount
+  const type = event.type || 'manual'
+  const description = event.description || ''
+  
   if (!amount || amount <= 0) {
     return { success: false, error: '积分数量必须大于0' }
   }
@@ -32,7 +36,11 @@ async function addPoints(openid, amount, type, description) {
   }
 }
 
-async function deductPoints(openid, amount, type, description) {
+async function deductPoints(openid, event) {
+  const amount = event.amount
+  const type = event.type || 'manual'
+  const description = event.description || ''
+  
   if (!amount || amount <= 0) {
     return { success: false, error: '积分数量必须大于0' }
   }
@@ -70,7 +78,10 @@ async function deductPoints(openid, amount, type, description) {
   }
 }
 
-async function getRecords(openid, page, limit) {
+async function getRecords(openid, event) {
+  const page = event.page || 1
+  const limit = event.limit || 20
+  
   try {
     const skip = (page - 1) * limit
 
