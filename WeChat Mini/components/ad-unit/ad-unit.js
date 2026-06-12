@@ -527,7 +527,7 @@ Component({
             }
             // _adResolve 在 onClose 开头已处理组件销毁的情况，此处处理正常流程
             if (this._adResolve) {
-              this._adResolve({ success: this.data._adWatched })
+              this._adResolve({ success: this.data._adWatched, skipped: !this.data._adWatched })
               this._adResolve = null
             }
           })
