@@ -1,4 +1,4 @@
-﻿import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
+import { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } from '../../utils/api.js'
 import { loginWithProfile } from '../../utils/auth.js'
 import { reportError } from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
@@ -144,27 +144,15 @@ Page({
 
 
   async handleLogin() {
-    this.setData({ isLoginLoading: true, modalError: '' })
-    
-    try {
-      const userInfo = await wx.getUserProfile({ desc: '用于登录' })
-      await wx.login()
-      
-      await loginWithProfile({
-        nickName: userInfo.userInfo.nickName,
-        avatarUrl: userInfo.userInfo.avatarUrl
-      })
-      
-      wx.showToast({ title: '登录成功', icon: 'success' })
-      this.setData({ showLoginModal: false, isLoginLoading: false })
-      this.checkFavorite()
-    } catch (err) {
-      console.error('登录流程异常:', err)
-      this.setData({ 
-        modalError: err.message || '登录异常',
-        isLoginLoading: false 
-      })
-    }
+    this.setData({ showLoginModal: false, isLoginLoading: false })
+    wx.navigateTo({
+      url: '/subpackages/login/login',
+      events: {
+        loginSuccess: () => {
+          this.checkFavorite()
+        }
+      }
+    })
   },
 
   onLoad(options) {
@@ -532,48 +520,17 @@ Page({
   async fetchAvatarInfo(url, index) {
     if (!url) return;
     console.log(`Fetching avatar info for url: ${url} at index ${index}`);
-    const db = wx.cloud.database();
-    const _ = db.command;
     
-    // Construct query conditions
-    const conditions = [
-      { coverUrl: url },
-      { originUrl: url },
-      { url: url }
-    ];
-
     try {
-      const decodedUrl = decodeURIComponent(url);
-      if (decodedUrl !== url) {
-        conditions.push({ coverUrl: decodedUrl });
-        conditions.push({ originUrl: decodedUrl });
-        conditions.push({ url: decodedUrl });
-      }
-
-      // Extract filename for loose matching
-      const parts = decodedUrl.split('/');
-      if (parts.length > 0) {
-        const filename = parts[parts.length - 1];
-        if (filename && (filename.includes('.') || filename.length > 10)) {
-           const escapedFilename = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-           conditions.push({ coverUrl: db.RegExp({ regexp: escapedFilename + '$', options: 'i' }) });
-           conditions.push({ originUrl: db.RegExp({ regexp: escapedFilename + '$', options: 'i' }) });
-        }
-      }
-    } catch (e) {
-      console.error('URL parse failed', e);
-    }
-    
-    db.collection('resources').where(_.or(conditions)).get().then(async res => {
-      // 检查页面是否已卸载
+      const item = await findResourceByUrl(url);
+      
       if (this.data._isHiding) {
         console.log('[preview] 页面已卸载，跳过数据更新')
         return
       }
       
-      console.log(`Fetch avatar result for index ${index}:`, res.data);
-      if (res.data && res.data.length > 0) {
-        const item = res.data[0];
+      if (item) {
+        console.log(`Fetch avatar result for index ${index}:`, item);
         const itemsList = this.data.itemsList;
         itemsList[index] = item;
         
@@ -625,9 +582,9 @@ Page({
       } else {
         console.warn(`No avatar resource found for url: ${url}`);
       }
-    }).catch(err => {
+    } catch (err) {
       console.error('Fetch avatar info failed', err);
-    });
+    }
   },
 
   toggleShape() {
@@ -944,13 +901,10 @@ Page({
             type: 'download_error'
           })
           
-          // 仅提示失败，不再显示复制按钮
-          wx.showModal({
-            title: '保存失败',
-            content: '图片保存失败，请稍后重试',
-            showCancel: false,
-            confirmText: '知道了'
-          })
+          // 非权限错误才提示保存失败（权限错误已在上方弹窗引导用户授权）
+          if (!err.errMsg || !err.errMsg.includes('auth')) {
+            wx.showToast({ title: '图片保存失败，请稍后重试', icon: 'none' })
+          }
         }
       }
     })

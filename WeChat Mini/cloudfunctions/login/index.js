@@ -124,13 +124,15 @@ exports.main = async (event, context) => {
   // 生产环境建议结合 JWT 签名，这里使用高强度随机字符串作为 Session ID
   const token = crypto.randomBytes(32).toString('hex')
   
+  // session_key 仅服务端使用（解密手机号等），严禁下发到客户端
+  console.log('[login] session_key 已获取，长度:', session_key.length)
+  
   // 返回完整用户信息（包含 nickName, avatarUrl 等）
   return {
     success: true,
     openid,
     unionid,
-    session_key,
     token,
-    user // 直接返回数据库中的完整用户对象
+    user
   }
 }

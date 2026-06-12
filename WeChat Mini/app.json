@@ -28,6 +28,20 @@
     }
   ],
   "lazyCodeLoading": "requiredComponents",
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["subpackages"]
+    },
+    "pages/avatar/avatar": {
+      "network": "all",
+      "packages": ["subpackages"]
+    },
+    "pages/wallpaper/wallpaper": {
+      "network": "all",
+      "packages": ["subpackages"]
+    }
+  },
   "navigateToMiniProgramAppIdList": [
     "wxbd304fe2186156e4"
   ],

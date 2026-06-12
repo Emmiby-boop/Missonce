@@ -173,29 +173,15 @@ Page({
 
 
   async handleLogin() {
-    this.setData({ isLoginLoading: true })
-    
-    try {
-      const userInfo = await wx.getUserProfile({ desc: '用于登录' })
-      await wx.login()
-      
-      await loginWithProfile({
-        nickName: userInfo.userInfo.nickName,
-        avatarUrl: userInfo.userInfo.avatarUrl
-      })
-      
-      this.setData({ 
-        showLoginModal: false,
-        isLoginLoading: false 
-      })
-      wx.showToast({ title: '登录成功', icon: 'success' })
-      
-      this.loadFavorites()
-    } catch (err) {
-      console.error('登录流程异常:', err)
-      this.setData({ isLoginLoading: false })
-      wx.showToast({ title: '登录失败，请重试', icon: 'none' })
-    }
+    this.setData({ showLoginModal: false, isLoginLoading: false })
+    wx.navigateTo({
+      url: '/subpackages/login/login',
+      events: {
+        loginSuccess: () => {
+          this.loadFavorites()
+        }
+      }
+    })
   },
 
   onLoad(options) {
