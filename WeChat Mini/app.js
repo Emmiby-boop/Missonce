@@ -42,17 +42,18 @@ App({
   onLaunch() {
     PERFORMANCE_MARK.launchStart = Date.now()
 
-    // 🔥 关键路径：仅初始化 storage 缓存
+    // 🔥 关键路径：初始化 storage 缓存
     initStorageCache()
     
-    // 🔥 延迟云开发初始化到首屏渲染后
+    // 🔥 云开发必须同步初始化（页面可能立即使用）
+    if (!wx.cloud) {
+      console.error("请使用 2.2.3 或以上的基础库以使用云能力")
+    } else {
+      wx.cloud.init({ env: "missonce-99-1gfaff6n002f6ac1", traceUser: false })
+    }
+    
+    // 🔥 预热首页数据（延迟执行，不阻塞首屏）
     setTimeout(() => {
-      if (!wx.cloud) {
-        console.error("请使用 2.2.3 或以上的基础库以使用云能力")
-      } else {
-        wx.cloud.init({ env: "missonce-99-1gfaff6n002f6ac1", traceUser: false })
-      }
-      // 初始化完成后预热首页数据
       this._preheatAfterCloudInit()
     }, 100)
     
@@ -87,6 +88,18 @@ App({
         console.warn(`[性能] 启动耗时过长: ${launchTime}ms`)
       }
     }
+  },
+
+  logEvent(type, data = {}) {
+    if (!wx.cloud) return
+    wx.cloud.callFunction({
+      name: "logEvent",
+      data: {
+        type,
+        ...data,
+        timestamp: Date.now()
+      }
+    }).catch(() => {})
   },
 
   globalData: {
