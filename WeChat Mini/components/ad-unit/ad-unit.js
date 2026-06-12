@@ -79,6 +79,10 @@ Component({
         clearTimeout(this._hideAdTimer)
         this._hideAdTimer = null
       }
+      if (this._reinitTimer) {
+        clearTimeout(this._reinitTimer)
+        this._reinitTimer = null
+      }
       this._initRewarding = false
       if (this._lazyInitTimer) {
         clearTimeout(this._lazyInitTimer)
@@ -109,19 +113,22 @@ Component({
       // 激励广告：页面恢复时强制重置加载状态，防止 hide 期间残留的加载遮罩
       if (this.data.kind === 'rewarded') {
         this.setData({ isLoading: false })
-        // 🔥 页面恢复时，如果有待处理的 resolve，先清理掉
+        // 清理上一次可能遗留的重建定时器
+        if (this._reinitTimer) { clearTimeout(this._reinitTimer); this._reinitTimer = null }
+        // 🔥 页面恢复时，如果有待处理的 resolve（hide 中可能已处理），清理掉
         if (this._adResolve) {
           this._adResolve({ success: false, skipped: true })
           this._adResolve = null
         }
+        // 🔥 如果实例不存在（被 SDK 销毁），尝试重建
+        //    如果实例还在，不做任何操作 — 让用户点击时 onRewardTap 自然走 load→show
+        if (!this.videoAd && this.isAttached) {
+          this.dlog('[AD][Rewarded] page show, no instance, re-init')
+          this.initRewarded()
+        }
       }
       if (this.data.kind === 'interstitial' && interstitialAdManager) {
         interstitialAdManager.smartTriggerInterstitialAd(2000)
-      }
-      // 激励广告组件：如果已销毁则重新初始化，避免旧实例残留
-      if (this.data.kind === 'rewarded' && !this.videoAd && this.isAttached) {
-        this.dlog('[AD][Rewarded] page show, re-init')
-        this.initRewarded()
       }
     },
     hide() {
@@ -134,16 +141,15 @@ Component({
       if (this._initTimer) { clearTimeout(this._initTimer); this._initTimer = null }
       if (this._autoShowTimer) { clearTimeout(this._autoShowTimer); this._autoShowTimer = null }
       if (this._showRaceCheck) { clearTimeout(this._showRaceCheck); this._showRaceCheck = null }
-      if (this._hideAdTimer) { clearTimeout(this._hideAdTimer); this._hideAdTimer = null } // 清理上一次遗留的延迟隐藏定时器
+      if (this._hideAdTimer) { clearTimeout(this._hideAdTimer); this._hideAdTimer = null }
+      if (this._reinitTimer) { clearTimeout(this._reinitTimer); this._reinitTimer = null }
       this._initRewarding = false
 
       // 延迟设置 showAd=false，确保 _pageHidden 触发的 DOM 销毁已完成
-      // 使用较短延迟即可，因为 wx:if 的 DOM 移除是同步的
       if (this.data.showAd) {
         this._hideAdTimer = setTimeout(() => {
           this._hideAdTimer = null
           if (this.data.kind === 'native') {
-            // 仅在组件仍 attached 时才 setData，防止 detached 后的无效渲染调用
             if (this.isAttached) {
               this.setData({ showAd: false })
             }
@@ -155,29 +161,22 @@ Component({
         try { this._observer.disconnect() } catch (e) {}
         this._observer = null
       }
-      // 激励广告：页面隐藏时安全销毁广告实例
-      // 先暂停再销毁，避免 destroy 内部 pause 与正在进行的 play 产生竞态
-      // 这个错误发生在原生渲染层，JS try-catch 无法完全捕获
+      // 激励广告：页面隐藏时只暂停和标记状态，不销毁实例
+      // 🔥 旧版修复（b89412a）在 hide 中销毁 videoAd 导致无法复用，
+      //    回归旧版行为：保持实例存活，返回页面后直接复用
       if (this.videoAd) {
-        this.dlog('[AD][Rewarded] page hide, safe destroy videoAd')
-        const ad = this.videoAd
-        this.videoAd = null
-        this.data._adReady = false
+        const wasShowing = !!this._adResolve
+        this.dlog('[AD][Rewarded] page hide, wasShowing=', wasShowing, '- keeping instance alive')
+        this.data._adReady = false  // 强制下次重新 load
         this.data._adShowing = false
-        this.data.isLoading = false // data-only，不触发setData渲染
+        this.data.isLoading = false
         if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
         if (this._adResolve) {
-          this._adResolve({ success: false, error: '页面隐藏' })
+          this._adResolve({ success: false, skipped: true })
           this._adResolve = null
         }
-        // 分步销毁：先暂停（如果支持），再延迟 destroy
-        // 这样给播放器足够时间完成当前的 play/pause 状态机转换
-        try {
-          if (ad.pause) { ad.pause() }
-        } catch (e) {}
-        setTimeout(() => {
-          try { if (ad.destroy) ad.destroy() } catch (e) {}
-        }, 100)
+        // 只暂停，不销毁
+        try { this.videoAd.pause && this.videoAd.pause() } catch (e) {}
       }
     }
   },
@@ -493,7 +492,9 @@ Component({
               return
             }
             if (this.data._pageHidden) {
-              // 🔥 页面隐藏时广告关闭，仍需 resolve 防止状态不一致
+              // 🔥 页面隐藏时广告被关闭（如用户按 Home 键退出）
+              //    设置 _adReady=false 确保下次点击走 load→show 而非直接 show
+              this.data._adReady = false
               if (this._adResolve) {
                 this._adResolve({ success: false, skipped: true })
                 this._adResolve = null
@@ -506,38 +507,42 @@ Component({
             this.data._adReady = false
             console.log('[AD][Rewarded] _adWatched=', this.data._adWatched, 'rewardCloud=', this.data.rewardCloudName, this.data.rewardCloudAction)
             if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
-            if (this.data._adWatched) {
-              // 只有配置了 rewardCloudName 才调云函数发奖励（积分中心等页面）
-              // 预览页等不需要云函数发奖励的页面，直接触发 rewarded 事件
-              if (this.data.rewardCloudName) {
-                try {
-                  const callRes = await wx.cloud.callFunction({
-                    name: this.data.rewardCloudName,
-                    data: { action: this.data.rewardCloudAction }
-                  })
-                  console.log('[AD][Rewarded] cloudFunction result=', JSON.stringify(callRes.result))
-                  if (!this.isAttached) return
-                  if (callRes.result && callRes.result.success) {
-                    const added = (callRes.result.data && callRes.result.data.addedAmount) || this.data.rewardPoints || 0
-                    wx.showToast({ title: `+${added} 积分`, icon: 'success' })
-                    this.triggerEvent('rewarded', { success: true, added })
-                  } else {
-                    wx.showToast({ title: callRes.result?.error || '今日次数已满', icon: 'none' })
-                    this.triggerEvent('rewarded', { success: false, error: callRes.result?.error || '' })
+            // 🔥 只有存在活跃观看会话 (_adResolve 不为 null) 时才做副作用
+            //    防止旧会话的 onClose 延迟触发时显示错误的 toast/triggerEvent
+            if (this._adResolve) {
+              if (this.data._adWatched) {
+                // 只有配置了 rewardCloudName 才调云函数发奖励（积分中心等页面）
+                // 预览页等不需要云函数发奖励的页面，直接触发 rewarded 事件
+                if (this.data.rewardCloudName) {
+                  try {
+                    const callRes = await wx.cloud.callFunction({
+                      name: this.data.rewardCloudName,
+                      data: { action: this.data.rewardCloudAction }
+                    })
+                    console.log('[AD][Rewarded] cloudFunction result=', JSON.stringify(callRes.result))
+                    if (!this.isAttached) return
+                    if (callRes.result && callRes.result.success) {
+                      const added = (callRes.result.data && callRes.result.data.addedAmount) || this.data.rewardPoints || 0
+                      wx.showToast({ title: `+${added} 积分`, icon: 'success' })
+                      this.triggerEvent('rewarded', { success: true, added })
+                    } else {
+                      wx.showToast({ title: callRes.result?.error || '今日次数已满', icon: 'none' })
+                      this.triggerEvent('rewarded', { success: false, error: callRes.result?.error || '' })
+                    }
+                  } catch (e) {
+                    console.error('[AD][Rewarded] cloudFunction error=', e)
+                    if (!this.isAttached) return
+                    wx.showToast({ title: '奖励发放失败', icon: 'none' })
+                    this.triggerEvent('rewarded', { success: false })
                   }
-                } catch (e) {
-                  console.error('[AD][Rewarded] cloudFunction error=', e)
-                  if (!this.isAttached) return
-                  wx.showToast({ title: '奖励发放失败', icon: 'none' })
-                  this.triggerEvent('rewarded', { success: false })
+                } else {
+                  // 无云函数配置，仅触发 rewarded 事件（预览页等）
+                  this.triggerEvent('rewarded', { success: true })
                 }
               } else {
-                // 无云函数配置，仅触发 rewarded 事件（预览页等）
-                this.triggerEvent('rewarded', { success: true })
+                wx.showToast({ title: '需要完整观看视频才可获得积分', icon: 'none' })
+                this.triggerEvent('rewarded', { success: false, skipped: true })
               }
-            } else {
-              wx.showToast({ title: '需要完整观看视频才可获得积分', icon: 'none' })
-              this.triggerEvent('rewarded', { success: false, skipped: true })
             }
             // _adResolve 在 onClose 开头已处理组件销毁的情况，此处处理正常流程
             if (this._adResolve) {
@@ -545,8 +550,9 @@ Component({
               this._adResolve = null
             }
           })
-          // 🔥 延迟加载 + 失败重试（最多3次）
-          // 立即 load 会导致"play interrupted by pause"错误（页面切换时内部视频播放器冲突）
+          // 🔥 立即加载 + 失败重试（最多3次）
+          // 不再延迟：show 中已有足够的冷却期，此时加载是安全的
+          // 旧版延迟 500ms 是为防止"页面切换时视频播放器冲突"，现在切换已完成
           if (!this.data._pageHidden) {
             let retryCount = 0
             const maxRetries = 3
@@ -563,7 +569,7 @@ Component({
                 }
               })
             }
-            this._initTimer = setTimeout(doLoad, 500)
+            doLoad()  // 🔥 立即执行，不再 setTimeout 500ms
           }
         }
       } catch (e) {} finally {
@@ -669,18 +675,40 @@ Component({
             this.data.isLoading = false
             resolve({ success: false, error: '页面切换，广告取消' })
           } else if (errMsg.indexOf('destroyed') !== -1 || errMsg.indexOf('destroy') !== -1) {
-            // 🔥 广告实例已被 SDK 销毁（常见于中途退出后），重建后提示用户重试
-            console.log('[AD][Rewarded] ad destroyed, re-initializing...')
+            // 🔥 广告实例已被 SDK 销毁（常见于中途退出后同 adUnitId 冲突）
+            // 重建后延迟自动重试一次，避免用户手动再点
+            console.log('[AD][Rewarded] ad destroyed, re-initializing with auto-retry...')
             this.videoAd = null
             this.data._adReady = false
             this.data._adWatched = false
             this.data._adShowing = false
+            // 🔥 清理上一次可能遗留的重建定时器
+            if (this._reinitTimer) { clearTimeout(this._reinitTimer); this._reinitTimer = null }
             if (this.isAttached && !this.data._pageHidden) {
+              // 异步重建，完成后自动重试
+              this.initRewarded().then(() => {
+                // 给 SDK 足够时间完成内部清理 + load（2.5s 冷却）
+                this._reinitTimer = setTimeout(() => {
+                  this._reinitTimer = null
+                  if (!this.videoAd || !this.data._adReady || !this.isAttached || this.data._pageHidden) {
+                    this.setData({ isLoading: false })
+                    resolve({ success: false, error: '广告加载失败，请稍后重试' })
+                    return
+                  }
+                  // 🔥 自动重试观看
+                  console.log('[AD][Rewarded] auto-retry show after re-init')
+                  this.onRewardTap().then(resolve).catch(() => {
+                    resolve({ success: false, error: '广告加载失败，请稍后重试' })
+                  })
+                }, 2500)
+              }).catch(() => {
+                this.setData({ isLoading: false })
+                resolve({ success: false, error: '广告加载失败，请稍后重试' })
+              })
+            } else {
               this.setData({ isLoading: false })
-              // 异步重建，不阻塞当前流程
-              this.initRewarded()
+              resolve({ success: false, error: '广告加载失败，请稍后重试' })
             }
-            resolve({ success: false, error: '广告加载失败，请稍后重试' })
           } else {
             // 正常异常（加载失败等）：必须通过 setData 重置 UI，否则加载动画永远不消失
             console.error('[AD][Rewarded] show failed:', errMsg)
