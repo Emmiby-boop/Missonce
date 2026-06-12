@@ -1,39 +1,31 @@
 import logger from "./utils/logger"
 import { initStorageCache } from "./utils/storageManager"
 
+// 🔥 优化：仅包装关键生命周期方法，减少包装开销
 const originalPage = Page
 
 Page = function(pageConfig) {
+  const criticalMethods = ["onLoad", "onShow", "onUnload"]
   
-  const wrapMethod = (methodName, originalMethod) => {
-    return function(...args) {
-      try {
-        return originalMethod.apply(this, args)
-      } catch (e) {
-        let currentRoute = ""
-        try {
-          const pages = getCurrentPages()
-          if (pages && pages.length > 0) {
-            currentRoute = pages[pages.length - 1].route || ""
-          }
-        } catch (_) {}
-        
-        console.error(`页面方法 ${methodName} 出错 (${currentRoute}):`, e)
-        logger.logError("page_error", `页面${methodName}出错`, {
-          error: e.message,
-          stack: e.stack,
-          method: methodName
-        }, currentRoute)
-        throw e
-      }
-    }
-  }
-  
-  const methodNames = ["onLoad", "onShow", "onReady", "onHide", "onUnload", "onPullDownRefresh", "onReachBottom", "onShareAppMessage", "onShareTimeline", "onAddToFavorites"]
-  
-  methodNames.forEach(methodName => {
+  criticalMethods.forEach(methodName => {
     if (typeof pageConfig[methodName] === "function") {
-      pageConfig[methodName] = wrapMethod(methodName, pageConfig[methodName])
+      const originalMethod = pageConfig[methodName]
+      pageConfig[methodName] = function(...args) {
+        try {
+          return originalMethod.apply(this, args)
+        } catch (e) {
+          let currentRoute = ""
+          try {
+            const pages = getCurrentPages()
+            if (pages && pages.length > 0) {
+              currentRoute = pages[pages.length - 1].route || ""
+            }
+          } catch (_) {}
+          
+          console.error(`页面方法 ${methodName} 出错 (${currentRoute}):`, e)
+          throw e
+        }
+      }
     }
   })
   
@@ -43,96 +35,45 @@ Page = function(pageConfig) {
 // 🔥 启动性能监控
 const PERFORMANCE_MARK = {
   launchStart: 0,
-  launchEnd: 0,
-  firstScreenReady: 0
+  launchEnd: 0
 }
-
-const DELAY_INVITE = 1000
-const DELAY_NON_CRITICAL = 3000
-const DELAY_INVITE_BIND = 2000
 
 App({
   onLaunch() {
     PERFORMANCE_MARK.launchStart = Date.now()
 
-    // 🔥 仅保留关键路径：初始化storage缓存（极快）
+    // 🔥 关键路径：仅初始化 storage 缓存
     initStorageCache()
     
-    if (!wx.cloud) {
-      console.error("请使用 2.2.3 或以上的基础库以使用云能力")
-    } else {
-      wx.cloud.init({ env: "missonce-99-1gfaff6n002f6ac1", traceUser: false })
-    }
-    
-    // 🔥 处理邀请链接（非关键，延迟执行）
+    // 🔥 延迟云开发初始化到首屏渲染后
     setTimeout(() => {
-      this.handleInviteLink()
-    }, DELAY_INVITE)
-    
-    // 🔥 记录启动完成时间（此时应 < 30ms）
-    this.performanceMonitor("launch")
-    
-    // 🔥 关键优化：预热首页数据，使用 nextTick 延迟到 onLaunch 完成后执行
-    if (!this.globalData._preheatStarted) {
-      this.globalData._preheatStarted = true
-      wx.nextTick(() => {
-        // 动态导入 api 模块，不阻塞模块加载
-        import("./utils/api.js").then(({ getHomeData }) => {
-          this._preheatHomeData(getHomeData)
-        }).catch(err => {
-          console.warn("[预热] api 模块加载失败:", err)
-        })
-      })
-    }
-    
-    // 🔥 所有非关键任务延迟到首屏渲染完成后执行
-    setTimeout(() => {
-      this.preheatCloudFunctions()
-      this.preloadOtherPagesData()
-      this.initLoginStatus()
-    }, DELAY_NON_CRITICAL)
-  },
-
-  async handleInviteLink() {
-    try {
-      const launchOptions = wx.getLaunchOptionsSync()
-      const query = launchOptions.query
-      
-      if (query && query.inviter) {
-        const inviterOpenid = query.inviter
-        
-        setTimeout(async () => {
-          // 动态导入 storageManager 的 getStorage
-          const { getStorage } = await import("./utils/storageManager")
-          const userInfo = getStorage("userInfo")
-          if (userInfo && userInfo.openid && userInfo.openid !== inviterOpenid) {
-            await wx.cloud.callFunction({
-              name: "userPoints",
-              data: {
-                action: "bindInviter",
-                inviterOpenid: inviterOpenid
-              }
-            })
-          }
-        }, DELAY_INVITE_BIND)
+      if (!wx.cloud) {
+        console.error("请使用 2.2.3 或以上的基础库以使用云能力")
+      } else {
+        wx.cloud.init({ env: "missonce-99-1gfaff6n002f6ac1", traceUser: false })
       }
-    } catch (e) {
-      console.error("处理邀请链接失败", e)
-    }
+      // 初始化完成后预热首页数据
+      this._preheatAfterCloudInit()
+    }, 100)
+    
+    // 🔥 记录启动完成时间
+    this.performanceMonitor("launch")
   },
 
-  // 🔥 开屏广告期间预热首页数据
-  _preheatHomeData(getHomeData) {
-    if (!wx.cloud) return
-    
-    this.globalData.homeDataPromise = getHomeData().then(res => {
-      console.log("[预热] getHomeData 完成，结果已缓存")
-      return res
-    }).catch(err => {
-      console.warn("[预热] getHomeData 失败:", err)
-      this.globalData.homeDataPromise = null
-      return null
-    })
+  _preheatAfterCloudInit() {
+    try {
+      const api = require("./utils/api.js")
+      this.globalData.homeDataPromise = api.getHomeData().then(res => {
+        console.log("[预热] getHomeData 完成")
+        return res
+      }).catch(err => {
+        console.warn("[预热] getHomeData 失败:", err)
+        this.globalData.homeDataPromise = null
+        return null
+      })
+    } catch (e) {
+      console.warn("[预热] api 模块加载失败:", e)
+    }
   },
 
   performanceMonitor(type) {
@@ -142,84 +83,10 @@ App({
       const launchTime = PERFORMANCE_MARK.launchEnd - PERFORMANCE_MARK.launchStart
       console.log(`🚀 启动耗时: ${launchTime}ms`)
       
-      logger.logPerformance("launch", {
-        launchTime: launchTime,
-        timestamp: now
-      }, "app")
-      
       if (launchTime > 3000) {
         console.warn(`[性能] 启动耗时过长: ${launchTime}ms`)
       }
     }
-  },
-
-  async initLoginStatus() {
-    // 使用 require 而非动态导入（微信小程序兼容性更好）
-    try {
-      const auth = require("./utils/auth")
-      auth.checkLoginStatus()
-    } catch (e) {
-      console.error("auth 模块加载失败:", e)
-    }
-  },
-
-  preheatCloudFunctions() {
-    if (!wx.cloud) return
-    
-    wx.cloud.callFunction({
-      name: "getBanners",
-      data: { status: "active" }
-    }).catch(() => {})
-  },
-
-  preloadOtherPagesData() {
-    if (!wx.cloud) return
-    
-    wx.cloud.callFunction({
-      name: "getPageSections",
-      data: { type: "wallpaper" }
-    }).catch(() => {})
-    
-    wx.cloud.callFunction({
-      name: "getPageSections",
-      data: { type: "avatar" }
-    }).catch(() => {})
-    
-    // 🔥 预热头像列表缓存（热门排序，第一页）
-    wx.cloud.callFunction({
-      name: "getResources",
-      data: { type: "avatar", page: 1, pageSize: 12, sort: "hot" }
-    }).then(res => {
-      if (res.result && res.result.success && res.result.data) {
-        const { setStorage } = require("./utils/storageManager")
-        setStorage("avatar_list_cache", res.result.data)
-        console.log("[预热] 头像列表缓存已更新")
-      }
-    }).catch(() => {})
-    
-    // 🔥 预热壁纸列表缓存（热门排序，第一页）
-    wx.cloud.callFunction({
-      name: "getResources",
-      data: { type: "wallpaper", page: 1, pageSize: 12, sort: "hot" }
-    }).then(res => {
-      if (res.result && res.result.success && res.result.data) {
-        const { setStorage } = require("./utils/storageManager")
-        setStorage("wallpaper_list_cache", res.result.data)
-        console.log("[预热] 壁纸列表缓存已更新")
-      }
-    }).catch(() => {})
-  },
-
-  logEvent(type, data = {}) {
-    if (!wx.cloud) return
-    wx.cloud.callFunction({
-      name: "logEvent",
-      data: {
-        type,
-        ...data,
-        timestamp: Date.now()
-      }
-    }).catch(() => {})
   },
 
   globalData: {

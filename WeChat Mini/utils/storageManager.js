@@ -77,12 +77,33 @@ const readStorageAsync = (key) => {
 }
 
 export const initStorageCache = () => {
-  // 🔥 关键 key 立即预热（TOKEN, USER_INFO, OPENID）
-  preloadStorageCache(getCriticalStorageKeys())
-  // 🔥 非关键 key 延迟 2 秒加载，不阻塞启动路径
-  setTimeout(() => {
-    preloadStorageCache(getDeferredStorageKeys())
-  }, 2000)
+  // 🔥 批量读取所有关键 key（只需 1 次 wx.getStorage 调用）
+  const allKeys = [...getCriticalStorageKeys(), ...getDeferredStorageKeys()]
+  
+  try {
+    // 使用 wx.getStorageInfo 获取所有已存在的 key
+    const res = wx.getStorageInfoSync()
+    const existingKeys = allKeys.filter(key => res.keys.includes(key))
+    
+    // 批量读取存在的 key
+    existingKeys.forEach(key => {
+      try {
+        const data = wx.getStorageSync(key)
+        storageCache[key] = data
+      } catch (e) {}
+    })
+    
+    // 标记不存在的 key 为 null（避免重复读取）
+    allKeys.filter(key => !res.keys.includes(key)).forEach(key => {
+      storageCache[key] = null
+    })
+  } catch (e) {
+    // 降级：逐个读取关键 key
+    preloadStorageCache(getCriticalStorageKeys())
+    setTimeout(() => {
+      preloadStorageCache(getDeferredStorageKeys())
+    }, 2000)
+  }
 }
 
 export const preloadStorageCache = (keys = []) => {

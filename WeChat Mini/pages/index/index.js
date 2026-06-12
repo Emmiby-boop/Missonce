@@ -1,14 +1,11 @@
 import { getHomeData, getPersonalizedRecommendations, onHomeDataRefresh, getFavoritesCount, getFavorites } from '../../utils/api.js'
-import { checkLoginStatus, loginWithProfile } from '../../utils/auth'
+import { checkLoginStatus } from '../../utils/auth'
 import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js'
 import logger from '../../utils/logger.js'
 import { cacheManager } from '../../utils/cache.js'
 import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
 import { getWindowInfo, getStorage, setStorage, getTheme } from '../../utils/storageManager'
-import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
-import { notificationService } from '../../services/notificationService.js'
-import interstitialAdManager from '../../utils/interstitialAdManager.js'
  
 
 Page({
@@ -130,6 +127,7 @@ Page({
 
   async loadPageAds() {
     try {
+      const { fetchPageAds, pickByType } = require('../../utils/adUtil.js')
       const pages = getCurrentPages()
       const current = pages && pages.length ? pages[pages.length - 1] : null
       const route = current?.route || 'pages/index/index'
@@ -228,11 +226,6 @@ Page({
       }
       
       this.loadFavoritesCount()
-      
-      // 🔥 预加载其他页面数据（不阻塞用户操作）
-      setTimeout(() => {
-        getApp().preloadOtherPagesData()
-      }, 1000)
     } finally {
       this._isLoadingData = false
       this._isFirstLoad = false
@@ -423,7 +416,10 @@ Page({
     this.syncTheme()
     
     // 页面显示时智能触发插屏广告（带冷却时间检查）
-    interstitialAdManager.smartTriggerInterstitialAd(2000)
+    try {
+      const interstitialAdManager = require('../../utils/interstitialAdManager.js')
+      interstitialAdManager.smartTriggerInterstitialAd(2000)
+    } catch (e) {}
   },
 
   onHide() {
@@ -917,6 +913,7 @@ Page({
     if (this._notificationBadgeLoading) return
     this._notificationBadgeLoading = true
     try {
+      const { notificationService } = require('../../services/notificationService.js')
       const unreadCount = await notificationService.getUnreadCount()
       this.setData({ unreadNotificationCount: unreadCount })
     } catch (e) {
@@ -927,6 +924,7 @@ Page({
 
   async checkAnnouncement() {
     try {
+      const { notificationService } = require('../../services/notificationService.js')
       const notifications = await notificationService.getActiveNotifications()
       const readIds = await notificationService.getUserReadStatus()
       const popupAnnouncements = notifications.filter(n => 
@@ -960,7 +958,10 @@ Page({
     }
 
     if (currentAnnouncement) {
-      notificationService.markAsRead(currentAnnouncement._id).catch(() => {})
+      try {
+        const { notificationService } = require('../../services/notificationService.js')
+        notificationService.markAsRead(currentAnnouncement._id).catch(() => {})
+      } catch (e) {}
     }
 
     this.setData({

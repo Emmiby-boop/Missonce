@@ -5,6 +5,53 @@ const db = cloud.database()
 const _ = db.command
 
 // ============================================================
+// 缓存工具
+// ============================================================
+const CACHE_TTL = 5 * 60 * 1000 // 5分钟
+const cacheStore = {}
+
+async function getCache(key) {
+  // 内存缓存
+  if (cacheStore[key]) {
+    const item = cacheStore[key]
+    if (item.expireAt > Date.now()) {
+      return item.data
+    }
+    delete cacheStore[key]
+  }
+  
+  // 数据库缓存
+  try {
+    const res = await db.collection('resources_cache').where({ key }).get()
+    if (res.data.length > 0) {
+      const item = res.data[0]
+      if (item.expireAt > Date.now()) {
+        cacheStore[key] = { data: item.data, expireAt: item.expireAt }
+        return item.data
+      }
+    }
+  } catch (e) {}
+  
+  return null
+}
+
+async function setCache(key, data) {
+  const expireAt = Date.now() + CACHE_TTL
+  
+  // 内存缓存
+  cacheStore[key] = { data, expireAt }
+  
+  // 异步写入数据库（不阻塞返回）
+  db.collection('resources_cache').where({ key }).get().then(res => {
+    if (res.data.length > 0) {
+      db.collection('resources_cache').doc(res.data[0]._id).update({ data: { data, expireAt } })
+    } else {
+      db.collection('resources_cache').add({ data: { key, data, expireAt } })
+    }
+  }).catch(() => {})
+}
+
+// ============================================================
 // 性能追踪类
 // ============================================================
 class CloudFunctionPerformance {
@@ -240,6 +287,19 @@ exports.main = async (event) => {
     const limit = Math.min(Math.max(parseInt(pageSize) || 20, 1), 100)
     perf.markMilestone('参数解析完成')
 
+    // 🔥 优化：第一页且无搜索条件时使用缓存
+    const useCache = page === 1 && !keyword && !color && ids.length === 0
+    const cacheKey = useCache ? `resources_${type}_${tag || 'all'}_${sort}` : null
+    
+    if (useCache && cacheKey) {
+      const cached = await getCache(cacheKey)
+      if (cached) {
+        perf.markMilestone('缓存命中')
+        perf.logSummary()
+        return cached
+      }
+    }
+
     // ============================================================
     // 分支 A：ids 批量查询
     // ============================================================
@@ -331,6 +391,11 @@ exports.main = async (event) => {
       hasMore: data.length === limit,
       categories,
       tags
+    }
+
+    // 🔥 缓存第一页结果
+    if (useCache && cacheKey) {
+      setCache(cacheKey, result)
     }
 
     perf.logSummary()
