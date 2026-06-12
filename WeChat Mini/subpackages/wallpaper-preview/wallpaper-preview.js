@@ -435,11 +435,15 @@ Page({
                   // 广告观看成功
                   if (result.success) {
                     adResult = { success: true, method: 'free' }
-                    // 🔥 广告看完立即调用云函数记录，不等文件下载完成，防止二次点击时 recordDownload 还未写入导致重复弹窗
-                    wx.cloud.callFunction({
-                      name: 'userPoints',
-                      data: { action: 'recordDownload', downloadMethod: 'free', resourceType: 'wallpaper' }
-                    }).catch(() => {})
+                    // 🔥 等待记录写入完成，确保下次检查时 freeDownloadUsed 为 true
+                    try {
+                      await wx.cloud.callFunction({
+                        name: 'userPoints',
+                        data: { action: 'recordDownload', downloadMethod: 'free', resourceType: 'wallpaper' }
+                      })
+                    } catch (e) {
+                      console.error('[AD] recordDownload failed:', e)
+                    }
                   } else {
                     // 🔥 区分失败原因：未完整观看 vs 广告加载/播放失败
                     if (result.skipped) {
