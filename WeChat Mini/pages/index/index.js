@@ -38,10 +38,9 @@ Page({
     showNativeTopAd: false,
   },
 
-  _isFirstLoad: true,
-  _isLoadingData: false,
+  _isFirstLoad: true, // 标记是否为首次加载
+  _isLoadingData: false, // 标记是否正在加载数据
   _lastNotificationCheck: 0,
-  _lastAnnouncementCheck: 0,
 
   onShow() {
     this._isHiding = false
@@ -59,6 +58,12 @@ Page({
       this.loadNotificationBadge()
     }
     
+    // 刷新悬浮组件的未读计数
+    const floatingComponent = this.selectComponent('#floatingNotification')
+    if (floatingComponent && floatingComponent.refresh) {
+      floatingComponent.refresh()
+    }
+    
     // 🔥 首次加载由 onLoad 处理，onShow 只在数据丢失时重新加载
     if (!this._isFirstLoad && (this.data.banners.length === 0 || this.data.sections.length === 0)) {
       this.loadCriticalData()
@@ -71,7 +76,7 @@ Page({
     
     this.syncTheme()
     
-    // 🔥 插屏广告：延迟执行，不阻塞首屏
+    // 🔥 插屏广告：延迟执行，不阻塞页面切换
     setTimeout(() => {
       try {
         const interstitialAdManager = require('../../utils/interstitialAdManager.js')
