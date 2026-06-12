@@ -177,7 +177,6 @@ Page({
     
     try {
       const userInfo = await wx.getUserProfile({ desc: '用于登录' })
-      await wx.login()
       
       await loginWithProfile({
         nickName: userInfo.userInfo.nickName,
