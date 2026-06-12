@@ -62,6 +62,7 @@ Page({
       daysRemaining: 0
     },
     favoriteCount: 0,
+    recentItems: [],
     
     // Menu Configuration
     menuItems: [
@@ -146,9 +147,11 @@ Page({
       this.loadFavoritesCount()
       this.syncUserInfo()
       this.checkTodayCheckIn()
+      this.loadRecentItems()
     } else if (isLoggedIn) {
       // 已登录，静默刷新（不阻塞）
       this.loadFavoritesCount()
+      this.loadRecentItems()
     }
   },
 
@@ -200,6 +203,35 @@ Page({
       }
     } catch (e) {
       console.error('加载收藏数失败:', e)
+    }
+  },
+
+  // 🔥 最近使用：从下载记录中取最近 6 个
+  loadRecentItems() {
+    try {
+      const history = getStorage('downloadHistory') || []
+      const recent = history.slice(0, 6).map(item => ({
+        url: item.url || item.coverUrl,
+        coverUrl: item.coverUrl || item.url,
+        type: item.type || 'wallpaper',
+        title: item.title || ''
+      }))
+      this.setData({ recentItems: recent })
+    } catch (e) {}
+  },
+
+  onRecentTap(e) {
+    const item = e.currentTarget.dataset.item
+    if (!item || !item.url) return
+    
+    if (item.type === 'avatar') {
+      wx.navigateTo({
+        url: `/subpackages/preview/preview?url=${encodeURIComponent(item.url)}&isAvatar=true`
+      })
+    } else {
+      wx.navigateTo({
+        url: `/subpackages/wallpaper-preview/wallpaper-preview?url=${encodeURIComponent(item.url)}`
+      })
     }
   },
 

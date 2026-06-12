@@ -87,6 +87,23 @@
     <text class="hint-text">登录后可查看收藏与下载记录</text>
   </view>
 
+  <!-- 最近使用 -->
+  <view class="recent-section" wx:if="{{userInfo && recentItems.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">最近使用</text>
+      <view class="section-more" bindtap="openDownloadHistory">
+        <text>查看全部</text>
+        <image class="arrow-right" src="../../images/icon-arrow.png" mode="widthFix"></image>
+      </view>
+    </view>
+    <scroll-view class="recent-scroll" scroll-x enable-flex>
+      <view class="recent-item" wx:for="{{recentItems}}" wx:key="url" bindtap="onRecentTap" data-item="{{item}}">
+        <image class="recent-img" src="{{item.coverUrl || item.url}}" mode="aspectFill" lazy-load></image>
+        <text class="recent-type">{{item.type === 'avatar' ? '头像' : '壁纸'}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
   <!-- 菜单列表 -->
   <view class="menu-section">
     <block wx:for="{{menuItems}}" wx:key="title">

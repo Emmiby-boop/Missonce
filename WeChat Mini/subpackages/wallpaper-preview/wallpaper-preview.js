@@ -1005,6 +1005,12 @@ Page({
       return
     }
     this.setData({ isDownloading: true })
+    
+    // 🔥 埋点：下载开始
+    getApp().logEvent('download_start', {
+      type: 'wallpaper',
+      url: this.data.currentUrl
+    })
 
     try {
       if (!this.checkLogin()) {

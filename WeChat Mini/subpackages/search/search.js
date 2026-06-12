@@ -1,4 +1,4 @@
-﻿import { getResources, getCategories } from '../../utils/api.js'
+import { getResources, getCategories } from '../../utils/api.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
 import { getStorage, getTheme, setStorage } from '../../utils/storageManager.js'
 
@@ -39,6 +39,7 @@ Page({
 
   onLoad(options) {
     this.loadCategories()
+    this.loadHotTags()
     this.loadHistory()
     this.loadPageAds()
     
@@ -93,14 +94,13 @@ Page({
       const nativeBottom = pickByType(list, 'native_bottom')[0] || null
       const bottomNativeVideo = (list || []).find(it => it.type === 'native_video' && (it.position === 'bottom' || !it.position) && it.isEnable) || null
       const chosenBottom = nativeBottom || bottomNativeVideo
-      // 确保广告显示
-      this.setData({ 
-        bottomNativeVideoAd: chosenBottom || {}, 
-        showBottomNativeAd: true 
-      })
+      if (chosenBottom) {
+        this.setData({ 
+          bottomNativeVideoAd: chosenBottom, 
+          showBottomNativeAd: true 
+        })
+      }
     } catch (e) {
-      // 即使出错也显示广告
-      this.setData({ showBottomNativeAd: true })
     }
   },
 

@@ -8,10 +8,37 @@ let externalAdPlaying = false
 let interstitialShowing = false
 let appStartTime = Date.now() // 记录小程序启动时间
 let _triggerTimer = null
+let dailyShowCount = 0
+let dailyResetDate = ''
+
+// 🔥 初始化每日计数
+function initDailyCount() {
+  const today = new Date().toDateString()
+  if (dailyResetDate !== today) {
+    dailyResetDate = today
+    dailyShowCount = 0
+    try {
+      const saved = wx.getStorageSync('ad_daily_count')
+      if (saved && saved.date === today) {
+        dailyShowCount = saved.count || 0
+      }
+    } catch (e) {}
+  }
+}
+
+function saveDailyCount() {
+  try {
+    wx.setStorageSync('ad_daily_count', {
+      date: dailyResetDate,
+      count: dailyShowCount
+    })
+  } catch (e) {}
+}
 
 const COOLDOWN_TIME = 60 * 1000 // 1分钟冷却时间
 const MIN_TRIGGER_INTERVAL = 3000 // 最小触发间隔3秒，避免过于频繁
 const MIN_APP_START_TIME = 3000 // 小程序启动后至少3秒才能显示插屏广告
+const DAILY_LIMIT = 8 // 每日最多显示 8 次插屏广告
 
 /**
  * 初始化插屏广告
@@ -119,6 +146,12 @@ function canShowInterstitialAd() {
     return false
   }
   
+  // 🔥 每日次数限制
+  initDailyCount()
+  if (dailyShowCount >= DAILY_LIMIT) {
+    return false
+  }
+  
   return true
 }
 
@@ -136,6 +169,10 @@ async function showInterstitialAd() {
     interstitialShowing = true
     
     await globalInterstitialAd.show()
+    
+    // 🔥 增加每日计数
+    dailyShowCount++
+    saveDailyCount()
     
     return true
   } catch (e) {
