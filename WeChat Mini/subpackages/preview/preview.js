@@ -1010,18 +1010,38 @@ Page({
     const { recordShareReward } = require('../../utils/shareReward.js')
     setTimeout(() => recordShareReward(), 500)
     const { currentUrl, currentIndex, imageList, isAvatar, currentAvatar } = this.data
-    const title = currentAvatar?.title || '发现了一个超好看的头像'
+    
+    // 🔥 生成更好的分享标题
+    let title = '发现了一个超好看的头像'
+    if (currentAvatar) {
+      const categories = currentAvatar.categories || []
+      const tags = currentAvatar.tags || []
+      const firstTag = categories[0] || tags[0] || ''
+      if (firstTag) {
+        title = `${firstTag}头像 | 小辣椒壁纸`
+      } else if (currentAvatar.title && !currentAvatar.title.includes('.')) {
+        title = currentAvatar.title
+      }
+    }
+    
     return {
       title: title,
-      path: `/subpackages/preview/preview?url=${encodeURIComponent(currentUrl)}&isAvatar=${isAvatar}&currentIndex=${currentIndex}&imageList=${encodeURIComponent(JSON.stringify(imageList))}`,
+      path: `/subpackages/preview/preview?url=${encodeURIComponent(currentUrl)}&isAvatar=${isAvatar}&currentIndex=${currentIndex}`,
       imageUrl: currentUrl
     }
   },
 
   onShareTimeline() {
     const { currentUrl, currentAvatar } = this.data
+    const categories = currentAvatar?.categories || []
+    const tags = currentAvatar?.tags || []
+    const firstTag = categories[0] || tags[0] || ''
+    let title = '小辣椒头像壁纸 | 精美头像免费下载'
+    if (firstTag) {
+      title = `${firstTag}头像 | 小辣椒壁纸`
+    }
     return {
-      title: currentAvatar?.title || '发现了一个超好看的头像',
+      title: title,
       query: `url=${encodeURIComponent(currentUrl)}&isAvatar=${this.data.isAvatar}`,
       imageUrl: currentUrl
     }

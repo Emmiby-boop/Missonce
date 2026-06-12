@@ -881,16 +881,37 @@ Page({
   onShareAppMessage() {
     const { recordShareReward } = require('../../utils/shareReward.js')
     setTimeout(() => recordShareReward(), 500)
+    
+    // 🔥 生成更好的分享标题
+    const wallpaperData = this.data.wallpaperData || {}
+    const categories = wallpaperData.categories || []
+    const tags = wallpaperData.tags || []
+    const firstTag = categories[0] || tags[0] || ''
+    let title = '发现了一张超好看的壁纸'
+    if (firstTag) {
+      title = `${firstTag}壁纸 | 小辣椒壁纸`
+    } else if (wallpaperData.title && !wallpaperData.title.includes('.')) {
+      title = wallpaperData.title
+    }
+    
     return {
-      title: '发现了一个超好看的壁纸',
+      title: title,
       path: `/subpackages/wallpaper-preview/wallpaper-preview?url=${encodeURIComponent(this.data.currentUrl)}`,
       imageUrl: this.data.currentUrl
     }
   },
 
   onShareTimeline() {
+    const wallpaperData = this.data.wallpaperData || {}
+    const categories = wallpaperData.categories || []
+    const tags = wallpaperData.tags || []
+    const firstTag = categories[0] || tags[0] || ''
+    let title = '小辣椒头像壁纸 | 精美壁纸免费下载'
+    if (firstTag) {
+      title = `${firstTag}壁纸 | 小辣椒壁纸`
+    }
     return {
-      title: '发现了一个超好看的壁纸',
+      title: title,
       imageUrl: this.data.currentUrl
     }
   },
