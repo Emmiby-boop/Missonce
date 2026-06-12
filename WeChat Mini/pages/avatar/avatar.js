@@ -35,7 +35,14 @@ Page({
     showBottomNativeAd: false,
   },
   
-  _isLoadingData: false, // 🔥 防止重复请求
+  _isLoadingData: false,
+  _isHiding: false,
+
+  // 🔥 安全的 setData：页面隐藏时跳过更新
+  _safeSetData(data, callback) {
+    if (this._isHiding) return
+    this.setData(data, callback)
+  },
 
 
   async onLoad(options) {
@@ -229,13 +236,18 @@ Page({
   },
 
   onUnload() {
+    this._isHiding = true
     if (this._observer) this._observer.disconnect()
   },
 
   onShow() {
+    this._isHiding = false
     getApp().logEvent('pv', { page: 'avatar' })
     this.syncTheme()
-    
+  },
+
+  onHide() {
+    this._isHiding = true
   },
 
   syncTheme() {
@@ -409,7 +421,7 @@ Page({
         dataUpdate.avatars = [...this.data.avatars, ...processedAvatars]
       }
       
-      this.setData(dataUpdate, () => {
+      this._safeSetData(dataUpdate, () => {
         this._isLoadingData = false
         wx.stopPullDownRefresh()
         

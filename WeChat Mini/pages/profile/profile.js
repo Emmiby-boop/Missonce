@@ -72,6 +72,14 @@ Page({
     ]
   },
 
+  _isHiding: false,
+
+  // 🔥 安全的 setData：页面隐藏时跳过更新
+  _safeSetData(data, callback) {
+    if (this._isHiding) return
+    this.setData(data, callback)
+  },
+
   onLoad() {
     performanceMonitor.startPageLoad('个人中心')
     this.initNavBar()
@@ -124,6 +132,7 @@ Page({
   },
 
   onShow() {
+    this._isHiding = false
     // 🔥 只在登录状态变化时同步数据，避免每次 onShow 都调用
     const wasLoggedIn = !!this.data.userInfo
     this.checkLoginStatus()
@@ -141,6 +150,10 @@ Page({
       // 已登录，静默刷新（不阻塞）
       this.loadFavoritesCount()
     }
+  },
+
+  onHide() {
+    this._isHiding = true
   },
 
   syncTheme() {

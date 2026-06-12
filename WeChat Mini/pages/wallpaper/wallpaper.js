@@ -37,7 +37,14 @@ Page({
     showBottomNativeAd: false
   },
   
-  _isLoadingData: false, // 🔥 防止重复请求
+  _isLoadingData: false,
+  _isHiding: false,
+
+  // 🔥 安全的 setData：页面隐藏时跳过更新
+  _safeSetData(data, callback) {
+    if (this._isHiding) return
+    this.setData(data, callback)
+  },
 
 
 
@@ -233,14 +240,20 @@ Page({
   },
 
   onUnload() {
+    this._isHiding = true
     if (this._observer) this._observer.disconnect()
   },
 
   onShow() {
+    this._isHiding = false
     getApp().logEvent('pv', { page: 'wallpaper' })
     this.syncTheme()
     // 页面显示时智能触发插屏广告（带冷却时间检查）
     interstitialAdManager.smartTriggerInterstitialAd(2000)
+  },
+
+  onHide() {
+    this._isHiding = true
   },
 
   syncTheme() {
@@ -406,7 +419,7 @@ Page({
           dataUpdate.wallpapers = [...this.data.wallpapers, ...newWallpapers]
         }
         
-        this.setData(dataUpdate, () => {
+        this._safeSetData(dataUpdate, () => {
           this._isLoadingData = false
           wx.stopPullDownRefresh()
           
