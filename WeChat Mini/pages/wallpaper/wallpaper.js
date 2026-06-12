@@ -5,7 +5,6 @@ import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
 import logger from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
-import interstitialAdManager from '../../utils/interstitialAdManager.js'
 import { getWindowInfo, getStorage, getTheme } from '../../utils/storageManager'
 
 Page({
@@ -43,45 +42,45 @@ Page({
 
   async onLoad(options) {
     performanceMonitor.startPageLoad('壁纸页')
-    this.initNavBar()
-    performanceMonitor.markMilestone('壁纸页', '初始化完成')
     
+    // 🔥 合并初始化 + 缓存渲染 → 1 次 setData
+    const info = getWindowInfo()
+    const updates = {
+      statusBarHeight: info.statusBarHeight || 20,
+      navBarHeight: 44
+    }
     
-    
-    // 1. 优先尝试加载缓存
+    // 优先尝试加载缓存（Stale-While-Revalidate 第一步）
     const cachedWallpapers = getStorage('wallpaper_list_cache')
-    if (cachedWallpapers) {
-      this.setData({ wallpapers: cachedWallpapers })
+    if (cachedWallpapers && cachedWallpapers.length > 0) {
+      updates.wallpapers = cachedWallpapers
+      updates.loading = false
       performanceMonitor.markMilestone('壁纸页', '缓存加载完成')
     }
-
-    // 🔥 优化：板块加载改为后台异步，不阻塞页面
-    performanceMonitor.markMilestone('壁纸页', '开始加载板块')
+    
+    this.setData(updates)
+    performanceMonitor.markMilestone('壁纸页', '初始化完成')
+    
+    // 处理路由参数
+    if (options && (options.category || options.tag)) {
+      this.setData({
+        currentTag: options.tag || options.category
+      })
+    }
+    
+    // 🔥 并行加载非关键数据（不阻塞首屏）
     this.loadPageSections()
-
-    // 🔥 优化：同时启动默认布局加载，不等待板块
     this.loadNavTags()
     this.loadPageAds()
     
-    if (options) {
-      const { category, tag } = options
-      const updates = {}
-      if (category || tag) updates.currentTag = tag || category
-      if (Object.keys(updates).length) {
-        this.setData(updates, () => this.loadWallpapers())
-      } else {
-        this.loadWallpapers()
-      }
-    } else {
-      this.loadWallpapers()
-    }
-
+    // 🔥 加载壁纸数据（首屏关键路径）
+    this.loadWallpapers()
+    
     // 优化：使用 IntersectionObserver 替代 onPageScroll
     this._observer = wx.createIntersectionObserver(this)
     this._observer
       .relativeToViewport()
       .observe('.nav-holder', (res) => {
-        // 当顶部占位元素离开视口时（即向下滚动了），显示回到顶部按钮
         const showBackToTop = res.intersectionRatio === 0
         if (showBackToTop !== this.data.showBackToTop) {
           this.setData({ showBackToTop })
@@ -240,7 +239,7 @@ Page({
     getApp().logEvent('pv', { page: 'wallpaper' })
     this.syncTheme()
     // 页面显示时智能触发插屏广告（带冷却时间检查）
-    interstitialAdManager.smartTriggerInterstitialAd(2000)
+    import('../../utils/interstitialAdManager.js').then(m => m.default.smartTriggerInterstitialAd(2000)).catch(() => {})
   },
 
   syncTheme() {
@@ -250,21 +249,32 @@ Page({
 
   async loadNavTags() {
     try {
+      // 🔥 优先从缓存读取标签
+      const cachedTags = getStorage('wallpaper_tags_cache')
+      if (cachedTags && cachedTags.length > 0) {
+        const batchSize = this.data.tagBatchSize || 30
+        this.setData({
+          tagList: cachedTags.slice(0, batchSize),
+          _allTags: cachedTags,
+          tagsLoading: false
+        })
+        return
+      }
+      
       const res = await getCategories({ type: 'wallpaper', source: 'tags' })
       
       if (res.result.success) {
-        // 过滤掉 'all' 或 '全部'，避免重复
         const allTags = res.result.data.filter(t => t.id !== 'all' && t.name !== '全部')
-        // 分批渲染：首屏只渲染前 30 个
         const batchSize = this.data.tagBatchSize || 30
-        const initialTags = allTags.slice(0, batchSize)
-
+        
+        // 🔥 缓存标签数据
+        cacheManager.set('wallpaper_tags_cache', allTags, CACHE_EXPIRE.LONG)
+        
         this.setData({
-          tagList: initialTags,
+          tagList: allTags.slice(0, batchSize),
           _allTags: allTags,
           tagsLoading: false
         })
-        // console.log('成功从资源库实时加载壁纸标签:', res.result.data)
       } else {
         this.setData({ tagsLoading: false })
       }
@@ -347,14 +357,13 @@ Page({
     if (this._isLoadingData || !this.data.hasMore) return
     this._isLoadingData = true
     
-    // 如果是第一页，显示加载状态
-    if (this.data.page === 1) {
+    // 如果是第一页且无缓存，显示加载状态
+    if (this.data.page === 1 && this.data.wallpapers.length === 0) {
       this.setData({ loading: true })
     }
     
     try {
       const currentTag = this.data.currentTag
-      // 构建查询参数
       const params = {
         type: 'wallpaper',
         page: this.data.page,
@@ -362,7 +371,6 @@ Page({
         sort: this.data.sortType
       }
       
-      // 如果有标签筛选
       if (currentTag !== 'all') {
         params.tag = currentTag
       }
@@ -370,31 +378,34 @@ Page({
       const res = await getResources(params)
       
       if (res.result.success) {
-        // 直接使用 cloudID，移除 resolveUrl 的耗时操作
-        const newWallpapers = (res.result.data || []).map((item) => {
-          return {
-            id: item.id,
-            url: item.coverUrl,
-            originalUrl: item.originUrl,
-            rawUrl: item.coverUrl,
-            rawOriginalUrl: item.originUrl,
-            title: item.title,
-            categories: item.categories,
-            tags: item.tags
-          }
-        })
+        const newWallpapers = (res.result.data || []).map((item) => ({
+          id: item.id,
+          url: item.coverUrl,
+          originalUrl: item.originUrl,
+          rawUrl: item.coverUrl,
+          rawOriginalUrl: item.originUrl,
+          title: item.title,
+          categories: item.categories,
+          tags: item.tags
+        }))
         
         const nextPage = this.data.page + 1
-        const hasMore = res.result.data.length === 12 // 如果返回的数据达到pageSize，说明还有更多
+        const hasMore = res.result.data.length === 12
         
-        const updatedWallpapers = this.data.page === 1 ? newWallpapers : [...this.data.wallpapers, ...newWallpapers]
-
-        this.setData({
-          wallpapers: updatedWallpapers,
+        // 🔥 合并所有数据更新 → 1 次 setData
+        const dataUpdate = {
           page: nextPage,
           loading: false,
           hasMore
-        }, () => {
+        }
+        
+        if (this.data.page === 1) {
+          dataUpdate.wallpapers = newWallpapers
+        } else {
+          dataUpdate.wallpapers = [...this.data.wallpapers, ...newWallpapers]
+        }
+        
+        this.setData(dataUpdate, () => {
           this._isLoadingData = false
           wx.stopPullDownRefresh()
           
@@ -408,15 +419,15 @@ Page({
             }
             
             logger.logPageView('pages/wallpaper/wallpaper')
-          }
-          
-          if (params.page === 1 && params.tag === 'all') {
-            wx.setStorage({ key: 'wallpaper_list_cache', data: newWallpapers })
+            
+            // 🔥 缓存第一页数据（带 TTL）
+            if (params.tag === 'all' || params.tag === undefined) {
+              cacheManager.set('wallpaper_list_cache', newWallpapers, CACHE_EXPIRE.MEDIUM)
+            }
           }
         })
       } else {
-        // 尝试使用缓存
-        if (this.data.page === 1) {
+        if (this.data.page === 1 && this.data.wallpapers.length === 0) {
           const cached = getStorage('wallpaper_list_cache')
           if (cached) {
             this.setData({ wallpapers: cached, loading: false })
@@ -425,23 +436,16 @@ Page({
             return
           }
         }
-        this.setData({ 
-          loading: false,
-          hasMore: false 
-        }, () => {
+        this.setData({ loading: false, hasMore: false }, () => {
           this._isLoadingData = false
           wx.stopPullDownRefresh()
-          wx.showToast({
-            title: '加载失败',
-            icon: 'none'
-          })
+          wx.showToast({ title: '加载失败', icon: 'none' })
         })
       }
       
     } catch (error) {
       console.error('加载壁纸失败:', error)
-      // 尝试使用缓存
-      if (this.data.page === 1) {
+      if (this.data.page === 1 && this.data.wallpapers.length === 0) {
         const cached = getStorage('wallpaper_list_cache')
         if (cached) {
           this.setData({ wallpapers: cached, loading: false })
@@ -450,16 +454,10 @@ Page({
           return
         }
       }
-      this.setData({ 
-        loading: false,
-        hasMore: false 
-      }, () => {
+      this.setData({ loading: false, hasMore: false }, () => {
         this._isLoadingData = false
         wx.stopPullDownRefresh()
-        wx.showToast({
-          title: '加载失败',
-          icon: 'none'
-        })
+        wx.showToast({ title: '加载失败', icon: 'none' })
       })
     }
   },

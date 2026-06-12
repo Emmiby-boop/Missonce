@@ -196,6 +196,18 @@ App({
         console.log("[预热] 头像列表缓存已更新")
       }
     }).catch(() => {})
+    
+    // 🔥 预热壁纸列表缓存（热门排序，第一页）
+    wx.cloud.callFunction({
+      name: "getResources",
+      data: { type: "wallpaper", page: 1, pageSize: 12, sort: "hot" }
+    }).then(res => {
+      if (res.result && res.result.success && res.result.data) {
+        const { setStorage } = require("./utils/storageManager")
+        setStorage("wallpaper_list_cache", res.result.data)
+        console.log("[预热] 壁纸列表缓存已更新")
+      }
+    }).catch(() => {})
   },
 
   logEvent(type, data = {}) {

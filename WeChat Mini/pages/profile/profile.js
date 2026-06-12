@@ -124,11 +124,23 @@ Page({
   },
 
   onShow() {
+    // 🔥 只在登录状态变化时同步数据，避免每次 onShow 都调用
+    const wasLoggedIn = !!this.data.userInfo
     this.checkLoginStatus()
-    this.loadFavoritesCount()
-    this.syncUserInfo()
-    this.checkTodayCheckIn()
+    const isLoggedIn = !!this.data.userInfo
+    
     this.syncTheme()
+    
+    // 首次显示或登录状态变化时才加载数据
+    if (!wasLoggedIn && isLoggedIn) {
+      // 刚登录，加载所有数据
+      this.loadFavoritesCount()
+      this.syncUserInfo()
+      this.checkTodayCheckIn()
+    } else if (isLoggedIn) {
+      // 已登录，静默刷新（不阻塞）
+      this.loadFavoritesCount()
+    }
   },
 
   syncTheme() {
@@ -146,38 +158,35 @@ Page({
     }
 
     try {
+      // 🔥 优先使用本地缓存
+      const favorites = getStorage('favorites') || []
+      if (favorites.length > 0) {
+        this.setData({
+          'stats.favorites': favorites.length,
+          favoriteCount: favorites.length
+        })
+      }
+      
+      // 静默同步云端准确数量
       const openid = getStorage('openid')
       if (!openid) return
 
       const db = wx.cloud.database()
-      const [favRes] = await Promise.all([
-        db.collection('favorites').where({ _openid: openid }).count()
-      ])
-
+      const favRes = await db.collection('favorites').where({ _openid: openid }).count()
       const favCount = favRes.total || 0
       
-      // Update both stats object (for WXML) and legacy favoriteCount
       this.setData({
         'stats.favorites': favCount,
         favoriteCount: favCount
       })
       
-      // Sync legacy local storage if needed
       if (favCount === 0) {
         try {
           wx.setStorage({ key: 'favorites', data: [] })
         } catch (e) {}
       }
     } catch (e) {
-      console.error('加载统计数据失败:', e)
-      // Fallback to local storage if cloud fails
-      try {
-        const favorites = getStorage('favorites') || []
-        this.setData({ 
-          'stats.favorites': favorites.length,
-          favoriteCount: favorites.length 
-        })
-      } catch (err) {}
+      console.error('加载收藏数失败:', e)
     }
   },
 
@@ -267,22 +276,8 @@ Page({
       this.setData({ displayAvatarUrl: '/images/default-avatar.png' })
       return
     }
-    // 如果是云存储ID，需要转换
-    if (avatarUrl.startsWith('cloud://')) {
-      wx.cloud.getTempFileURL({
-        fileList: [avatarUrl],
-        success: res => {
-          if (res.fileList && res.fileList[0].tempFileURL) {
-            this.setData({ displayAvatarUrl: res.fileList[0].tempFileURL })
-          }
-        },
-        fail: () => {
-          this.setData({ displayAvatarUrl: avatarUrl })
-        }
-      })
-    } else {
-      this.setData({ displayAvatarUrl: avatarUrl })
-    }
+    // 🔥 cloud:// 链接直接使用，微信小程序 image 组件原生支持
+    this.setData({ displayAvatarUrl: avatarUrl })
   },
 
   async checkTodayCheckIn() {
@@ -670,25 +665,26 @@ Page({
       const db = wx.cloud.database()
       const openid = getStorage('openid')
 
-      // 1. 清空云端数据
+      // 🔥 使用批量删除，每次最多删 20 条（微信限制）
       if (openid) {
-        const batchDelete = async () => {
+        let hasMore = true
+        while (hasMore) {
           const res = await db.collection('favorites').where({
             _openid: openid
-          }).limit(100).get()
+          }).limit(20).get()
           
-          if (res.data.length > 0) {
+          if (res.data.length === 0) {
+            hasMore = false
+          } else {
             const deletePromises = res.data.map(item => 
               db.collection('favorites').doc(item._id).remove()
             )
             await Promise.all(deletePromises)
-            await batchDelete()
           }
         }
-        await batchDelete()
       }
 
-      // 2. 清空本地数据
+      // 清空本地数据
       this.setData({ 
         favoritesList: [],
         favoritesEnded: true 
@@ -697,17 +693,11 @@ Page({
       this.loadFavoritesCount()
 
       wx.hideLoading()
-      wx.showToast({
-        title: '已清空全部收藏',
-        icon: 'success'
-      })
+      wx.showToast({ title: '已清空全部收藏', icon: 'success' })
     } catch (err) {
       console.error('清空收藏失败:', err)
       wx.hideLoading()
-      wx.showToast({
-        title: '清空失败，请重试',
-        icon: 'none'
-      })
+      wx.showToast({ title: '清空失败，请重试', icon: 'none' })
     }
   },
 
@@ -798,25 +788,26 @@ Page({
             const db = wx.cloud.database()
             const openid = getStorage('openid')
 
-            // 1. 清空云端数据
+            // 🔥 使用批量删除
             if (openid) {
-              const batchDelete = async () => {
+              let hasMore = true
+              while (hasMore) {
                 const res = await db.collection('downloads').where({
                   _openid: openid
-                }).limit(100).get()
+                }).limit(20).get()
                 
-                if (res.data.length > 0) {
+                if (res.data.length === 0) {
+                  hasMore = false
+                } else {
                   const deletePromises = res.data.map(item => 
                     db.collection('downloads').doc(item._id).remove()
                   )
                   await Promise.all(deletePromises)
-                  await batchDelete()
                 }
               }
-              await batchDelete()
             }
 
-            // 2. 清空本地数据
+            // 清空本地数据
             wx.removeStorageSync('downloadHistory')
             this.setData({ 
               downloadHistory: [],
