@@ -1,4 +1,4 @@
-﻿import { getHomeData, getPersonalizedRecommendations, onHomeDataRefresh, getFavoritesCount, getFavorites } from '../../utils/api.js'
+import { getHomeData, getPersonalizedRecommendations, onHomeDataRefresh, getFavoritesCount, getFavorites } from '../../utils/api.js'
 import { checkLoginStatus, loginWithProfile } from '../../utils/auth'
 import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js'
 import logger from '../../utils/logger.js'
@@ -6,6 +6,9 @@ import { cacheManager } from '../../utils/cache.js'
 import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
 import { getWindowInfo, getStorage, setStorage, getTheme } from '../../utils/storageManager'
+import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import { notificationService } from '../../services/notificationService.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
  
 
 Page({
@@ -130,8 +133,8 @@ Page({
       const pages = getCurrentPages()
       const current = pages && pages.length ? pages[pages.length - 1] : null
       const route = current?.route || 'pages/index/index'
-      const { fetchPageAds: _fpa, pickByType: _pbt } = await import('../../utils/adUtil.js'); const list = await _fpa(route.startsWith('/') ? route : '/' + route)
-      let nativeTop = _pbt(list, 'native_top')[0] || null
+      const list = await fetchPageAds(route.startsWith('/') ? route : '/' + route)
+      let nativeTop = pickByType(list, 'native_top')[0] || null
       if (!nativeTop) {
         const topNativeVideo = (list || []).find(it => it.type === 'native_video' && it.position === 'top' && it.isEnable)
         if (topNativeVideo) nativeTop = topNativeVideo
@@ -420,7 +423,7 @@ Page({
     this.syncTheme()
     
     // 页面显示时智能触发插屏广告（带冷却时间检查）
-    import('../../utils/interstitialAdManager.js').then(m => m.default.smartTriggerInterstitialAd(2000)).catch(() => {})
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
   },
 
   onHide() {
@@ -914,7 +917,7 @@ Page({
     if (this._notificationBadgeLoading) return
     this._notificationBadgeLoading = true
     try {
-      const { notificationService: _ns } = await import('../../services/notificationService.js'); const unreadCount = await _ns.getUnreadCount()
+      const unreadCount = await notificationService.getUnreadCount()
       this.setData({ unreadNotificationCount: unreadCount })
     } catch (e) {
     } finally {
@@ -924,8 +927,8 @@ Page({
 
   async checkAnnouncement() {
     try {
-      const { notificationService: _ns2 } = await import('../../services/notificationService.js'); const notifications = await _ns2.getActiveNotifications()
-      const readIds = await _ns2.getUserReadStatus()
+      const notifications = await notificationService.getActiveNotifications()
+      const readIds = await notificationService.getUserReadStatus()
       const popupAnnouncements = notifications.filter(n => 
         n.showPopup && !readIds.includes(n._id)
       )
@@ -957,7 +960,7 @@ Page({
     }
 
     if (currentAnnouncement) {
-      import('../../services/notificationService.js').then(m => m.notificationService.markAsRead(currentAnnouncement._id)).catch(() => {})
+      notificationService.markAsRead(currentAnnouncement._id).catch(() => {})
     }
 
     this.setData({

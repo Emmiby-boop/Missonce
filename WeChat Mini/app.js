@@ -154,10 +154,10 @@ App({
   },
 
   async initLoginStatus() {
-    // 动态导入 auth 模块
+    // 使用 require 而非动态导入（微信小程序兼容性更好）
     try {
-      const { checkLoginStatus } = await import("./utils/auth")
-      checkLoginStatus()
+      const auth = require("./utils/auth")
+      auth.checkLoginStatus()
     } catch (e) {
       console.error("auth 模块加载失败:", e)
     }

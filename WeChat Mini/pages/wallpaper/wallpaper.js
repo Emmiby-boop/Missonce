@@ -5,6 +5,7 @@ import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
 import logger from '../../utils/logger.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
+import interstitialAdManager from '../../utils/interstitialAdManager.js'
 import { getWindowInfo, getStorage, getTheme } from '../../utils/storageManager'
 
 Page({
@@ -239,7 +240,7 @@ Page({
     getApp().logEvent('pv', { page: 'wallpaper' })
     this.syncTheme()
     // 页面显示时智能触发插屏广告（带冷却时间检查）
-    import('../../utils/interstitialAdManager.js').then(m => m.default.smartTriggerInterstitialAd(2000)).catch(() => {})
+    interstitialAdManager.smartTriggerInterstitialAd(2000)
   },
 
   syncTheme() {
