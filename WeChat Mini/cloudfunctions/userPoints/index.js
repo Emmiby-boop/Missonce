@@ -77,6 +77,10 @@ exports.main = async (event, context) => {
         return await getExchangeOptions()
       case 'rewardAdWatch':
         return await rewardAdWatch(openid)
+      case 'recordShare':
+        return await recordShare(openid)
+      case 'getShareStatus':
+        return await getShareStatus(openid)
       default:
         return { success: false, error: '无效的 action' }
     }
@@ -980,5 +984,73 @@ async function getExchangeOptions() {
 
       downloadPoints: POINTS_CONFIG.downloadPoints
     }
+  }
+}
+
+// ============================================================
+// 分享奖励功能
+// ============================================================
+
+function formatDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+async function recordShare(openid) {
+  try {
+    const today = formatDate(new Date())
+    
+    // 检查今日分享次数
+    const shareCountRes = await db.collection('share_records')
+      .where({ _openid: openid, date: today })
+      .count()
+    
+    if (shareCountRes.total >= POINTS_CONFIG.shareDailyLimit) {
+      return {
+        success: false,
+        error: `今日分享次数已用完（每日${POINTS_CONFIG.shareDailyLimit}次）`,
+        todayCount: shareCountRes.total,
+        dailyLimit: POINTS_CONFIG.shareDailyLimit
+      }
+    }
+    
+    // 记录分享
+    await db.collection('share_records').add({
+      data: { _openid: openid, date: today, createdAt: new Date() }
+    })
+    
+    // 发放积分
+    const points = POINTS_CONFIG.sharePoints
+    const userRes = await db.collection('user_points').where({ _openid: openid }).limit(1).get()
+    const user = userRes.data[0]
+    const totalPoints = (user ? user.points : 0) + points
+    
+    await db.collection('user_points').doc(user._id).update({
+      data: { points: totalPoints, totalPoints: _.inc(points), updatedAt: new Date() }
+    })
+    
+    return { success: true, points, totalPoints, todayCount: shareCountRes.total + 1, dailyLimit: POINTS_CONFIG.shareDailyLimit }
+  } catch (e) {
+    console.error('recordShare 错误:', e)
+    return { success: false, error: e.message }
+  }
+}
+
+async function getShareStatus(openid) {
+  try {
+    const today = formatDate(new Date())
+    const shareCountRes = await db.collection('share_records')
+      .where({ _openid: openid, date: today })
+      .count()
+    
+    return {
+      success: true,
+      todayCount: shareCountRes.total,
+      dailyLimit: POINTS_CONFIG.shareDailyLimit,
+      canShare: shareCountRes.total < POINTS_CONFIG.shareDailyLimit,
+      pointsPerShare: POINTS_CONFIG.sharePoints
+    }
+  } catch (e) {
+    console.error('getShareStatus 错误:', e)
+    return { success: false, error: e.message }
   }
 }
