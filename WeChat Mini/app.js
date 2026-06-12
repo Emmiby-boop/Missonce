@@ -1,4 +1,4 @@
-﻿import logger from "./utils/logger"
+import logger from "./utils/logger"
 import { initStorageCache } from "./utils/storageManager"
 
 const originalPage = Page
@@ -183,6 +183,18 @@ App({
     wx.cloud.callFunction({
       name: "getPageSections",
       data: { type: "avatar" }
+    }).catch(() => {})
+    
+    // 🔥 预热头像列表缓存（热门排序，第一页）
+    wx.cloud.callFunction({
+      name: "getResources",
+      data: { type: "avatar", page: 1, pageSize: 12, sort: "hot" }
+    }).then(res => {
+      if (res.result && res.result.success && res.result.data) {
+        const { setStorage } = require("./utils/storageManager")
+        setStorage("avatar_list_cache", res.result.data)
+        console.log("[预热] 头像列表缓存已更新")
+      }
     }).catch(() => {})
   },
 

@@ -40,39 +40,40 @@ Page({
 
   async onLoad(options) {
     performanceMonitor.startPageLoad('头像页')
-    // 初始化导航栏
-    this.initNavBar()
-    performanceMonitor.markMilestone('头像页', '初始化完成')
     
+    // 🔥 合并初始化 + 缓存渲染 → 1 次 setData
+    const info = getWindowInfo()
+    const updates = {
+      statusBarHeight: info.statusBarHeight || 20,
+      navBarHeight: 44
+    }
     
-    
-    // 1. 优先尝试加载缓存
+    // 优先尝试加载缓存（Stale-While-Revalidate 第一步）
     const cachedAvatars = getStorage('avatar_list_cache')
-    if (cachedAvatars) {
-      this.setData({ avatars: cachedAvatars })
+    if (cachedAvatars && cachedAvatars.length > 0) {
+      updates.avatars = cachedAvatars
+      updates.loading = false
       performanceMonitor.markMilestone('头像页', '缓存加载完成')
     }
-
-    // 🔥 优化：板块加载改为后台异步，不阻塞页面
-    performanceMonitor.markMilestone('头像页', '开始加载板块')
+    
+    this.setData(updates)
+    performanceMonitor.markMilestone('头像页', '初始化完成')
+    
+    // 处理路由参数
+    if (options && (options.category || options.tag)) {
+      this.setData({
+        currentTag: options.tag || options.category
+      })
+    }
+    
+    // 🔥 并行加载非关键数据（不阻塞首屏）
     this.loadPageSections()
-
-    // 🔥 优化：同时启动默认布局加载，不等待板块
     this.loadNavTags()
     this.loadPageAds()
-    if (options) {
-      const { category, tag } = options
-      const updates = {}
-      if (category || tag) updates.currentTag = tag || category
-      if (Object.keys(updates).length) {
-        this.setData(updates, () => this.loadAvatars())
-      } else {
-        this.loadAvatars()
-      }
-    } else {
-      this.loadAvatars()
-    }
-
+    
+    // 🔥 加载头像数据（首屏关键路径）
+    this.loadAvatars()
+    
     // 优化：使用 IntersectionObserver 替代 onPageScroll
     this._observer = wx.createIntersectionObserver(this)
     this._observer
@@ -244,21 +245,31 @@ Page({
 
   async loadNavTags() {
     try {
-      // 直接从数据库所有图片的标签中实时读取展示
+      // 🔥 优先从缓存读取标签
+      const cachedTags = getStorage('avatar_tags_cache')
+      if (cachedTags && cachedTags.length > 0) {
+        const batchSize = this.data.tagBatchSize || 30
+        this.setData({
+          tagList: cachedTags.slice(0, batchSize),
+          _allTags: cachedTags,
+          tagsLoading: false
+        })
+        return
+      }
+      
       const res = await getCategories({ type: 'avatar', source: 'tags' })
       if (res.result.success) {
-        // 过滤掉 'all' 或 '全部'，避免重复
         const allTags = res.result.data.filter(t => t.id !== 'all' && t.name !== '全部')
-        // 分批渲染：首屏只渲染前 30 个
         const batchSize = this.data.tagBatchSize || 30
-        const initialTags = allTags.slice(0, batchSize)
+        
+        // 🔥 缓存标签数据
+        cacheManager.set('avatar_tags_cache', allTags, CACHE_EXPIRE.LONG)
         
         this.setData({
-          tagList: initialTags,
+          tagList: allTags.slice(0, batchSize),
           _allTags: allTags,
           tagsLoading: false
         })
-        // console.log('成功从资源库实时加载头像标签:', res.result.data)
       } else {
         this.setData({ tagsLoading: false })
       }
@@ -341,8 +352,8 @@ Page({
     if (this._isLoadingData || !this.data.hasMore) return
     this._isLoadingData = true
     
-    // 如果是第一页，显示加载状态
-    if (this.data.page === 1) {
+    // 如果是第一页且无缓存，显示加载状态
+    if (this.data.page === 1 && this.data.avatars.length === 0) {
       this.setData({ loading: true })
     }
     
@@ -361,15 +372,8 @@ Page({
     }
     
     getResources(params).then(async (res) => {
-      // console.log('getResources 返回:', res.result)
-      // console.log('查询参数:', params)
-      
       if (!res.result || !res.result.success) {
         console.error('getResources 请求失败:', res.result?.message)
-        wx.showToast({
-          title: '加载头像失败',
-          icon: 'none'
-        })
         this.setData({ loading: false })
         this._isLoadingData = false
         return
@@ -381,27 +385,31 @@ Page({
       const thumbSize = getOptimalThumbnailSize()
       const optimizedAvatars = optimizeImageUrls(newAvatars, 'coverUrl', thumbSize)
       
-      const processedAvatars = optimizedAvatars.map((item) => {
-        return {
-          ...item,
-          url: item.optimizedUrl || item.coverUrl, // 优先使用优化后的链接
-          originalUrl: item.originUrl,
-          rawUrl: item.coverUrl,
-          rawOriginalUrl: item.originUrl
-        }
-      })
+      const processedAvatars = optimizedAvatars.map((item) => ({
+        ...item,
+        url: item.optimizedUrl || item.coverUrl,
+        originalUrl: item.originUrl,
+        rawUrl: item.coverUrl,
+        rawOriginalUrl: item.originUrl
+      }))
       
       const nextPage = this.data.page + 1
       const hasMore = processedAvatars.length >= 12
       
-      const updatedAvatars = this.data.page === 1 ? processedAvatars : [...this.data.avatars, ...processedAvatars]
-
-      this.setData({
-        avatars: updatedAvatars,
+      // 🔥 合并所有数据更新 → 1 次 setData
+      const dataUpdate = {
         page: nextPage,
         loading: false,
         hasMore
-      }, () => {
+      }
+      
+      if (this.data.page === 1) {
+        dataUpdate.avatars = processedAvatars
+      } else {
+        dataUpdate.avatars = [...this.data.avatars, ...processedAvatars]
+      }
+      
+      this.setData(dataUpdate, () => {
         this._isLoadingData = false
         wx.stopPullDownRefresh()
         
@@ -415,21 +423,20 @@ Page({
           }
           
           logger.logPageView('pages/avatar/avatar')
-        }
-        
-        if (params.page === 1 && params.tag === undefined) {
-          wx.setStorage({ key: 'avatar_list_cache', data: processedAvatars })
+          
+          // 🔥 缓存第一页数据（带 TTL）
+          if (params.tag === undefined) {
+            cacheManager.set('avatar_list_cache', processedAvatars, CACHE_EXPIRE.MEDIUM)
+          }
         }
       })
     }).catch(error => {
       console.error('加载头像失败:', error)
-      this.setData({
-        loading: false
-      })
+      this.setData({ loading: false })
       this._isLoadingData = false
       
       // 如果是第一页加载失败，尝试读取缓存
-      if (this.data.page === 1) {
+      if (this.data.page === 1 && this.data.avatars.length === 0) {
         const cached = getStorage('avatar_list_cache')
         if (cached) {
           this.setData({ avatars: cached })
