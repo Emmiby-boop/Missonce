@@ -333,12 +333,16 @@ Page({
       tag: tag
     })
 
-    this.setData({
+    // 🔥 先停止任何正在进行的加载
+    this._isLoadingData = false
+    
+    this._safeSetData({
       currentTag: tag,
       wallpapers: [],
       page: 1,
       hasMore: true,
-      showCategoryPanel: false // 选择后关闭弹窗
+      loading: true,
+      showCategoryPanel: false
     }, () => {
       this.loadWallpapers()
     })
@@ -349,13 +353,18 @@ Page({
     const sortType = e.currentTarget.dataset.type
     if (sortType === this.data.sortType) return
     
-    this.setData({
+    // 🔥 先停止任何正在进行的加载
+    this._isLoadingData = false
+    
+    this._safeSetData({
       sortType: sortType,
       wallpapers: [],
       page: 1,
-      hasMore: true
+      hasMore: true,
+      loading: true
+    }, () => {
+      this.loadWallpapers()
     })
-    this.loadWallpapers()
   },
 
   initNavBar() {
@@ -373,7 +382,7 @@ Page({
     
     // 如果是第一页且无缓存，显示加载状态
     if (this.data.page === 1 && this.data.wallpapers.length === 0) {
-      this.setData({ loading: true })
+      this._safeSetData({ loading: true })
     }
     
     try {
@@ -444,13 +453,13 @@ Page({
         if (this.data.page === 1 && this.data.wallpapers.length === 0) {
           const cached = getStorage('wallpaper_list_cache')
           if (cached) {
-            this.setData({ wallpapers: cached, loading: false })
+            this._safeSetData({ wallpapers: cached, loading: false })
             this._isLoadingData = false
             wx.showToast({ title: '已为您展示离线内容', icon: 'none' })
             return
           }
         }
-        this.setData({ loading: false, hasMore: false }, () => {
+        this._safeSetData({ loading: false, hasMore: false }, () => {
           this._isLoadingData = false
           wx.stopPullDownRefresh()
           wx.showToast({ title: '加载失败', icon: 'none' })
@@ -462,13 +471,13 @@ Page({
       if (this.data.page === 1 && this.data.wallpapers.length === 0) {
         const cached = getStorage('wallpaper_list_cache')
         if (cached) {
-          this.setData({ wallpapers: cached, loading: false })
+          this._safeSetData({ wallpapers: cached, loading: false })
           this._isLoadingData = false
           wx.showToast({ title: '网络不可用，已为您展示离线内容', icon: 'none' })
           return
         }
       }
-      this.setData({ loading: false, hasMore: false }, () => {
+      this._safeSetData({ loading: false, hasMore: false }, () => {
         this._isLoadingData = false
         wx.stopPullDownRefresh()
         wx.showToast({ title: '加载失败', icon: 'none' })

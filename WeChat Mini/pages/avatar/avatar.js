@@ -326,12 +326,16 @@ Page({
       tag: tag
     })
 
-    this.setData({
+    // 🔥 先停止任何正在进行的加载
+    this._isLoadingData = false
+    
+    this._safeSetData({
       currentTag: tag,
       avatars: [],
       page: 1,
       hasMore: true,
-      showCategoryPanel: false // 选择后关闭弹窗
+      loading: true,
+      showCategoryPanel: false
     }, () => {
       this.loadAvatars()
     })
@@ -342,13 +346,18 @@ Page({
     const sortType = e.currentTarget.dataset.type
     if (sortType === this.data.sortType) return
     
-    this.setData({
+    // 🔥 先停止任何正在进行的加载
+    this._isLoadingData = false
+    
+    this._safeSetData({
       sortType: sortType,
       avatars: [],
       page: 1,
-      hasMore: true
+      hasMore: true,
+      loading: true
+    }, () => {
+      this.loadAvatars()
     })
-    this.loadAvatars()
   },
 
   initNavBar() {
@@ -366,7 +375,7 @@ Page({
     
     // 如果是第一页且无缓存，显示加载状态
     if (this.data.page === 1 && this.data.avatars.length === 0) {
-      this.setData({ loading: true })
+      this._safeSetData({ loading: true })
     }
     
     const sort = this.data.sortType
@@ -386,7 +395,7 @@ Page({
     getResources(params).then(async (res) => {
       if (!res.result || !res.result.success) {
         console.error('getResources 请求失败:', res.result?.message)
-        this.setData({ loading: false })
+        this._safeSetData({ loading: false })
         this._isLoadingData = false
         return
       }
@@ -444,14 +453,14 @@ Page({
       })
     }).catch(error => {
       console.error('加载头像失败:', error)
-      this.setData({ loading: false })
+      this._safeSetData({ loading: false })
       this._isLoadingData = false
       
       // 如果是第一页加载失败，尝试读取缓存
       if (this.data.page === 1 && this.data.avatars.length === 0) {
         const cached = getStorage('avatar_list_cache')
         if (cached) {
-          this.setData({ avatars: cached })
+          this._safeSetData({ avatars: cached })
           wx.showToast({
             title: '网络不稳定，已为您展示缓存内容',
             icon: 'none'
