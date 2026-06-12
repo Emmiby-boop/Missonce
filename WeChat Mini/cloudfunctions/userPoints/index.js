@@ -8,14 +8,12 @@ const { recordDownload, getDownloadStatus, canDownload } = require('./actions/do
 const { getInviteStatus, bindInviter, getInviteRecords } = require('./actions/invite')
 const { exchangeDownloads, getExchangeOptions, rewardAdWatch } = require('./actions/exchange')
 const { getUserInfo, getConfigs } = require('./actions/userInfo')
-const { recordShare, getShareStatus } = require('./actions/share')
 
 const ACTIONS = {
   getUserInfo, checkIn, deductPoints, addPoints, getRecords,
   exchangeMember, getMemberStatus, recordDownload, getConfigs,
   getDownloadStatus, canDownload, getInviteStatus, bindInviter,
-  getInviteRecords, exchangeDownloads, getExchangeOptions, rewardAdWatch,
-  recordShare, getShareStatus
+  getInviteRecords, exchangeDownloads, getExchangeOptions, rewardAdWatch
 }
 
 exports.main = async (event, context) => {
