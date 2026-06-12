@@ -502,6 +502,8 @@ Component({
             }
             this.data._adShowing = false
             this.data._adWatched = (typeof res === 'undefined') ? true : !!(res && res.isEnded)
+            // 🔥 广告关闭后重置 _adReady，下次必须重新 load
+            this.data._adReady = false
             console.log('[AD][Rewarded] _adWatched=', this.data._adWatched, 'rewardCloud=', this.data.rewardCloudName, this.data.rewardCloudAction)
             if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
             if (this.data._adWatched) {
@@ -667,53 +669,18 @@ Component({
             this.data.isLoading = false
             resolve({ success: false, error: '页面切换，广告取消' })
           } else if (errMsg.indexOf('destroyed') !== -1 || errMsg.indexOf('destroy') !== -1) {
-            // 🔥 广告实例已被 SDK 销毁（常见于中途退出后），自动重建并重试
-            console.log('[AD][Rewarded] ad destroyed, re-initializing and retrying...')
+            // 🔥 广告实例已被 SDK 销毁（常见于中途退出后），重建后提示用户重试
+            console.log('[AD][Rewarded] ad destroyed, re-initializing...')
             this.videoAd = null
             this.data._adReady = false
             this.data._adWatched = false
             this.data._adShowing = false
-            this.data.isLoading = false
             if (this.isAttached && !this.data._pageHidden) {
-              this.setData({ isLoading: true })
-              // 重建广告实例
-              await this.initRewarded()
-              // 等待广告加载完成后重试
-              let retryCount = 0
-              const maxRetries = 3
-              const retryShow = async () => {
-                if (!this.isAttached || this.data._pageHidden || !this.videoAd) {
-                  this.setData({ isLoading: false })
-                  resolve({ success: false, error: '广告重建失败' })
-                  return
-                }
-                try {
-                  await this.videoAd.load()
-                  clearLoadTimeout()
-                  if (this.data._pageHidden) {
-                    this.setData({ isLoading: false })
-                    resolve({ success: false, error: '页面已隐藏' })
-                    return
-                  }
-                  await this.videoAd.show()
-                  this.setData({ isLoading: false })
-                  // show() 成功，等待 onClose 回调
-                } catch (retryErr) {
-                  retryCount++
-                  const retryMsg = retryErr && (retryErr.errMsg || retryErr.message || '')
-                  console.log('[AD][Rewarded] retry show failed (attempt', retryCount, '/', maxRetries, '):', retryMsg)
-                  if (retryCount < maxRetries && this.isAttached && !this.data._pageHidden) {
-                    setTimeout(retryShow, 1000)
-                  } else {
-                    this.setData({ isLoading: false })
-                    resolve({ success: false, error: '广告加载失败，请稍后重试' })
-                  }
-                }
-              }
-              retryShow()
-            } else {
-              resolve({ success: false, error: '广告实例已销毁' })
+              this.setData({ isLoading: false })
+              // 异步重建，不阻塞当前流程
+              this.initRewarded()
             }
+            resolve({ success: false, error: '广告加载失败，请稍后重试' })
           } else {
             // 正常异常（加载失败等）：必须通过 setData 重置 UI，否则加载动画永远不消失
             console.error('[AD][Rewarded] show failed:', errMsg)
