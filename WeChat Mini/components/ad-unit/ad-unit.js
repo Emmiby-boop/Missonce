@@ -109,6 +109,11 @@ Component({
       // 激励广告：页面恢复时强制重置加载状态，防止 hide 期间残留的加载遮罩
       if (this.data.kind === 'rewarded') {
         this.setData({ isLoading: false })
+        // 🔥 页面恢复时，如果有待处理的 resolve，先清理掉
+        if (this._adResolve) {
+          this._adResolve({ success: false, skipped: true })
+          this._adResolve = null
+        }
       }
       if (this.data.kind === 'interstitial' && interstitialAdManager) {
         interstitialAdManager.smartTriggerInterstitialAd(2000)
@@ -487,7 +492,14 @@ Component({
               }
               return
             }
-            if (this.data._pageHidden) return
+            if (this.data._pageHidden) {
+              // 🔥 页面隐藏时广告关闭，仍需 resolve 防止状态不一致
+              if (this._adResolve) {
+                this._adResolve({ success: false, skipped: true })
+                this._adResolve = null
+              }
+              return
+            }
             this.data._adShowing = false
             this.data._adWatched = (typeof res === 'undefined') ? true : !!(res && res.isEnded)
             console.log('[AD][Rewarded] _adWatched=', this.data._adWatched, 'rewardCloud=', this.data.rewardCloudName, this.data.rewardCloudAction)
