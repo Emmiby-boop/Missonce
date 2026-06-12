@@ -144,15 +144,27 @@ Page({
 
 
   async handleLogin() {
-    this.setData({ showLoginModal: false, isLoginLoading: false })
-    wx.navigateTo({
-      url: '/subpackages/login/login',
-      events: {
-        loginSuccess: () => {
-          this.checkFavorite()
-        }
-      }
-    })
+    this.setData({ isLoginLoading: true, modalError: '' })
+    
+    try {
+      const userInfo = await wx.getUserProfile({ desc: '用于登录' })
+      await wx.login()
+      
+      await loginWithProfile({
+        nickName: userInfo.userInfo.nickName,
+        avatarUrl: userInfo.userInfo.avatarUrl
+      })
+      
+      wx.showToast({ title: '登录成功', icon: 'success' })
+      this.setData({ showLoginModal: false, isLoginLoading: false })
+      this.checkFavorite()
+    } catch (err) {
+      console.error('登录流程异常:', err)
+      this.setData({ 
+        modalError: err.message || '登录异常',
+        isLoginLoading: false 
+      })
+    }
   },
 
   onLoad(options) {
