@@ -38,51 +38,86 @@ Page({
     showNativeTopAd: false,
   },
 
-  _isFirstLoad: true, // 标记是否为首次加载
-  _isLoadingData: false, // 标记是否正在加载数据
+  _isFirstLoad: true,
+  _isLoadingData: false,
   _lastNotificationCheck: 0,
 
-  onShow() {
-    this._isHiding = false
-    getApp().logEvent('pv', { page: 'index' })
+  onLoad(options) {
+    performanceMonitor.startPageLoad('首页')
     
-    // 🔥 收藏数：仅登录用户才查询
-    if (getApp().globalData.isLoggedIn) {
-      this.loadFavoritesCount()
+    // 处理邀请参数
+    this.handleInvite(options)
+    
+    this.initNavBar()
+    this.setData({ loading: true })
+    performanceMonitor.markMilestone('首页', '初始化完成')
+
+    // 🔥 优化：先尝试从本地缓存渲染（Stale-While-Revalidate 第一步）
+    let hasCacheRendered = false
+    try {
+      const apiCache = getStorage('home_data_api_cache')
+      if (apiCache && apiCache.data?.result?.success) {
+        const { banners, sections } = apiCache.data.result.data
+        let updateData = { loading: false }
+        
+        if (banners && banners.length > 0) {
+          const optimizedBanners = optimizeImageUrls(banners, 'image', 750)
+          updateData.banners = optimizedBanners.map(item => ({
+            ...item, 
+            id: item._id, 
+            image: item.optimizedUrl || item.image 
+          }))
+        }
+        
+        if (sections) {
+          // 异步处理 sections（图片优化），完成后更新
+          this.processSections(sections).then(processedSections => {
+            this.setData({ sections: processedSections })
+          })
+          // 不在 updateData 中设置未处理的 sections，避免先渲染原始数据再被异步覆盖闪烁
+        }
+        
+        if (Object.keys(updateData).length > 1 || updateData.loading === false) {
+          this.setData(updateData)
+          hasCacheRendered = true
+          performanceMonitor.markMilestone('首页', '本地缓存渲染完成')
+        }
+      }
+    } catch (e) {
+      // 缓存读取失败，忽略
     }
-    
-    // 🔥 通知 badge：5 分钟内不重复查询
-    const now = Date.now()
-    if (now - this._lastNotificationCheck > 5 * 60 * 1000) {
-      this._lastNotificationCheck = now
-      this.loadNotificationBadge()
+
+    // 如果API缓存没渲染成功，再尝试 cacheManager 的缓存
+    if (!hasCacheRendered) {
+      const cachedData = cacheManager.get(STORAGE_KEYS.HOME_DATA_CACHE)
+      if (cachedData) {
+        const { banners, sections } = cachedData
+        let updateData = { loading: false }
+        if (banners && banners.length > 0) {
+          updateData.banners = banners.map(item => ({ ...item, id: item._id }))
+        }
+        if (sections) {
+          updateData.sections = sections
+        }
+        if (Object.keys(updateData).length > 1 || updateData.loading === false) {
+          this.setData(updateData)
+          hasCacheRendered = true
+          performanceMonitor.markMilestone('首页', '缓存渲染完成')
+        }
+      }
     }
+
+    // 🔥 优化：本地缓存已渲染时，loadCriticalData 只负责后台刷新（不重复渲染相同数据）
+    this._hasCacheRendered = hasCacheRendered
+    this.loadCriticalData()
     
-    // 刷新悬浮组件的未读计数
-    const floatingComponent = this.selectComponent('#floatingNotification')
-    if (floatingComponent && floatingComponent.refresh) {
-      floatingComponent.refresh()
-    }
-    
-    // 🔥 首次加载由 onLoad 处理，onShow 只在数据丢失时重新加载
-    if (!this._isFirstLoad && (this.data.banners.length === 0 || this.data.sections.length === 0)) {
-      this.loadCriticalData()
-    }
-    
-    // 🔥 推荐数据延迟加载
-    if (this.data.recommendations.length === 0) {
-      setTimeout(() => this.loadRecommendations(), 500)
-    }
-    
-    this.syncTheme()
-    
-    // 🔥 插屏广告：延迟执行，不阻塞页面切换
+    // 🔥 优化：延迟加载非关键数据（不影响首屏）
     setTimeout(() => {
-      try {
-        const interstitialAdManager = require('../../utils/interstitialAdManager.js')
-        interstitialAdManager.smartTriggerInterstitialAd(2000)
-      } catch (e) {}
-    }, 500)
+      this.loadRecommendations()
+      this.checkDailyBadge()
+      this.loadNotificationBadge()
+      this.checkAnnouncement()
+    }, 1000)
   },
 
   onNativeAdError() {
@@ -358,8 +393,18 @@ Page({
   onShow() {
     this._isHiding = false
     getApp().logEvent('pv', { page: 'index' })
-    this.loadFavoritesCount()
-    this.loadNotificationBadge()
+    
+    // 🔥 收藏数：仅登录用户才查询
+    if (getApp().globalData.isLoggedIn) {
+      this.loadFavoritesCount()
+    }
+    
+    // 🔥 通知 badge：5 分钟内不重复查询
+    const now = Date.now()
+    if (now - this._lastNotificationCheck > 5 * 60 * 1000) {
+      this._lastNotificationCheck = now
+      this.loadNotificationBadge()
+    }
     
     // 刷新悬浮组件的未读计数
     const floatingComponent = this.selectComponent('#floatingNotification')
@@ -367,25 +412,25 @@ Page({
       floatingComponent.refresh()
     }
     
-    // 🔥 优化：首次加载由 onLoad 处理，onShow 只在特定情况下重新加载
-    // 避免 onLoad 后紧接着 onShow 触发重复请求
+    // 🔥 首次加载由 onLoad 处理，onShow 只在数据丢失时重新加载
     if (!this._isFirstLoad && (this.data.banners.length === 0 || this.data.sections.length === 0)) {
       this.loadCriticalData()
     }
     
-    // 推荐数据延迟加载
+    // 🔥 推荐数据延迟加载
     if (this.data.recommendations.length === 0) {
       setTimeout(() => this.loadRecommendations(), 500)
     }
     
-    // 同步深色模式
     this.syncTheme()
     
-    // 页面显示时智能触发插屏广告（带冷却时间检查）
-    try {
-      const interstitialAdManager = require('../../utils/interstitialAdManager.js')
-      interstitialAdManager.smartTriggerInterstitialAd(2000)
-    } catch (e) {}
+    // 🔥 插屏广告：延迟执行，不阻塞页面切换
+    setTimeout(() => {
+      try {
+        const interstitialAdManager = require('../../utils/interstitialAdManager.js')
+        interstitialAdManager.smartTriggerInterstitialAd(2000)
+      } catch (e) {}
+    }, 500)
   },
 
   onHide() {
