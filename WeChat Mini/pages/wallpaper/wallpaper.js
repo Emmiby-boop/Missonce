@@ -4,8 +4,6 @@ import { cacheManager } from '../../utils/cache.js'
 import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
 import { performanceMonitor } from '../../utils/performance.js'
 import logger from '../../utils/logger.js'
-import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
-import interstitialAdManager from '../../utils/interstitialAdManager.js'
 import { getWindowInfo, getStorage, getTheme } from '../../utils/storageManager'
 
 Page({
@@ -100,6 +98,7 @@ Page({
   
   async loadPageAds() {
     try {
+      const { fetchPageAds, pickByType } = require('../../utils/adUtil.js')
       const pages = getCurrentPages()
       const current = pages && pages.length ? pages[pages.length - 1] : null
       const route = current?.route || 'pages/wallpaper/wallpaper'
@@ -248,8 +247,13 @@ Page({
     this._isHiding = false
     getApp().logEvent('pv', { page: 'wallpaper' })
     this.syncTheme()
-    // 页面显示时智能触发插屏广告（带冷却时间检查）
-    interstitialAdManager.smartTriggerInterstitialAd(2000)
+    // 🔥 延迟触发插屏广告，不阻塞页面切换
+    setTimeout(() => {
+      try {
+        const interstitialAdManager = require('../../utils/interstitialAdManager.js')
+        interstitialAdManager.smartTriggerInterstitialAd(2000)
+      } catch (e) {}
+    }, 500)
   },
 
   onHide() {
