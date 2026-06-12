@@ -1,0 +1,1 @@
+{"name": "adminSession", "version": "1.0.0", "description": "管理员 Session Token 管理云函数 - HMAC-SHA256 签名认证，支持生成/验证/刷新 Token", "main": "index.js", "dependencies": {"wx-server-sdk": "latest"}}

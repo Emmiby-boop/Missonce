@@ -1,4 +1,4 @@
-const cloud = require('wx-server-sdk')
+﻿const cloud = require('wx-server-sdk')
 const https = require('https')
 const http = require('http')
 const { URL } = require('url')
@@ -68,7 +68,16 @@ function fetchBuffer(targetUrl) {
           return reject(new Error(`HTTP ${res.statusCode}`))
         }
         const chunks = []
-        res.on('data', (c) => chunks.push(c))
+        let totalSize = 0
+        const MAX_SIZE = 10 * 1024 * 1024 // 10MB limit
+        res.on('data', (c) => {
+          totalSize += c.length
+          if (totalSize > MAX_SIZE) {
+            req.destroy()
+            return reject(new Error('File too large (max 10MB)'))
+          }
+          chunks.push(c)
+        })
         res.on('end', () => {
           const buffer = Buffer.concat(chunks)
           const contentType = res.headers['content-type'] || 'image/jpeg'

@@ -423,6 +423,8 @@ Component({
       if (this._initRewarding) return // 防止并发重复初始化
       this._initRewarding = true
       try {
+        // 🔥 递增生成代数，用于让旧实例的回调（onClose/onError）识别自己已过时
+        const gen = (this._adGeneration = (this._adGeneration || 0) + 1)
         if (this.videoAd) {
           try { this.videoAd.destroy && this.videoAd.destroy() } catch (e) {}
           this.videoAd = null
@@ -439,19 +441,20 @@ Component({
           this.data._adWatched = false
           this.data._adShowing = false
           this.videoAd.onLoad && this.videoAd.onLoad(() => { 
+            if (this._adGeneration !== gen) return  // 🔥 旧实例回调，忽略
             this.data._adReady = true
             if (this.isAttached && !this.data._pageHidden && this.data.isLoading) {
               this.setData({ isLoading: false })
             }
           })
           this.videoAd.onError && this.videoAd.onError((err) => { 
+            if (this._adGeneration !== gen) return  // 🔥 旧实例回调，忽略
             this.data._adReady = false
             if (this.isAttached && !this.data._pageHidden && this.data.isLoading) {
               this.setData({ isLoading: false })
             }
             if (interstitialAdManager) interstitialAdManager.setExternalAdPlaying(false)
             console.log('[AD][Rewarded] onError:', err, '_adShowing:', this.data._adShowing)
-            // Ignore AbortError (play interrupted by pause) - expected when page hides
             const errMsg = err && (err.errMsg || err.message || '')
             if (errMsg && errMsg.indexOf('interrupt') !== -1) {
               console.log('[AD][Rewarded] onError ignored (interrupt)')
@@ -464,6 +467,11 @@ Component({
             }
           })
           this.videoAd.onClose && this.videoAd.onClose(async (res) => {
+            if (this._adGeneration !== gen) {
+              // 🔥 旧实例回调，仅清理自己的引用，不干扰当前广告
+              console.log('[AD][Rewarded] onClose ignored (stale gen=', gen, 'current=', this._adGeneration, ')')
+              return
+            }
             console.log('[AD][Rewarded] onClose fired, res=', JSON.stringify(res), 'isAttached=', this.isAttached, '_pageHidden=', this.data._pageHidden)
             // 🔥 无论如何先重置加载状态，防止 loading 永远不消失
             if (this.isAttached && !this.data._pageHidden) {
@@ -523,18 +531,25 @@ Component({
               this._adResolve = null
             }
           })
-          // 延迟加载：仅在页面显示且组件 attached 时才 load。
+          // 🔥 延迟加载 + 失败重试（最多3次）
           // 立即 load 会导致"play interrupted by pause"错误（页面切换时内部视频播放器冲突）
-          // 保存 timer 引用供 hide() 清除，避免页面切换时 load 仍触发
           if (!this.data._pageHidden) {
-            this._initTimer = setTimeout(() => {
-              this._initTimer = null
-              if (this.isAttached && !this.data._pageHidden && this.videoAd && this.videoAd.load) {
-                this.videoAd.load().catch((err) => {
-                  console.log('[AD][Rewarded] init load failed:', err && (err.errMsg || err.message))
-                })
-              }
-            }, 500)
+            let retryCount = 0
+            const maxRetries = 3
+            const doLoad = () => {
+              if (!this.isAttached || this.data._pageHidden || !this.videoAd || this._adGeneration !== gen) return
+              this.videoAd.load().then(() => {
+                console.log('[AD][Rewarded] load success after', retryCount, 'retries')
+              }).catch((err) => {
+                retryCount++
+                const errMsg = err && (err.errMsg || err.message || '')
+                console.log('[AD][Rewarded] load failed (attempt', retryCount, '/', maxRetries, '):', errMsg)
+                if (retryCount < maxRetries && this._adGeneration === gen && this.isAttached) {
+                  setTimeout(doLoad, 2000 * retryCount)  // 递增延迟: 2s, 4s
+                }
+              })
+            }
+            this._initTimer = setTimeout(doLoad, 500)
           }
         }
       } catch (e) {} finally {

@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk')
 const nodemailer = require('nodemailer')
+const CryptoJS = require('crypto-js')
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -105,7 +106,7 @@ exports.main = async (event, context) => {
     await db.collection('verify_codes').add({
       data: {
         email: email,
-        code: code,
+        codeHash: codeHash,
         type: type,
         createdAt: db.serverDate(),
         expireAt: expireTime,

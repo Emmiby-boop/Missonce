@@ -1,4 +1,4 @@
-import { createApp, defineAsyncComponent } from "vue";
+﻿import { createApp, defineAsyncComponent } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
 import "./style.css";

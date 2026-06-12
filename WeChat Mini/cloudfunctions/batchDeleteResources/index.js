@@ -1,4 +1,5 @@
-const cloud = require('wx-server-sdk')
+﻿const cloud = require('wx-server-sdk')
+const { requireAdmin } = require('../shared/adminAuth')
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV

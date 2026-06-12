@@ -1,24 +1,29 @@
-// 使用微信官方 API 获取环境版本，替代不可靠的 __wxConfig 内部变量
-const ENV = (() => {
+﻿// 懒初始化：避免模块加载时同步调用 wx.getAccountInfoSync() 阻塞启动
+let _env = null
+const getEnv = () => {
+  if (_env !== null) return _env
   try {
-    return wx.getAccountInfoSync().miniProgram.envVersion || 'develop'
+    _env = wx.getAccountInfoSync().miniProgram.envVersion || "develop"
   } catch (e) {
-    return 'develop'
+    _env = "develop"
   }
-})()
+  return _env
+}
+
+const isProd = () => getEnv() === "release"
 
 export const logger = {
   debug: (...args) => {
-    if (ENV !== 'release') console.debug(...args)
+    if (!isProd()) console.debug(...args)
   },
   log: (...args) => {
-    if (ENV !== 'release') console.log(...args)
+    if (!isProd()) console.log(...args)
   },
   info: (...args) => {
-    if (ENV !== 'release') console.info(...args)
+    if (!isProd()) console.info(...args)
   },
   warn: (...args) => {
-    if (ENV !== 'release') console.warn(...args)
+    if (!isProd()) console.warn(...args)
   },
   error: (...args) => {
     console.error(...args)
@@ -27,12 +32,12 @@ export const logger = {
     console.error(`[错误监控] ${type}:`, message, data)
   },
   logPerformance: (type, data, source) => {
-    if (ENV !== 'release') {
+    if (!isProd()) {
       console.log(`[性能监控] ${type}:`, data)
     }
   },
   logPageView: (pagePath) => {
-    if (ENV !== 'release') {
+    if (!isProd()) {
       console.log(`[页面访问] ${pagePath}`)
     }
   }

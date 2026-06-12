@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk')
+const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const CryptoJS = require('crypto-js') // ⚠️ 保留用于向后兼容旧密码，迁移完成后可移除
 
@@ -51,6 +52,7 @@ exports.main = async (event, context) => {
   const db = cloud.database()
   const wxContext = cloud.getWXContext()
   const { action, uuid, email, code, username, password } = event
+  console.log('[adminAuth] received action:', action, 'full event keys:', Object.keys(event))
 
   // --------------------------------------------------
   // 场景 0：账号密码登录
@@ -164,9 +166,10 @@ exports.main = async (event, context) => {
     }
     
     // 1. 查找验证码记录
+    const codeHash = CryptoJS.SHA256(code).toString()
     const codeRes = await db.collection('verify_codes').where({
       email: email,
-      code: code,
+      codeHash: codeHash,
       used: false
     }).orderBy('createdAt', 'desc').limit(1).get()
     

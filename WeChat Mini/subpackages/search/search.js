@@ -1,4 +1,4 @@
-import { getResources, getCategories } from '../../utils/api.js'
+﻿import { getResources, getCategories } from '../../utils/api.js'
 import { fetchPageAds, pickByType } from '../../utils/adUtil.js'
 import { getStorage, getTheme, setStorage } from '../../utils/storageManager.js'
 
@@ -10,7 +10,7 @@ Page({
     showResult: false,
     categories: [],
     historyTags: [],
-    hotTags: ['星空壁纸', '简约头像', '游戏壁纸', '女生头像'],
+    hotTags: [],
     page: 1,
     pageSize: 30,
     loading: false,
@@ -60,7 +60,31 @@ Page({
     }
   },
   
-  async loadPageAds() {
+
+  // 动态加载热门标签（优先从缓存读取，后端可通过 sys_config 热更新）
+  async loadHotTags() {
+    const cached = getStorage('search_hot_tags')
+    if (cached && Array.isArray(cached)) {
+      this.setData({ hotTags: cached })
+      return
+    }
+    // 从分类中提取热门标签
+    try {
+      const cats = await getCategories()
+      if (cats && cats.length > 0) {
+        const tags = cats.slice(0, 8).map(c => c.name || c.key)
+        this.setData({ hotTags: tags })
+        setStorage('search_hot_tags', tags)
+        return
+      }
+    } catch (e) { /* fall through */ }
+    // 兜底
+    const fallback = ['星空壁纸', '简约头像', '游戏壁纸', '女生头像']
+    this.setData({ hotTags: fallback })
+    setStorage('search_hot_tags', fallback)
+  },
+
+    async loadPageAds() {
     try {
       const pages = getCurrentPages()
       const current = pages && pages.length ? pages[pages.length - 1] : null

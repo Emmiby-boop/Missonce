@@ -1,4 +1,4 @@
-const cloud = require('wx-server-sdk')
+﻿const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -6,8 +6,16 @@ const db = cloud.database()
 // 加载数据库配置
 let VALID_CATEGORIES = new Set(['其他']);
 let VALID_TAGS_WHITELIST = new Set([]);
+let _configLoadedAt = 0;
+const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 
 async function loadConfig() {
+  const now = Date.now();
+  if (_configLoadedAt && (now - _configLoadedAt < CONFIG_CACHE_TTL)) {
+    return;
+  }
+
   try {
     const tagsConfigRes = await db.collection('sys_config').doc('tags_whitelist').get().catch(() => null);
     if (tagsConfigRes && tagsConfigRes.data && Array.isArray(tagsConfigRes.data.tags)) {
@@ -20,6 +28,7 @@ async function loadConfig() {
       VALID_CATEGORIES = new Set(catsConfigRes.data.categories);
       console.log('已从数据库加载分类白名单，数量:', catsConfigRes.data.categories.length);
     }
+    _configLoadedAt = now;
   } catch (err) {
     console.error('加载系统配置失败，使用默认配置:', err);
   }

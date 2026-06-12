@@ -1,0 +1,15 @@
+{
+  "envId": "missonce-99-1gfaff6n002f6ac1",
+  "region": "ap-shanghai",
+  "runtime": "Nodejs18.15",
+  "functions": {
+    "batchUpdateResources": {
+      "handler": "index.main",
+      "timeout": 60,
+      "memorySize": 512,
+      "environment": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

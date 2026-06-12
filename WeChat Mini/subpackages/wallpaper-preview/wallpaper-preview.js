@@ -438,8 +438,14 @@ Page({
                       data: { action: 'recordDownload', downloadMethod: 'free', resourceType: 'wallpaper' }
                     }).catch(() => {})
                   } else {
-                    // 广告没看完，不能下载
-                  wx.showToast({ title: '需要完整观看广告才能下载', icon: 'none' })
+                    // 🔥 区分失败原因：未完整观看 vs 广告加载/播放失败
+                    if (result.skipped) {
+                      wx.showToast({ title: '需要完整观看广告才能下载', icon: 'none' })
+                    } else if (result.error) {
+                      wx.showToast({ title: result.error, icon: 'none' })
+                    } else {
+                      wx.showToast({ title: '广告加载失败，请稍后重试', icon: 'none' })
+                    }
                   }
                 }
               }

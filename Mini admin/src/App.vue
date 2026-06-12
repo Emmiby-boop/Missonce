@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="min-h-screen" :class="isDark ? 'theme-dark' : 'theme-light'">
     <div class="app-shell">
       <AdminSidebar :is-dark="isDark" :is-open="isSidebarOpen" @close="isSidebarOpen = false" />
@@ -176,7 +176,7 @@ onMounted(() => {
 
 const route = useRoute();
 const loading = ref(false);
-const user = ref<any>(null);
+const user = ref<AdminUser | null>(null);
 
 const currentTitle = computed(() => {
   const map: Record<string, string> = {

@@ -1,4 +1,6 @@
 const cloud = require('wx-server-sdk')
+const CryptoJS = require('crypto-js')
+const { requireAdmin } = require('../shared/adminAuth')
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -6,11 +8,34 @@ cloud.init({
 
 const db = cloud.database()
 
+// Shared decrypt for manageApiKeys-encrypted keys
+const ENCRYPTION_KEY = process.env.API_KEY_ENCRYPTION_SECRET
+
+function decryptKey(encryptedText) {
+  if (!ENCRYPTION_KEY) return encryptedText
+  try {
+    const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY)
+    return bytes.toString(CryptoJS.enc.Utf8)
+  } catch (e) {
+    return encryptedText
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, ...data } = event
-  
-  console.log('manageAIConfig 被调用, action:', action, 'data:', JSON.stringify(data))
-  
+  const { OPENID } = cloud.getWXContext()
+
+  // 鉴权检查
+  if (!OPENID) {
+    return { success: false, message: '未登录' }
+  }
+  const auth = await requireAdmin(db, OPENID)
+  if (!auth.isAdmin) {
+    return auth.response
+  }
+
+  console.log('manageAIConfig 被调用, action:', action)
+
   try {
     switch (action) {
       case 'get':
@@ -26,7 +51,6 @@ exports.main = async (event, context) => {
       case 'saveFeaturedQuotes':
         return await saveFeaturedQuotes(data)
       default:
-        console.log('未知操作:', action)
         return { success: false, message: '未知操作' }
     }
   } catch (error) {
@@ -36,67 +60,38 @@ exports.main = async (event, context) => {
 }
 
 async function getConfig(data) {
-  const { type } = data
-  
   const result = {}
-  
+
   try {
-    console.log('开始获取配置...')
     const [aiRes, catRes, tagRes, keysRes, writerRes] = await Promise.all([
-      db.collection('sys_config').doc('ai_config').get().catch((e) => {
-        console.log('ai_config 获取失败:', e)
-        return null
-      }),
-      db.collection('sys_config').doc('categories_whitelist').get().catch((e) => {
-        console.log('categories_whitelist 获取失败:', e)
-        return null
-      }),
-      db.collection('sys_config').doc('tags_whitelist').get().catch((e) => {
-        console.log('tags_whitelist 获取失败:', e)
-        return null
-      }),
-      db.collection('api_keys').orderBy('createdAt', 'desc').get().catch((e) => {
-        console.log('api_keys 获取失败:', e)
-        return null
-      }),
-      db.collection('sys_config').doc('ai_writer_config').get().catch((e) => {
-        console.log('ai_writer_config 获取失败:', e)
-        return null
-      })
+      db.collection('sys_config').doc('ai_config').get().catch(() => null),
+      db.collection('sys_config').doc('categories_whitelist').get().catch(() => null),
+      db.collection('sys_config').doc('tags_whitelist').get().catch(() => null),
+      db.collection('api_keys').orderBy('createdAt', 'desc').get().catch(() => null),
+      db.collection('sys_config').doc('ai_writer_config').get().catch(() => null)
     ])
-    
-    console.log('aiRes:', aiRes)
-    console.log('catRes:', catRes)
-    console.log('tagRes:', tagRes)
-    console.log('keysRes:', keysRes)
-    console.log('writerRes:', writerRes)
-    
+
     if (aiRes && aiRes.data) {
       result.aiConfig = Array.isArray(aiRes.data) ? aiRes.data[0] : aiRes.data
     }
-    
     if (catRes && catRes.data) {
       result.categories = Array.isArray(catRes.data) ? catRes.data[0] : catRes.data
     }
-    
     if (tagRes && tagRes.data) {
       result.tags = Array.isArray(tagRes.data) ? tagRes.data[0] : tagRes.data
     }
-    
     if (keysRes && keysRes.data) {
-      result.apiKeys = Array.isArray(keysRes.data) ? keysRes.data : [keysRes.data]
+      // 解密后脱敏返回
+      result.apiKeys = keysRes.data.map(item => ({
+        ...item,
+        key: item.key ? decryptKey(item.key).replace(/^(.{4}).*(.{4})$/, '$1****$2') : ''
+      }))
     }
-    
     if (writerRes && writerRes.data) {
       result.writerConfig = Array.isArray(writerRes.data) ? writerRes.data[0] : writerRes.data
     }
-    
-    console.log('返回结果:', result)
-    
-    return {
-      success: true,
-      data: result
-    }
+
+    return { success: true, data: result }
   } catch (error) {
     console.error('获取配置失败:', error)
     return { success: false, message: error.message }
@@ -105,8 +100,7 @@ async function getConfig(data) {
 
 async function saveAIConfig(data) {
   const { config } = data
-  console.log('saveAIConfig 被调用, config:', JSON.stringify(config))
-  
+
   try {
     const saveData = {
       API_KEY: config.API_KEY || '',
@@ -115,92 +109,44 @@ async function saveAIConfig(data) {
       SYSTEM_PROMPT: config.SYSTEM_PROMPT || '',
       updatedAt: db.serverDate()
     }
-    console.log('准备保存的数据:', saveData)
-    
-    console.log('尝试使用 update 方法...')
+
     try {
-      await db.collection('sys_config').doc('ai_config').update({
-        data: saveData
-      })
-      console.log('saveAIConfig update 成功')
-      return {
-        success: true,
-        message: 'AI 配置保存成功'
-      }
+      await db.collection('sys_config').doc('ai_config').update({ data: saveData })
     } catch (updateError) {
-      console.log('update 失败，尝试 add 方法:', updateError)
-      const addData = {
-        _id: 'ai_config',
-        ...saveData,
-        createdAt: db.serverDate()
-      }
       await db.collection('sys_config').add({
-        data: addData
+        data: { _id: 'ai_config', ...saveData, createdAt: db.serverDate() }
       })
-      console.log('saveAIConfig add 成功')
-      return {
-        success: true,
-        message: 'AI 配置保存成功'
-      }
     }
+
+    return { success: true, message: 'AI 配置保存成功' }
   } catch (error) {
     console.error('saveAIConfig 保存失败:', error)
-    console.error('错误堆栈:', error.stack)
-    return {
-      success: false,
-      message: error.message || 'AI 配置保存失败'
-    }
+    return { success: false, message: error.message || 'AI 配置保存失败' }
   }
 }
 
 async function saveCategories(data) {
   const { categories } = data
-  console.log('saveCategories 被调用, categories:', categories)
-  
   try {
-    await db.collection('sys_config').doc('categories_whitelist').set({
-      categories: categories
-    })
-    console.log('saveCategories 保存成功')
-    return {
-      success: true,
-      message: '分类白名单保存成功'
-    }
+    await db.collection('sys_config').doc('categories_whitelist').set({ categories })
+    return { success: true, message: '分类白名单保存成功' }
   } catch (error) {
-    console.error('saveCategories 保存失败:', error)
-    return {
-      success: false,
-      message: error.message || '分类白名单保存失败'
-    }
+    return { success: false, message: error.message || '分类白名单保存失败' }
   }
 }
 
 async function saveTags(data) {
   const { tags } = data
-  console.log('saveTags 被调用, tags:', tags)
-  
   try {
-    await db.collection('sys_config').doc('tags_whitelist').set({
-      tags: tags
-    })
-    console.log('saveTags 保存成功')
-    return {
-      success: true,
-      message: '标签白名单保存成功'
-    }
+    await db.collection('sys_config').doc('tags_whitelist').set({ tags })
+    return { success: true, message: '标签白名单保存成功' }
   } catch (error) {
-    console.error('saveTags 保存失败:', error)
-    return {
-      success: false,
-      message: error.message || '标签白名单保存失败'
-    }
+    return { success: false, message: error.message || '标签白名单保存失败' }
   }
 }
 
 async function saveWriterConfig(data) {
   const { config, scenes } = data
-  console.log('saveWriterConfig 被调用, config:', config, 'scenes:', scenes)
-  
   try {
     await db.collection('sys_config').doc('ai_writer_config').set({
       SYSTEM_PROMPT: config.SYSTEM_PROMPT || '',
@@ -210,45 +156,22 @@ async function saveWriterConfig(data) {
       API_KEY: config.API_KEY || '',
       scenes: scenes || []
     })
-    console.log('saveWriterConfig 保存成功')
-    return {
-      success: true,
-      message: '文案配置保存成功'
-    }
+    return { success: true, message: '文案配置保存成功' }
   } catch (error) {
-    console.error('saveWriterConfig 保存失败:', error)
-    return {
-      success: false,
-      message: error.message || '文案配置保存失败'
-    }
+    return { success: false, message: error.message || '文案配置保存失败' }
   }
 }
 
 async function saveFeaturedQuotes(data) {
   const { featuredQuotes } = data
-  console.log('saveFeaturedQuotes 被调用, featuredQuotes:', featuredQuotes)
-  
   try {
     try {
-      await db.collection('sys_config').doc('ai_writer_config').update({
-        featuredQuotes: featuredQuotes
-      })
+      await db.collection('sys_config').doc('ai_writer_config').update({ featuredQuotes })
     } catch (e) {
-      console.log('update 失败，尝试 set:', e)
-      await db.collection('sys_config').doc('ai_writer_config').set({
-        featuredQuotes: featuredQuotes
-      })
+      await db.collection('sys_config').doc('ai_writer_config').set({ featuredQuotes })
     }
-    console.log('saveFeaturedQuotes 保存成功')
-    return {
-      success: true,
-      message: '文案库保存成功'
-    }
+    return { success: true, message: '文案库保存成功' }
   } catch (error) {
-    console.error('saveFeaturedQuotes 保存失败:', error)
-    return {
-      success: false,
-      message: error.message || '文案库保存失败'
-    }
+    return { success: false, message: error.message || '文案库保存失败' }
   }
 }

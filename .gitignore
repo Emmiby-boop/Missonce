@@ -40,3 +40,6 @@ backups/
 # WeChat Mini Program
 project.private.config.json
 miniprogram_npm/
+
+# Cloud function dependencies (deployed separately)
+cloudfunctions/*/node_modules/

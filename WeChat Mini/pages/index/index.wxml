@@ -1,4 +1,4 @@
-<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+﻿<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
   <view class="nav-bar">
     <text class="nav-title">首页</text>
   </view>
@@ -63,26 +63,26 @@
     <view class="quick-grid">
       <view class="quick-item" bindtap="navigateToTopicList">
         <view class="quick-icon-box quick-icon-topics">
-          <image src="../../images/quick-topics.png" class="quick-icon"></image>
+          <image src="../../images/quick-topics.svg" class="quick-icon"></image>
         </view>
         <text class="quick-text">精选专题</text>
       </view>
       <view class="quick-item" bindtap="navigateToInspiration">
         <view class="quick-icon-box quick-icon-inspiration">
-          <image src="../../images/quick-inspiration.png" class="quick-icon"></image>
+          <image src="../../images/quick-inspiration.svg" class="quick-icon"></image>
         </view>
         <text class="quick-text">灵感文案</text>
       </view>
       <view class="quick-item" bindtap="navigateToDailyPicks">
         <view class="quick-icon-box quick-icon-daily">
-          <image src="../../images/quick-daily.png" class="quick-icon"></image>
+          <image src="../../images/quick-daily.svg" class="quick-icon"></image>
         </view>
         <text class="quick-text">每日推荐</text>
         <view class="quick-badge" wx:if="{{showDailyBadge}}" style="background: #ef4444;">NEW</view>
       </view>
       <view class="quick-item" bindtap="navigateToWatermark">
         <view class="quick-icon-box quick-icon-watermark">
-          <image class="quick-icon" src="../../images/quick-watermark.png" mode="widthFix"></image>
+          <image class="quick-icon" src="../../images/quick-watermark.svg" mode="widthFix"></image>
         </view>
         <text class="quick-text">去水印</text>
       </view>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <circle cx="24" cy="22" r="16" fill="#C4B5FD" opacity="0.3"/>
+  <path d="M18 22c0-4 3-7 6-7s6 3 6 7c0 3-1.5 5-3 7h-6c-1.5-2-3-4-3-7z" fill="#A78BFA"/>
+  <path d="M21 17c1-1 2-1.5 3-1.5s2 .5 3 1.5c-1-.5-2-.8-3-.8s-2 .3-3 .8z" fill="white" opacity="0.5"/>
+  <rect x="20" y="30" width="8" height="3" rx="1.5" fill="#7C3AED"/>
+  <rect x="18" y="33" width="12" height="3" rx="1.5" fill="#6D28D9"/>
+  <circle cx="24" cy="22" r="3" fill="white" opacity="0.8"/>
+  <path d="M24 5v3" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M35 14l-2 2" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M35 30l-2-2" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+  <path d="M13 14l2 2" stroke="#C4B5FD" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+  <path d="M24 39v-3" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <path d="M36 6l1 2.5 2.5.5-1.8 1.8.4 2.7-2.1-1.4-2.1 1.4.4-2.7-1.8-1.8 2.5-.5L36 6z" fill="#FBBF24"/>
+</svg>

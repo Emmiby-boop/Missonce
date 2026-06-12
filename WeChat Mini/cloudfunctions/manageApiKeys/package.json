@@ -1,9 +1,10 @@
 {
-  "name": "manage-api-keys",
-  "version": "1.0.0",
-  "description": "Manage API Keys",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
+    "name":  "manage-api-keys",
+    "version":  "1.0.0",
+    "description":  "Manage API Keys",
+    "main":  "index.js",
+    "dependencies":  {
+                         "wx-server-sdk":  "~2.6.3",
+                         "crypto-js":  "^4.2.0"
+                     }
 }

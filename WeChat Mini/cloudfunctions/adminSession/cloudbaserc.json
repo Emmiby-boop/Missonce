@@ -1,0 +1,17 @@
+{
+    "envId":  "missonce-99-1gfaff6n002f6ac1",
+    "region":  "ap-shanghai",
+    "runtime":  "Nodejs18.15",
+    "functions":  {
+                      "adminSession":  {
+                                           "handler":  "index.main",
+                                           "timeout":  15,
+                                           "memorySize":  256,
+                                           "environment":  {
+                                                               "NODE_ENV":  "production",
+                                                               "ADMIN_SESSION_SECRET":  "missonce-admin-secret-key-2026",
+                                                               "SESSION_SECRET":  "c37cdb3c17351854b0e561a3153f220e4775b598a6079a1fb3aea854539e8473"
+                                                           }
+                                       }
+                  }
+}

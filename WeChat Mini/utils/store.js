@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 轻量级状态管理 - 使用 BehaviorSubject 模式
  * 适合小程序：轻量、简单、响应式
  */
@@ -76,7 +76,7 @@ export const getState = (key) => {
  * @param {*} value 
  */
 export const setState = (key, value) => {
-  if (!store[key]) {
+  if (!(key in store)) {
     console.warn(`[Store] 状态 ${key} 未初始化，使用默认值`)
     createStore(key, value)
     return

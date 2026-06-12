@@ -1,4 +1,4 @@
-import logger from './logger'
+﻿import logger from './logger'
 import { STORAGE_KEYS } from '../config/constants'
 import { getAppBaseInfo, getDeviceInfo as getCachedDeviceInfo, getStorage, setStorage, removeStorage } from './storageManager'
 
