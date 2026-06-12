@@ -561,6 +561,8 @@ Page({
   },
 
   onShareAppMessage() {
+    const { recordShareReward } = require('../../utils/shareReward.js')
+    setTimeout(() => recordShareReward(), 500)
     return {
       title: '小辣椒动态头像壁纸，海量精美壁纸免费下载！',
       path: '/pages/wallpaper/wallpaper',

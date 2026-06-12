@@ -879,6 +879,8 @@ Page({
   },
 
   onShareAppMessage() {
+    const { recordShareReward } = require('../../utils/shareReward.js')
+    setTimeout(() => recordShareReward(), 500)
     return {
       title: '发现了一个超好看的壁纸',
       path: `/subpackages/wallpaper-preview/wallpaper-preview?url=${encodeURIComponent(this.data.currentUrl)}`,

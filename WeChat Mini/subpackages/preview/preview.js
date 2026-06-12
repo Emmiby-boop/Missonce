@@ -1007,6 +1007,8 @@ Page({
 
 
   onShareAppMessage() {
+    const { recordShareReward } = require('../../utils/shareReward.js')
+    setTimeout(() => recordShareReward(), 500)
     const { currentUrl, currentIndex, imageList, isAvatar, currentAvatar } = this.data
     const title = currentAvatar?.title || '发现了一个超好看的头像'
     return {
