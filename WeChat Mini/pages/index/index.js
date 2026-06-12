@@ -1,5 +1,5 @@
 import { getHomeData, getPersonalizedRecommendations, onHomeDataRefresh, getFavoritesCount, getFavorites } from '../../utils/api.js'
-import { checkLoginStatus } from '../../utils/auth'
+import { checkLoginStatus, loginWithProfile } from '../../utils/auth'
 import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js'
 import logger from '../../utils/logger.js'
 import { cacheManager } from '../../utils/cache.js'

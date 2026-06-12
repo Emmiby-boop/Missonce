@@ -181,7 +181,7 @@
     </view>
     <view class="similar-grid">
       <view class="similar-item" wx:for="{{similarList}}" wx:key="url" data-url="{{item.url}}" bindtap="onRecommendTap">
-        <image class="similar-img" src="{{item.url}}" mode="aspectFill" />
+        <image class="similar-img" src="{{item.url}}" mode="aspectFill" lazy-load />
       </view>
     </view>
   </view>

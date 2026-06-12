@@ -18,7 +18,7 @@
   <!-- 收藏列表 -->
   <view class="favorites-grid" wx:else>
     <view class="favorite-item" wx:for="{{favorites}}" wx:key="url" bindtap="onFavoriteTap" data-url="{{item.url}}">
-      <image class="favorite-image {{item.type === 'avatar' ? 'circular' : ''}}" src="{{item.url}}" mode="aspectFill"></image>
+      <image class="favorite-image {{item.type === 'avatar' ? 'circular' : ''}}" src="{{item.url}}" mode="aspectFill" lazy-load></image>
       <view class="favorite-delete" catchtap="onDeleteFavorite" data-url="{{item.url}}" data-index="{{index}}">
         <text class="delete-icon">×</text>
       </view>

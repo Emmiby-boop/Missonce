@@ -65,8 +65,12 @@ Page({
     getApp().logEvent('pv', { page: 'wallpaper-preview' })
     this.updateSimTime()
     this.syncTheme()
-    // 页面显示时智能触发插屏广告（带冷却时间检查）
-    interstitialAdManager.smartTriggerInterstitialAd(2000)
+    // 🔥 插屏广告：延迟执行，不阻塞页面切换
+    setTimeout(() => {
+      try {
+        interstitialAdManager.smartTriggerInterstitialAd(2000)
+      } catch (e) {}
+    }, 500)
   },
 
   updateSimTime() {
@@ -632,15 +636,27 @@ Page({
   },
 
 
-  onTouchStart() {
+  onTouchStart(e) {
     this.setData({ showPageIndicator: true })
+    this.touchStartX = e.touches[0].clientX
+    this.touchStartY = e.touches[0].clientY
   },
 
-  onTouchEnd() {
+  onTouchEnd(e) {
     if (this.hideTimer) clearTimeout(this.hideTimer)
     this.hideTimer = setTimeout(() => {
       this.setData({ showPageIndicator: false })
     }, 2000)
+    
+    this.touchEndX = e.changedTouches[0].clientX
+    this.touchEndY = e.changedTouches[0].clientY
+    
+    const deltaX = this.touchEndX - this.touchStartX
+    const deltaY = this.touchEndY - this.touchStartY
+    
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+      this.slideDirection = deltaX > 0 ? 'right' : 'left'
+    }
   },
 
   async onSwiperChange(e) {
@@ -1278,26 +1294,5 @@ Page({
   },
 
   // 辅助方法：尝试使用云函数代理下载
-  
-    // 新增：触摸开始
-  onTouchStart(e) {
-    this.touchStartX = e.touches[0].clientX
-    this.touchStartY = e.touches[0].clientY
-  },
-  
-  // 新增：触摸结束
-  onTouchEnd(e) {
-    this.touchEndX = e.changedTouches[0].clientX
-    this.touchEndY = e.changedTouches[0].clientY
-    
-    const deltaX = this.touchEndX - this.touchStartX
-    const deltaY = this.touchEndY - this.touchStartY
-    
-    // 判断是否为横向滑动
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-      const direction = deltaX > 0 ? 'right' : 'left'
-      this.slideDirection = direction
-    }
-  },
 })
 

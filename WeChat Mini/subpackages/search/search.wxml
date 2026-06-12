@@ -46,7 +46,7 @@
     <view class="result-grid">
       <view class="result-item {{item.type}}" wx:for="{{searchResult}}" wx:key="id" bindtap="previewImage" 
             data-index="{{index}}">
-        <image class="result-image" src="{{item.url}}" mode="aspectFill"></image>
+        <image class="result-image" src="{{item.url}}" mode="aspectFill" lazy-load></image>
         <view class="result-tag {{item.type}}">
           {{item.type === 'wallpaper' ? '壁纸' : '头像'}}
         </view>

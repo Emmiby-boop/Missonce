@@ -1,4 +1,4 @@
-import { getResources, getCategories, getPageSections, getResourceList } from '../../utils/api.js'
+import { getResources, getCategories, getPageSections } from '../../utils/api.js'
 import { optimizeImageUrls, getOptimalThumbnailSize } from '../../utils/image.js'
 import { cacheManager } from '../../utils/cache.js'
 import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants.js'
