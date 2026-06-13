@@ -23,6 +23,7 @@ const AdminsPage = defineAsyncComponent(() => import("./pages/AdminsPage.vue"));
 const NotificationsPage = defineAsyncComponent(() => import("./pages/NotificationsPage.vue"));
 const PageAdsManager = defineAsyncComponent(() => import("./pages/PageAdsManager.vue"));
 const ContactConfigPage = defineAsyncComponent(() => import("./pages/ContactConfigPage.vue"));
+const UserManagerPage = defineAsyncComponent(() => import("./pages/UserManagerPage.vue"));
 
 const routes = [
   { path: "/", component: DashboardPage },
@@ -43,6 +44,7 @@ const routes = [
   { path: "/notifications", component: NotificationsPage },
   { path: "/page-ads", component: PageAdsManager },
   { path: "/contact-config", component: ContactConfigPage },
+  { path: "/user-manager", component: UserManagerPage },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
