@@ -304,8 +304,9 @@ async function getUserList(event) {
 }
 
 /**
- * 重置用户当天观看激励广告次数
- * 删除当天的 watchAd 类型积分记录，让用户可以重新观看
+ * 重置用户今天首次下载的广告状态
+ * 删除当天 downloadMethod='free' 的 download_records，
+ * 让用户下次下载时重新需要观看激励广告。
  */
 async function resetWatchAdCount(event) {
   const { userOpenid } = event
@@ -318,11 +319,11 @@ async function resetWatchAdCount(event) {
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
 
-    // 查询今天有多少条 watchAd 记录
-    const countRes = await db.collection('point_records')
+    // 查询今天有多少条免费下载记录（即"看过广告"标记）
+    const countRes = await db.collection('download_records')
       .where({
         _openid: userOpenid,
-        type: 'watchAd',
+        downloadMethod: 'free',
         createdAt: _.gte(todayStart)
       })
       .count()
@@ -330,66 +331,27 @@ async function resetWatchAdCount(event) {
     const count = countRes.total || 0
 
     if (count === 0) {
-      return { success: true, message: '该用户今天没有观看广告记录，无需重置', deletedCount: 0 }
+      return { success: true, message: '该用户今天还没有免费下载记录，无需重置', deletedCount: 0 }
     }
 
-    // 删除今天的 watchAd 记录
-    const deleteRes = await db.collection('point_records')
+    // 删除今天的免费下载记录
+    await db.collection('download_records')
       .where({
         _openid: userOpenid,
-        type: 'watchAd',
+        downloadMethod: 'free',
         createdAt: _.gte(todayStart)
       })
       .remove()
 
-    console.log(`[adminUserManager] 已重置用户 ${userOpenid.slice(-6)} 的广告次数，删除 ${count} 条记录`)
-
-    // 同步扣减积分（删除记录对应的积分）
-    // 每条 watchAd 记录奖励 20 积分（与 userPoints 的 POINTS_CONFIG.watchAdPoints 一致）
-    const pointsToDeduct = count * 20
-
-    if (pointsToDeduct > 0) {
-      try {
-        const userRes = await db.collection('user_points')
-          .where({ _openid: userOpenid })
-          .limit(1)
-          .get()
-
-        if (userRes.data.length > 0) {
-          const user = userRes.data[0]
-          const newPoints = Math.max(0, (user.points || 0) - pointsToDeduct)
-          await db.collection('user_points').doc(user._id).update({
-            data: {
-              points: newPoints,
-              updatedAt: new Date()
-            }
-          })
-
-          // 记录扣分日志
-          await db.collection('point_records').add({
-            data: {
-              _openid: userOpenid,
-              type: 'admin_reset',
-              amount: -pointsToDeduct,
-              balance: newPoints,
-              description: `管理员重置今日广告次数，扣除 ${pointsToDeduct} 积分`,
-              createdAt: new Date()
-            }
-          })
-        }
-      } catch (pointErr) {
-        console.warn('[adminUserManager] 扣减积分失败（不影响主流程）:', pointErr)
-      }
-    }
+    console.log(`[adminUserManager] 已重置用户 ${userOpenid.slice(-6)} 的下载广告状态，删除 ${count} 条`)
 
     return {
       success: true,
-      message: `已重置 ${count} 条广告记录，扣减 ${pointsToDeduct} 积分`,
-      deletedCount: count,
-      pointsDeducted: pointsToDeduct
+      message: `已重置，用户下次下载需要重新观看广告`,
+      deletedCount: count
     }
   } catch (err) {
-    console.error('[adminUserManager] 重置广告次数失败:', err)
+    console.error('[adminUserManager] 重置下载广告状态失败:', err)
     return { success: false, message: '重置失败: ' + (err.message || '未知错误') }
   }
 }
