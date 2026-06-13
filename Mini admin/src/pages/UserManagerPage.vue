@@ -233,6 +233,26 @@
               </span>
             </label>
           </div>
+
+          <!-- 重置激励广告次数 -->
+          <div class="form-group pt-2 border-t border-[var(--border-color)]">
+            <label class="form-label">重置今日广告次数</label>
+            <p class="text-xs text-[var(--text-sub)] mb-2">
+              删除该用户今天的观看激励视频记录，用户可重新观看赚取积分。
+              相应的积分也会被扣减（每次 20 积分）。
+            </p>
+            <button
+              class="btn-soft text-sm"
+              :class="resettingAd ? 'opacity-50 cursor-not-allowed' : ''"
+              :disabled="resettingAd"
+              @click="resetWatchAdCount"
+            >
+              {{ resettingAd ? '重置中...' : '重置今日广告次数' }}
+            </button>
+            <span v-if="resetAdResult" class="ml-3 text-sm" :class="resetAdResult.success ? 'text-green-600' : 'text-red-500'">
+              {{ resetAdResult.message }}
+            </span>
+          </div>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
@@ -272,6 +292,8 @@ const pagination = reactive({
 // 编辑弹窗
 const showEditDialog = ref(false)
 const saving = ref(false)
+const resettingAd = ref(false)
+const resetAdResult = ref<{ success: boolean; message: string } | null>(null)
 const editUser = ref<any>(null)
 const editForm = reactive({
   memberLevel: 'none',
@@ -393,7 +415,42 @@ function openEditDialog(user: any) {
   editForm.memberExpireDate = ''
   editForm.points = ''
   editForm.skipAd = !!user.skipAd
+  resetAdResult.value = null
   showEditDialog.value = true
+}
+
+// 重置今日广告次数
+async function resetWatchAdCount() {
+  if (!editUser.value) return
+
+  resettingAd.value = true
+  resetAdResult.value = null
+
+  try {
+    const res = await callCloudFunction('adminUserManager', {
+      action: 'resetWatchAdCount',
+      userOpenid: editUser.value._openid
+    })
+
+    resetAdResult.value = {
+      success: res?.success,
+      message: res?.message || '操作完成'
+    }
+
+    if (res?.success) {
+      ElMessage.success(res.message || '重置成功')
+    } else {
+      ElMessage.warning(res.message || '重置失败')
+    }
+  } catch (error: any) {
+    resetAdResult.value = {
+      success: false,
+      message: error.message || '请求失败'
+    }
+    ElMessage.error(error.message || '请求失败')
+  } finally {
+    resettingAd.value = false
+  }
 }
 
 // 保存会员设置

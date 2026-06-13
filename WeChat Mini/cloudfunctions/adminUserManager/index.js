@@ -29,6 +29,8 @@ exports.main = async (event, context) => {
         return await updateMembership(event)
       case 'getUserList':
         return await getUserList(event)
+      case 'resetWatchAdCount':
+        return await resetWatchAdCount(event)
       default:
         return { success: false, message: `未知 action: ${action}` }
     }
@@ -282,6 +284,7 @@ async function getUserList(event) {
         bonusDownloads: p.bonusDownloads || 0,
         downloadsRemaining: p.downloadsRemaining || 0,
         skipAd: !!p.skipAd,
+        todayWatchAdCount: p.todayWatchAdCount || 0,
         updatedAt: p.updatedAt || null,
         hasPointsRecord: true
       }
@@ -297,5 +300,96 @@ async function getUserList(event) {
   } catch (err) {
     console.error('[adminUserManager] 获取用户列表失败:', err)
     return { success: false, message: '获取用户列表失败' }
+  }
+}
+
+/**
+ * 重置用户当天观看激励广告次数
+ * 删除当天的 watchAd 类型积分记录，让用户可以重新观看
+ */
+async function resetWatchAdCount(event) {
+  const { userOpenid } = event
+
+  if (!userOpenid) {
+    return { success: false, message: '缺少用户 openid' }
+  }
+
+  try {
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+
+    // 查询今天有多少条 watchAd 记录
+    const countRes = await db.collection('point_records')
+      .where({
+        _openid: userOpenid,
+        type: 'watchAd',
+        createdAt: _.gte(todayStart)
+      })
+      .count()
+
+    const count = countRes.total || 0
+
+    if (count === 0) {
+      return { success: true, message: '该用户今天没有观看广告记录，无需重置', deletedCount: 0 }
+    }
+
+    // 删除今天的 watchAd 记录
+    const deleteRes = await db.collection('point_records')
+      .where({
+        _openid: userOpenid,
+        type: 'watchAd',
+        createdAt: _.gte(todayStart)
+      })
+      .remove()
+
+    console.log(`[adminUserManager] 已重置用户 ${userOpenid.slice(-6)} 的广告次数，删除 ${count} 条记录`)
+
+    // 同步扣减积分（删除记录对应的积分）
+    // 每条 watchAd 记录奖励 20 积分（与 userPoints 的 POINTS_CONFIG.watchAdPoints 一致）
+    const pointsToDeduct = count * 20
+
+    if (pointsToDeduct > 0) {
+      try {
+        const userRes = await db.collection('user_points')
+          .where({ _openid: userOpenid })
+          .limit(1)
+          .get()
+
+        if (userRes.data.length > 0) {
+          const user = userRes.data[0]
+          const newPoints = Math.max(0, (user.points || 0) - pointsToDeduct)
+          await db.collection('user_points').doc(user._id).update({
+            data: {
+              points: newPoints,
+              updatedAt: new Date()
+            }
+          })
+
+          // 记录扣分日志
+          await db.collection('point_records').add({
+            data: {
+              _openid: userOpenid,
+              type: 'admin_reset',
+              amount: -pointsToDeduct,
+              balance: newPoints,
+              description: `管理员重置今日广告次数，扣除 ${pointsToDeduct} 积分`,
+              createdAt: new Date()
+            }
+          })
+        }
+      } catch (pointErr) {
+        console.warn('[adminUserManager] 扣减积分失败（不影响主流程）:', pointErr)
+      }
+    }
+
+    return {
+      success: true,
+      message: `已重置 ${count} 条广告记录，扣减 ${pointsToDeduct} 积分`,
+      deletedCount: count,
+      pointsDeducted: pointsToDeduct
+    }
+  } catch (err) {
+    console.error('[adminUserManager] 重置广告次数失败:', err)
+    return { success: false, message: '重置失败: ' + (err.message || '未知错误') }
   }
 }
