@@ -78,11 +78,11 @@ async function initInterstitialAd(pagePath) {
       return false
     }
     
-    // 🔥 从 admin 配置读取启动延迟（startTime 存毫秒数），覆盖默认 3000ms
+    // 🔥 从 admin 配置读取启动延迟（startTime 单位秒），覆盖默认 3000ms
     if (adConfig.startTime) {
       const parsed = Number(adConfig.startTime)
       if (!isNaN(parsed) && parsed > 0) {
-        minAppStartTime = parsed
+        minAppStartTime = parsed * 1000  // admin 存秒，这里用毫秒
       } else {
         minAppStartTime = DEFAULT_MIN_APP_START_TIME
       }
