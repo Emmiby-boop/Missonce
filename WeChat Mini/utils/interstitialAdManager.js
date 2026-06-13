@@ -37,8 +37,10 @@ function saveDailyCount() {
 
 const COOLDOWN_TIME = 60 * 1000 // 1分钟冷却时间
 const MIN_TRIGGER_INTERVAL = 3000 // 最小触发间隔3秒，避免过于频繁
-const MIN_APP_START_TIME = 3000 // 小程序启动后至少3秒才能显示插屏广告
+const DEFAULT_MIN_APP_START_TIME = 3000 // 默认：小程序启动后至少3秒才能显示插屏广告
 const DAILY_LIMIT = 8 // 每日最多显示 8 次插屏广告
+
+let minAppStartTime = DEFAULT_MIN_APP_START_TIME // 当前生效的启动延迟，可从 admin 配置
 
 /**
  * 初始化插屏广告
@@ -74,6 +76,18 @@ async function initInterstitialAd(pagePath) {
     if (!wx.createInterstitialAd) {
   
       return false
+    }
+    
+    // 🔥 从 admin 配置读取启动延迟（startTime 存毫秒数），覆盖默认 3000ms
+    if (adConfig.startTime) {
+      const parsed = Number(adConfig.startTime)
+      if (!isNaN(parsed) && parsed > 0) {
+        minAppStartTime = parsed
+      } else {
+        minAppStartTime = DEFAULT_MIN_APP_START_TIME
+      }
+    } else {
+      minAppStartTime = DEFAULT_MIN_APP_START_TIME
     }
     
     // 销毁之前的广告实例
@@ -142,7 +156,7 @@ function canShowInterstitialAd() {
   }
   
   const timeSinceAppStart = now - appStartTime
-  if (timeSinceAppStart < MIN_APP_START_TIME) {
+  if (timeSinceAppStart < minAppStartTime) {
     return false
   }
   
@@ -251,6 +265,7 @@ function destroy() {
   currentPagePath = ''
   interstitialShowing = false
   externalAdPlaying = false
+  minAppStartTime = DEFAULT_MIN_APP_START_TIME  // 重置为默认值
 }
 
 function setExternalAdPlaying(flag) {
