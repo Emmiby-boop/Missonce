@@ -1,4 +1,4 @@
-﻿import { createApp, defineAsyncComponent } from "vue";
+import { createApp, defineAsyncComponent } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
 import "./style.css";
@@ -24,6 +24,7 @@ const NotificationsPage = defineAsyncComponent(() => import("./pages/Notificatio
 const PageAdsManager = defineAsyncComponent(() => import("./pages/PageAdsManager.vue"));
 const ContactConfigPage = defineAsyncComponent(() => import("./pages/ContactConfigPage.vue"));
 const UserManagerPage = defineAsyncComponent(() => import("./pages/UserManagerPage.vue"));
+const MediaParsePage = defineAsyncComponent(() => import("./pages/MediaParsePage.vue"));
 
 const routes = [
   { path: "/", component: DashboardPage },
@@ -45,6 +46,7 @@ const routes = [
   { path: "/page-ads", component: PageAdsManager },
   { path: "/contact-config", component: ContactConfigPage },
   { path: "/user-manager", component: UserManagerPage },
+  { path: "/media-parse", component: MediaParsePage },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
