@@ -205,6 +205,7 @@ function executeDownload(url, timeout) {
 // 下载视频到相册
 async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
   let downloadTask = null;
+  let aborted = false;
 
   const { isConnected } = getNetworkStatus();
   if (!isConnected) {
@@ -223,11 +224,8 @@ async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
     downloadUrl = await buildProxiedUrl(videoUrl, `${videoId || 'video'}.mp4`);
   }
 
-  if (!downloadUrl) {
-    return { promise: Promise.reject(new Error('获取下载链接失败')), abort: () => {} };
-  }
-
   const promise = ensureWritePhotosAlbumPermission().then(() => {
+    if (aborted) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const t0 = Date.now();
       console.log(`[download][video] 开始下载: ${downloadUrl?.substring(0, 80)}...`);
@@ -324,7 +322,7 @@ async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
 
   return {
     promise,
-    abort: () => { if (downloadTask) downloadTask.abort(); }
+    abort: function() { aborted = true; if (downloadTask) downloadTask.abort(); }
   };
 }
 
