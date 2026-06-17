@@ -19,7 +19,7 @@ const DIRECT_DOMAINS = ['missonce.cc', 'missonce-99', 'tcloudbaseapp.com', 'wx.q
 function needsProxy(url) {
   if (!url) return false;
   try { return PLAY_PROXY_DOMAINS.some(d => new URL(url).hostname.includes(d)); }
-  catch { return false; }
+  catch (e) { return false; }
 }
 // 下载用：第三方域名一律走代理，避免微信域名白名单报错
 function needsDownloadProxy(url) {
@@ -28,7 +28,7 @@ function needsDownloadProxy(url) {
     const host = new URL(url).hostname;
     if (DIRECT_DOMAINS.some(d => host.includes(d))) return false;
     return true;
-  } catch { return true; }
+  } catch (e) { return true; }
 }
 
 Page({
@@ -337,12 +337,13 @@ Page({
     return { title: '分享一个去水印神器', query: `url=${encodeURIComponent(video_url || '')}&cover=${encodeURIComponent(cover_url || '')}&videoid=${encodeURIComponent(video_id || '')}&title=${encodeURIComponent(title || '')}&fromShare=true`, imageUrl: cover_url || '/images/share-cover.png' };
   },
 
-  // 并行预代理所有视频，当前视频代理完成后立即播放
+  // 预代理当前+后续2个视频，当前视频代理完成后立即播放
   _proxyAllAndPlay(playlist, currentIdx) {
     var self = this;
     var tasks = [];
+    var end = Math.min(currentIdx + 3, playlist.length);
 
-    for (var i = 0; i < playlist.length; i++) {
+    for (var i = currentIdx; i < end; i++) {
       (function(idx) {
         var item = playlist[idx];
         if (!item || !item.video_url) return;

@@ -1,0 +1,172 @@
+import { isLoggedIn, getUserInfo, logout, silentLogin } from '../../utils/auth';
+
+Page({
+  data: {
+    isLoggedIn: false,
+    userInfo: null,
+    historyCount: 0,
+    cacheSize: ''
+  },
+
+  onShow() {
+    // 同步登录状态
+    this.setData({
+      isLoggedIn: isLoggedIn(),
+      userInfo: getUserInfo()
+    });
+    
+    // 统计历史记录
+    const history = wx.getStorageSync('parse_history') || [];
+    this.setData({ historyCount: history.length });
+    this.calcCache();
+  },
+
+  calcCache() {
+    try {
+      const info = wx.getStorageInfoSync();
+      const kb = info.currentSize || 0;
+      this.setData({
+        cacheSize: kb < 1024 ? kb + ' KB' : (kb / 1024).toFixed(1) + ' MB'
+      });
+    } catch (e) {
+      this.setData({ cacheSize: '未知' });
+    }
+  },
+
+  // 点击用户卡片
+  onProfileTap() {
+    if (this.data.isLoggedIn) {
+      // 已登录，显示用户信息
+      wx.showModal({
+        title: '用户信息',
+        content: `昵称：${this.data.userInfo?.nickName || '未设置'}\nID：${this.data.userInfo?._id || '未知'}`,
+        showCancel: false,
+        confirmText: '好的',
+        confirmColor: '#07c160',
+      });
+    } else {
+      // 未登录，引导登录
+      this._doLogin();
+    }
+  },
+
+  // 执行登录
+  async _doLogin() {
+    wx.showModal({
+      title: '登录',
+      content: '登录后可同步解析历史记录到云端，换设备也不丢失',
+      confirmText: '一键登录',
+      cancelText: '暂不登录',
+      confirmColor: '#07c160',
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            wx.showLoading({ title: '登录中...' });
+            const userInfo = await silentLogin();
+            wx.hideLoading();
+            
+            if (userInfo) {
+              this.setData({
+                isLoggedIn: true,
+                userInfo: userInfo
+              });
+              wx.showToast({ title: '登录成功', icon: 'success' });
+            } else {
+              wx.showToast({ title: '登录失败', icon: 'none' });
+            }
+          } catch (e) {
+            wx.hideLoading();
+            console.error('[Mine] 登录失败:', e);
+            wx.showToast({ title: '登录失败', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
+  goHistory() {
+    wx.switchTab({ url: '/pages/history/history' });
+  },
+
+  goFavorites() {
+    wx.showToast({ title: '收藏功能即将上线', icon: 'none' });
+  },
+
+  goHelp() {
+    wx.navigateTo({ url: '/pages/questions/questions' });
+  },
+
+  goSettings() {
+    wx.navigateTo({ url: '/pages/settings/settings' });
+  },
+
+  onAbout() {
+    const accountInfo = wx.getAccountInfoSync ? wx.getAccountInfoSync() : null;
+    const version = accountInfo?.miniProgram?.version || 'v2.5.3';
+    wx.showModal({
+      title: '关于小辣椒去水印精灵',
+      content: `小辣椒去水印精灵是一款免费的视频无水印提取工具，支持抖音、快手、B站等50+主流平台。\n\n提供高清视频下载、音频提取、封面保存等功能。\n\n版本：${version}`,
+      showCancel: false,
+      confirmText: '我知道了',
+      confirmColor: '#07c160',
+    });
+  },
+
+  onClearCache() {
+    wx.showModal({
+      title: '清除缓存',
+      content: '将清除临时数据（历史记录保留）',
+      confirmColor: '#07c160',
+      success: (res) => {
+        if (res.confirm) {
+          const history = wx.getStorageSync('parse_history');
+          const privacy = wx.getStorageSync('privacy_agreed');
+          const theme = wx.getStorageSync('theme_mode');
+          wx.clearStorageSync();
+          if (history) wx.setStorageSync('parse_history', history);
+          if (privacy) wx.setStorageSync('privacy_agreed', privacy);
+          if (theme) wx.setStorageSync('theme_mode', theme);
+          this.calcCache();
+          wx.showToast({ title: '已清除', icon: 'success' });
+        }
+      }
+    });
+  },
+
+  onLogout() {
+    if (!this.data.isLoggedIn) {
+      wx.showToast({ title: '已是游客模式', icon: 'none' });
+      return;
+    }
+
+    wx.showModal({
+      title: '退出登录',
+      content: '退出后本地数据将保留，云端数据需重新登录后同步',
+      confirmText: '确定退出',
+      cancelText: '取消',
+      confirmColor: '#ba1a1a',
+      success: (res) => {
+        if (res.confirm) {
+          logout();
+          this.setData({
+            isLoggedIn: false,
+            userInfo: null
+          });
+          wx.showToast({ title: '已退出', icon: 'success' });
+        }
+      }
+    });
+  },
+
+  handleContact(e) {
+    // 客服消息回调
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '小辣椒去水印精灵 — 免费无水印视频提取工具',
+      path: '/pages/index/index',
+      imageUrl: '/images/share-cover.png'
+    };
+  },
+});

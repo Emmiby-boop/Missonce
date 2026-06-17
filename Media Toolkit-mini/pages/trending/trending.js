@@ -235,7 +235,13 @@ Page({
 
   _cacheParseResult(url, data) {
     try {
-      const cache = wx.getStorageSync('trending_parse_cache') || {};
+      var cache = wx.getStorageSync('trending_parse_cache') || {};
+      // 限制缓存上限 50 条，超出时清理最旧的
+      var keys = Object.keys(cache);
+      if (keys.length >= 50) {
+        var sorted = keys.sort(function(a, b) { return (cache[a].timestamp || 0) - (cache[b].timestamp || 0); });
+        for (var i = 0; i < 10; i++) { delete cache[sorted[i]]; }
+      }
       cache[url] = {
         video_url: data.video_url || '', title: data.title || '',
         cover_url: data.cover_url || '', video_id: data.video_id || '',
