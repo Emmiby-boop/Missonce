@@ -3,8 +3,8 @@ const path = require('path');
 
 // 安全依赖：首次部署需 npm install，缺失时降级运行
 let helmet, rateLimit;
-try { helmet = require('helmet'); } catch { helmet = null; }
-try { rateLimit = require('express-rate-limit'); } catch { rateLimit = null; }
+try { helmet = require('helmet'); } catch (e) { helmet = null; }
+try { rateLimit = require('express-rate-limit'); } catch (e) { rateLimit = null; }
 
 const parseRouter = require('./src/api/parse');
 const adConfigRouter = require('./src/api/adConfig');
@@ -13,16 +13,43 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+// ===== CORS（必须在所有中间件之前） =====
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(function(s) { return s.trim(); })
+  : [
+      'https://servicewechat.com',
+      'https://missonce-99',
+      'https://missonce.cc',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://localhost:8080',
+    ];
+
+app.use(function(req, res, next) {
+  var origin = req.headers.origin || '';
+  var isAllowed = ALLOWED_ORIGINS.some(function(allowed) { return origin.indexOf(allowed) === 0; });
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // ===== 安全中间件 =====
 
-// helmet 安全头（X-Content-Type-Options, X-Frame-Options, CSP 等）
+// helmet 安全头
 if (helmet) {
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: false,
   }));
 } else {
-  console.warn('⚠ helmet 未安装，跳过安全头设置。运行 npm install helmet 即可启用');
+  console.warn('⚠ helmet 未安装，跳过安全头设置');
 }
 
 // 全局请求速率限制（防止暴力/DoS）
@@ -43,21 +70,21 @@ if (rateLimit) {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CORS 白名单（替代原来的 * 通配）
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
-  : [
-      'https://servicewechat.com',   // 微信小程序
-      'https://missonce-99',                                    // CloudBase 管理后台（前缀匹配）
-      'https://missonce-99-1gfaff6n002f6ac1-1318542519.tcloudbaseapp.com',  // CloudBase 完整域名
-      'https://missonce.cc',                                    // Mini admin 管理后台
-      'http://localhost:3000',       // 本地开发
-      'http://localhost:3001',
-      'http://localhost:5173',       // Vite dev server
-      'http://localhost:8080',
-    ];
+// API 响应禁止缓存
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  if (isAllowed) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
-// CORS 由 nginx 处理（避免 CDN 缓存无 CORS 头的响应）
 // API 响应禁止缓存
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
