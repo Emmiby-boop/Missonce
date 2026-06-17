@@ -212,7 +212,19 @@ class DouyinParser extends BaseParser {
       }
 
       const imageData = urls[urls.length - 1];
-      const livePhotoUrl = image.video?.play_addr?.url_list?.[0];
+
+      // 实况图视频 URL：优先 play_addr，降级到 bit_rate
+      let livePhotoUrl = image.video?.play_addr?.url_list?.[0] || '';
+      if (!livePhotoUrl && image.video?.bit_rate) {
+        const bitRateList = image.video.bit_rate;
+        for (let i = 0; i < bitRateList.length; i++) {
+          const brUrls = bitRateList[i]?.play_addr?.url_list || [];
+          if (brUrls.length > 0) {
+            livePhotoUrl = brUrls[brUrls.length - 1] || brUrls[0] || '';
+            break;
+          }
+        }
+      }
 
       if (livePhotoUrl) {
         result.push({
