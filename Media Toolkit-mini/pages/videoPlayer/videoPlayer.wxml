@@ -1,0 +1,96 @@
+<!-- 播放器 — 抖音风格布局，保持原始 swipe+tap 机制 -->
+<view wx:if="{{hasParams}}" class="page">
+  <!-- 图集 -->
+  <swiper wx:if="{{isImageMode}}" class="player-swiper" vertical="{{false}}" current="{{currentIdx}}" bindchange="onSwiperChange" duration="{{250}}">
+    <swiper-item wx:for="{{imageList}}" wx:key="index" wx:for-item="img" wx:for-index="idx">
+      <view class="player-slide" bindtap="onPreviewImage" data-index="{{idx}}">
+        <image class="swiper-img" src="{{img.url || img}}" mode="aspectFill" />
+      </view>
+    </swiper-item>
+  </swiper>
+  <view class="dot-indicator" wx:if="{{isImageMode && imageList.length > 1}}">
+    <view class="dot {{currentIdx === index ? 'active' : ''}}" wx:for="{{imageList}}" wx:key="index" />
+  </view>
+
+  <!-- 视频 — 保持原始 swipe+view.bindtap 机制 -->
+  <swiper wx:if="{{!isImageMode}}" class="player-swiper" vertical="{{true}}" current="{{currentIdx}}" bindchange="onSwiperChange" duration="{{200}}">
+    <swiper-item wx:for="{{playlist}}" wx:key="idx" wx:for-item="v" wx:for-index="idx">
+      <view class="player-slide" bindtap="onTapVideo">
+        <video
+          id="vid_{{idx}}"
+          class="player"
+          src="{{idx === readyIdx ? v.video_url : ''}}"
+          controls="{{false}}"
+          loop="{{true}}"
+          autoplay="{{idx === readyIdx}}"
+          muted="{{idx !== readyIdx}}"
+          object-fit="contain"
+          binderror="onVideoError"
+          bindplay="onPlay"
+          bindpause="onPause"
+          show-fullscreen-btn="{{true}}"
+          show-play-btn="{{false}}"
+          show-center-play-btn="{{false}}"
+          show-progress="{{true}}"
+          enable-progress-gesture="{{true}}"
+        />
+        <!-- 暂停遮罩 - 抖音风格 -->
+        <view class="pause-overlay" wx:if="{{!isPlaying && idx === currentIdx}}" bindtap="onTapVideo">
+          <view class="pause-circle">
+            <view class="pause-triangle"></view>
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <!-- 右侧操作面板 -->
+  <view class="right-panel">
+    <block wx:if="{{!isImageMode}}">
+      <view class="avatar-wrap" wx:if="{{currentItem.author && currentItem.author.avatar}}">
+        <image class="avatar-img" src="{{currentItem.author.avatar}}" mode="aspectFill" bindtap="onAvatarTap" />
+      </view>
+      <view class="act-btn" bindtap="onSaveCover">
+        <image class="act-icon-img" src="{{iconCover}}" mode="aspectFit" />
+        <text class="act-label">封面</text>
+      </view>
+    </block>
+    <view class="act-btn" bindtap="onDownload">
+      <image class="act-icon-img" src="{{iconDownload}}" mode="aspectFit" />
+      <text class="act-label">{{isImageMode ? '保存' : '下载'}}</text>
+    </view>
+    <view class="act-btn" wx:if="{{isImageMode && imageList.length > 1}}" bindtap="onSaveAllImages">
+      <image class="act-icon-img" src="{{iconDownload}}" mode="aspectFit" />
+      <text class="act-label">全部</text>
+    </view>
+    <view class="act-btn">
+      <button class="act-btn-inner" open-type="share">
+        <image class="act-icon-img" src="{{iconShare}}" mode="aspectFit" />
+        <text class="act-label">分享</text>
+      </button>
+    </view>
+    <view class="music-disc" wx:if="{{!isImageMode && currentItem.audio_url}}">
+      <view class="disc-outer"><image class="disc-img" src="{{currentItem.cover_url || currentItem.author.avatar}}" mode="aspectFill" /></view>
+    </view>
+  </view>
+
+  <!-- 底部信息 -->
+  <view class="bottom-panel">
+    <view class="author-row" wx:if="{{!isImageMode && currentItem.author && currentItem.author.nickname}}">
+      <text class="author-name">@{{currentItem.author.nickname}}</text>
+      <view class="platform-tag" wx:if="{{currentItem.platform}}">
+        <text class="platform-tag-text">{{currentItem.platform}}</text>
+      </view>
+    </view>
+    <view class="title-area" wx:if="{{currentItem.title}}" bindlongpress="onCopyTitle">
+      <text class="title-text">{{currentItem.title}}</text>
+    </view>
+  </view>
+</view>
+
+<view wx:else class="page empty-page">
+  <view class="empty-state">
+    <image class="empty-icon" src="/images/icon-video.png" mode="aspectFit" />
+    <text class="empty-title">暂无内容</text>
+  </view>
+</view>

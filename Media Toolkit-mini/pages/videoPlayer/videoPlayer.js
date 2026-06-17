@@ -33,7 +33,7 @@ function needsDownloadProxy(url) {
 
 Page({
   data: {
-    hasParams: false, playlist: [], currentIdx: 0, currentItem: {},
+    hasParams: false, playlist: [], currentIdx: 0, readyIdx: -1, currentItem: {},
     isPlaying: false, hasRetried: false, fromShare: false,
     isImageMode: false, imageList: [],
     iconDownload: '/images/icon-download.png',
@@ -93,25 +93,29 @@ Page({
     }
 
     // 先渲染，再懒代理后续视频
-    this.setData({ hasParams: true, playlist, currentIdx: ci, currentItem: cur, fromShare: fromShare === 'true' });
+    this.setData({ hasParams: true, playlist, currentIdx: ci, readyIdx: -1, currentItem: cur, fromShare: fromShare === 'true' });
     wx.nextTick(() => {
       if (!this.data.isImageMode) {
-        // 当前视频如果需要代理，先等代理就绪再播放
         var self = this;
         var firstItem = playlist[ci];
+        // 当前视频如果需要代理，先等代理就绪再播放
         if (firstItem && firstItem.video_url && needsProxy(firstItem.video_url) && !firstItem.video_url.startsWith(config.baseURL)) {
           buildProxiedUrl(firstItem.video_url, (firstItem.video_id || 'video') + '.mp4').then(function(proxyUrl) {
             if (proxyUrl && playlist[ci]) {
               playlist[ci] = Object.assign({}, playlist[ci], { video_url: proxyUrl, _proxied: true });
-              self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[ci]) });
+              self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[ci]), readyIdx: ci });
+            } else {
+              self.setData({ readyIdx: ci });
             }
             self._playIdx(ci);
             self._lazyProxyRange(playlist, ci + 1, 3);
           }).catch(function() {
+            self.setData({ readyIdx: ci });
             self._playIdx(ci);
             self._lazyProxyRange(playlist, ci + 1, 3);
           });
         } else {
+          self.setData({ readyIdx: ci });
           self._playIdx(ci);
           self._lazyProxyRange(playlist, ci + 1, 3);
         }
@@ -133,7 +137,10 @@ Page({
   _abortAllDownloads() { this._cleanupOnLeave(); },
 
   _stopAll() {
-    this.data.playlist.forEach((_, i) => { try { const ctx = wx.createVideoContext('vid_' + i, this); if (ctx) ctx.stop(); } catch (e) {} });
+    var readyIdx = this.data.readyIdx;
+    if (readyIdx >= 0) {
+      try { var ctx = wx.createVideoContext('vid_' + readyIdx, this); if (ctx) ctx.stop(); } catch (e) {}
+    }
     this._videoCtx = null; this.setData({ isPlaying: false });
   },
   _playIdx(idx) {
@@ -146,25 +153,30 @@ Page({
     if (idx === this.data.currentIdx) return;
     if (!this.data.isImageMode) {
       this._stopAll();
+      // 先设 currentIdx 做视觉定位，readyIdx 清空（不加载视频）
       var item = Object.assign({}, this.data.playlist[idx] || {});
-      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false });
+      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false, readyIdx: -1 });
 
-      // 当前视频如果需要代理，先等代理就绪再播放
       var self = this;
       var playlist = this.data.playlist;
+      // 等代理就绪后再设 readyIdx，触发视频加载
       if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL) && !item._proxied) {
         buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
           if (proxyUrl && playlist[idx]) {
             playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true });
-            self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]) });
+            self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyIdx: idx });
+          } else {
+            self.setData({ readyIdx: idx });
           }
           self._playIdx(idx);
           self._lazyProxyRange(playlist, idx + 1, 3);
         }).catch(function() {
+          self.setData({ readyIdx: idx });
           self._playIdx(idx);
           self._lazyProxyRange(playlist, idx + 1, 3);
         });
       } else {
+        self.setData({ readyIdx: idx });
         self._playIdx(idx);
         self._lazyProxyRange(playlist, idx + 1, 3);
       }
@@ -182,27 +194,31 @@ Page({
   onPause() { this.setData({ isPlaying: false }); },
 
   onVideoError() {
-    const item = this.data.currentItem;
+    var item = this.data.currentItem;
     if (!item || !item.video_url) return;
     // 如果当前不是代理 URL，尝试走代理再播
     if (!item._proxied && needsProxy(item.video_url)) {
-      buildProxiedUrl(item.video_url, `${item.video_id || 'video'}.mp4`).then(proxyUrl => {
+      var self = this;
+      buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
         if (!proxyUrl) { wx.showToast({ title: '视频加载失败', icon: 'none' }); return; }
-        const pl = [...this.data.playlist];
-        const idx = this.data.currentIdx;
+        var pl = [...self.data.playlist];
+        var idx = self.data.currentIdx;
         pl[idx] = { ...pl[idx], video_url: proxyUrl, _proxied: true };
-        this.setData({ playlist: pl, currentItem: { ...this.data.currentItem, video_url: proxyUrl, _proxied: true } });
-        wx.nextTick(() => this._playIdx(idx));
-      }).catch(() => {
+        self.setData({ playlist: pl, currentItem: { ...self.data.currentItem, video_url: proxyUrl, _proxied: true }, readyIdx: -1 });
+        wx.nextTick(function() {
+          self.setData({ readyIdx: idx });
+          self._playIdx(idx);
+        });
+      }).catch(function() {
         wx.showToast({ title: '视频加载失败', icon: 'none' });
       });
     } else if (!this.data.hasRetried) {
-      // 已经是代理 URL 还失败，带 timestamp 重试一次
-      const url = item.video_url;
-      const r = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
-      const pl = [...this.data.playlist]; pl[this.data.currentIdx] = { ...pl[this.data.currentIdx], video_url: r };
-      this.setData({ hasRetried: true, playlist: pl, currentItem: { ...this.data.currentItem, video_url: r } });
-      wx.nextTick(() => this._playIdx(this.data.currentIdx));
+      var url = item.video_url;
+      var r = url.includes('?') ? url + '&_t=' + Date.now() : url + '?_t=' + Date.now();
+      var pl = [...this.data.playlist]; pl[this.data.currentIdx] = { ...pl[this.data.currentIdx], video_url: r };
+      this.setData({ hasRetried: true, playlist: pl, currentItem: { ...this.data.currentItem, video_url: r }, readyIdx: -1 });
+      var self2 = this;
+      wx.nextTick(function() { self2.setData({ readyIdx: self2.data.currentIdx }); self2._playIdx(self2.data.currentIdx); });
     } else {
       wx.showToast({ title: '视频加载失败', icon: 'none' });
     }
