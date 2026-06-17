@@ -110,9 +110,8 @@ Page({
       if (self._precacheRunning) return;
       self._precacheRunning = true;
 
-      request('/api/trending/merged').then(function(res) {
-        if (res.retcode !== 200) { self._precacheRunning = false; return; }
-        var items = (res.data.list || []).filter(function(i) { return i.url && !cache[i.url]; }).slice(0, 5);
+      var doPrecache = function(list) {
+        var items = list.filter(function(i) { return i.url && !cache[i.url]; }).slice(0, 5);
         if (!items.length) { self._precacheRunning = false; return; }
         var chain = Promise.resolve();
         items.forEach(function(item) {
@@ -133,7 +132,23 @@ Page({
           });
         });
         return chain;
-      }).then(function() { self._precacheRunning = false; }).catch(function() { self._precacheRunning = false; });
+      };
+
+      // 优先用 app.js 预拉取的缓存
+      var trendingList = wx.getStorageSync('trending_cache') || [];
+      if (trendingList.length > 0) {
+        doPrecache(trendingList).then(function() { self._precacheRunning = false; }).catch(function() { self._precacheRunning = false; });
+      } else {
+        // 缓存为空时从 API 拉取
+        request('/api/trending/merged').then(function(res) {
+          if (res.retcode === 200 && res.data && res.data.list) {
+            wx.setStorageSync('trending_cache', res.data.list);
+            wx.setStorageSync('trending_cache_time', Date.now());
+            return doPrecache(res.data.list);
+          }
+          self._precacheRunning = false;
+        }).then(function() { self._precacheRunning = false; }).catch(function() { self._precacheRunning = false; });
+      }
     } catch (e) { self._precacheRunning = false; }
   },
 

@@ -28,13 +28,22 @@ Page({
 
   onLoad() {
     track('page_view', { page: 'trending' });
+    // 优先读缓存（app.js 启动时已预拉取）
+    var cached = wx.getStorageSync('trending_cache');
+    if (cached && cached.length > 0) {
+      this._processItems(cached);
+    }
+    // 后台刷新最新数据
     this.loadData();
   },
 
   onShow() {
-    // 仅首次加载，后续切换 tab 不重复请求
     if (!this._hasLoaded) {
       this._hasLoaded = true;
+      var cached = wx.getStorageSync('trending_cache');
+      if (cached && cached.length > 0) {
+        this._processItems(cached);
+      }
       this.loadData();
     }
   },
@@ -61,40 +70,12 @@ Page({
     try {
       const res = await request('/api/trending/merged');
       if (res.retcode === 200) {
-        const now = Date.now();
-        const allItems = (res.data.list || []).map((item, idx) => {
-          const age = now - (item.cachedAt || item.syncedAt || 0);
-          const minutes = Math.floor(age / 60000);
-          let timeLabel = '刚刚';
-          if (minutes > 60) timeLabel = Math.floor(minutes / 60) + '小时前';
-          else if (minutes > 0) timeLabel = minutes + '分钟前';
-
-          // 判断类型
-          let type = 'video';
-          let typeLabel = '视频';
-          if (item.image_list && item.image_list.length > 0 && !item.video_url) {
-            type = 'image';
-            typeLabel = '图集';
-          } else if (item.title && (item.title.includes('音乐') || item.title.includes('#音乐'))) {
-            type = 'music';
-            typeLabel = '音乐';
-          }
-
-          return {
-            ...item,
-            cover: item.cover || '',
-            platformColor: PLATFORM_COLORS[item.platform] || '#07c160',
-            timeLabel,
-            type,
-            typeLabel,
-            isNew: age < 3600000, // 1小时内标记NEW
-            isTop: idx < 3,
-          };
-        });
-        this.setData({ allItems: allItems });
-        this.filterList();
+        // 更新缓存
+        wx.setStorageSync('trending_cache', res.data.list || []);
+        wx.setStorageSync('trending_cache_time', Date.now());
+        this._processItems(res.data.list || []);
         // 后台预缓存前 5 条热门视频的解析结果
-        this._precacheTopItems(allItems);
+        this._precacheTopItems(this.data.allItems);
       }
     } catch (e) {
       showToast('加载失败', 'none');
@@ -119,6 +100,46 @@ Page({
         }).catch(function() {});
       });
     });
+  },
+
+  // 处理热门列表数据（缓存和网络共用）
+  _processItems(list) {
+    var now = Date.now();
+    var allItems = list.map(function(item, idx) {
+      var age = now - (item.cachedAt || item.syncedAt || 0);
+      var minutes = Math.floor(age / 60000);
+      var timeLabel = '刚刚';
+      if (minutes > 60) timeLabel = Math.floor(minutes / 60) + '小时前';
+      else if (minutes > 0) timeLabel = minutes + '分钟前';
+
+      var type = 'video';
+      var typeLabel = '视频';
+      if (item.image_list && item.image_list.length > 0 && !item.video_url) {
+        type = 'image';
+        typeLabel = '图集';
+      } else if (item.title && (item.title.indexOf('音乐') >= 0 || item.title.indexOf('#音乐') >= 0)) {
+        type = 'music';
+        typeLabel = '音乐';
+      }
+
+      return {
+        id: item.id,
+        url: item.url || '',
+        title: item.title || '',
+        cover: item.cover || '',
+        platform: item.platform || '',
+        platformColor: PLATFORM_COLORS[item.platform] || '#07c160',
+        heat: item.heat || 0,
+        source: item.source || '',
+        timeLabel: timeLabel,
+        type: type,
+        typeLabel: typeLabel,
+        isNew: age < 3600000,
+        isTop: idx < 3,
+      };
+    });
+    this.setData({ allItems: allItems });
+    this.filterList();
   },
 
   filterList() {
