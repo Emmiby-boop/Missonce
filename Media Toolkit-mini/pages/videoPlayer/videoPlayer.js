@@ -33,7 +33,7 @@ function needsDownloadProxy(url) {
 
 Page({
   data: {
-    hasParams: false, playlist: [], currentIdx: 0, readyIdx: -1, currentItem: {},
+    hasParams: false, playlist: [], currentIdx: 0, readyMap: {}, currentItem: {},
     isPlaying: false, hasRetried: false, fromShare: false,
     isImageMode: false, imageList: [], coverVisible: true,
     iconDownload: '/images/icon-download.png',
@@ -121,34 +121,10 @@ Page({
       if (!cur.platform && cachedResult?.platform) cur.platform = cachedResult.platform;
     }
 
-    // 先渲染，再懒代理后续视频
-    this.setData({ hasParams: true, playlist, currentIdx: ci, readyIdx: -1, currentItem: cur, fromShare: fromShare === 'true', coverVisible: true });
-    wx.nextTick(() => {
-      if (!this.data.isImageMode) {
-        var self = this;
-        var firstItem = playlist[ci];
-        // 当前视频如果需要代理，先等代理就绪再播放
-        if (firstItem && firstItem.video_url && needsProxy(firstItem.video_url) && !firstItem.video_url.startsWith(config.baseURL)) {
-          buildProxiedUrl(firstItem.video_url, (firstItem.video_id || 'video') + '.mp4').then(function(proxyUrl) {
-            if (proxyUrl && playlist[ci]) {
-              playlist[ci] = Object.assign({}, playlist[ci], { video_url: proxyUrl, _proxied: true });
-              self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[ci]), readyIdx: ci });
-              self._playIdx(ci);
-            } else {
-              wx.showToast({ title: '视频链接已过期', icon: 'none' });
-            }
-            self._lazyProxyRange(playlist, ci + 1, 3);
-          }).catch(function() {
-            wx.showToast({ title: '视频加载失败', icon: 'none' });
-            self._lazyProxyRange(playlist, ci + 1, 3);
-          });
-        } else {
-          self.setData({ readyIdx: ci });
-          self._playIdx(ci);
-          self._lazyProxyRange(playlist, ci + 1, 3);
-        }
-      }
-    });
+    // 先渲染，预加载当前+后续视频
+    this.setData({ hasParams: true, playlist, currentIdx: ci, readyMap: {}, currentItem: cur, fromShare: fromShare === 'true', coverVisible: true });
+    // 预代理并加载当前+后续 2 个视频
+    this._eagerProxyAndReady(playlist, ci, 3);
   },
 
   onReady() {},
@@ -165,9 +141,11 @@ Page({
   _abortAllDownloads() { this._cleanupOnLeave(); },
 
   _stopAll() {
-    var readyIdx = this.data.readyIdx;
-    if (readyIdx >= 0) {
-      try { var ctx = wx.createVideoContext('vid_' + readyIdx, this); if (ctx) ctx.stop(); } catch (e) {}
+    var rm = this.data.readyMap;
+    for (var k in rm) {
+      if (rm[k]) {
+        try { var ctx = wx.createVideoContext('vid_' + k, this); if (ctx) ctx.stop(); } catch (e) {}
+      }
     }
     this._videoCtx = null; this.setData({ isPlaying: false });
   },
@@ -181,32 +159,38 @@ Page({
     if (idx === this.data.currentIdx) return;
     if (!this.data.isImageMode) {
       this._stopAll();
-      // 先设 currentIdx 做视觉定位，readyIdx 清空（不加载视频）
       var item = Object.assign({}, this.data.playlist[idx] || {});
-      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false, readyIdx: -1, coverVisible: true });
+      var rm = Object.assign({}, this.data.readyMap);
+      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false, coverVisible: true });
 
       var self = this;
-      var playlist = this.data.playlist;
-      // 等代理就绪后再设 readyIdx，触发视频加载
-      if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL) && !item._proxied) {
-        buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
-          if (proxyUrl && playlist[idx]) {
-            playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true });
-            self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyIdx: idx });
-            self._playIdx(idx);
-          } else {
-            wx.showToast({ title: '视频链接已过期', icon: 'none' });
-          }
-          self._lazyProxyRange(playlist, idx + 1, 3);
-        }).catch(function() {
-          wx.showToast({ title: '视频加载失败', icon: 'none' });
-          self._lazyProxyRange(playlist, idx + 1, 3);
-        });
+      // 如果下一个视频已经在 readyMap 里（已预加载），直接播放
+      if (rm[idx]) {
+        wx.nextTick(function() { self._playIdx(idx); });
       } else {
-        self.setData({ readyIdx: idx });
-        self._playIdx(idx);
-        self._lazyProxyRange(playlist, idx + 1, 3);
+        // 没有预加载好，现场代理
+        var playlist = this.data.playlist;
+        if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL) && !item._proxied) {
+          buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
+            if (proxyUrl && playlist[idx]) {
+              playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true });
+              rm[idx] = true;
+              self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyMap: rm });
+              self._playIdx(idx);
+            } else {
+              wx.showToast({ title: '视频链接已过期', icon: 'none' });
+            }
+          }).catch(function() {
+            wx.showToast({ title: '视频加载失败', icon: 'none' });
+          });
+        } else {
+          rm[idx] = true;
+          self.setData({ readyMap: rm });
+          self._playIdx(idx);
+        }
       }
+      // 继续预加载后续视频
+      this._eagerProxyRange(this.data.playlist, idx, 3);
     } else {
       this.setData({ currentIdx: idx });
     }
@@ -223,29 +207,28 @@ Page({
   onVideoError() {
     var item = this.data.currentItem;
     if (!item || !item.video_url) return;
-    // 如果当前不是代理 URL，尝试走代理再播
+    var self = this;
+    var rm = Object.assign({}, self.data.readyMap);
+    var playlist = self.data.playlist;
+    var idx = self.data.currentIdx;
+
     if (!item._proxied && needsProxy(item.video_url)) {
-      var self = this;
       buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
         if (!proxyUrl) { wx.showToast({ title: '视频加载失败', icon: 'none' }); return; }
-        var pl = [...self.data.playlist];
-        var idx = self.data.currentIdx;
-        pl[idx] = { ...pl[idx], video_url: proxyUrl, _proxied: true };
-        self.setData({ playlist: pl, currentItem: { ...self.data.currentItem, video_url: proxyUrl, _proxied: true }, readyIdx: -1 });
-        wx.nextTick(function() {
-          self.setData({ readyIdx: idx });
-          self._playIdx(idx);
-        });
+        playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true });
+        rm[idx] = true;
+        self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyMap: rm });
+        wx.nextTick(function() { self._playIdx(idx); });
       }).catch(function() {
         wx.showToast({ title: '视频加载失败', icon: 'none' });
       });
-    } else if (!this.data.hasRetried) {
+    } else if (!self.data.hasRetried) {
       var url = item.video_url;
-      var r = url.includes('?') ? url + '&_t=' + Date.now() : url + '?_t=' + Date.now();
-      var pl = [...this.data.playlist]; pl[this.data.currentIdx] = { ...pl[this.data.currentIdx], video_url: r };
-      this.setData({ hasRetried: true, playlist: pl, currentItem: { ...this.data.currentItem, video_url: r }, readyIdx: -1 });
-      var self2 = this;
-      wx.nextTick(function() { self2.setData({ readyIdx: self2.data.currentIdx }); self2._playIdx(self2.data.currentIdx); });
+      var r = url.indexOf('?') >= 0 ? url + '&_t=' + Date.now() : url + '?_t=' + Date.now();
+      playlist[idx] = Object.assign({}, playlist[idx], { video_url: r });
+      rm[idx] = false;
+      self.setData({ hasRetried: true, playlist: playlist, readyMap: rm });
+      wx.nextTick(function() { rm[idx] = true; self.setData({ readyMap: rm }); self._playIdx(idx); });
     } else {
       wx.showToast({ title: '视频加载失败', icon: 'none' });
     }
@@ -383,28 +366,65 @@ Page({
     return { title: '分享一个去水印神器', query: `url=${encodeURIComponent(video_url || '')}&cover=${encodeURIComponent(cover_url || '')}&videoid=${encodeURIComponent(video_id || '')}&title=${encodeURIComponent(title || '')}&fromShare=true`, imageUrl: cover_url || '/images/share-cover.png' };
   },
 
-  // 懒代理：只代理指定范围内的视频（当前+后续N个），不阻塞播放
-  async _lazyProxyRange(playlist, startIdx, count) {
-    const end = Math.min(startIdx + count, playlist.length);
-    const tasks = [];
-    for (let i = startIdx; i < end; i++) {
-      const item = playlist[i];
-      if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL) && !item._proxyPending && !item._proxied) {
-        item._proxyPending = true;
-        const idx = i;
-        tasks.push(
-          buildProxiedUrl(item.video_url, `${item.video_id || 'video'}.mp4`).then(p => {
-            if (p && playlist[idx]) {
-              playlist[idx] = { ...playlist[idx], video_url: p, _proxied: true, _proxyPending: false };
-              // 如果正在播放这个 item，更新 UI
-              if (idx === this.data.currentIdx) {
-                this.setData({ playlist: [...playlist], currentItem: { ...playlist[idx] } });
-              }
-            }
-          }).catch(() => { if (playlist[idx]) playlist[idx]._proxyPending = false; })
-        );
+  // 预加载并设 readyMap：先代理当前视频，再并行预加载后续
+  _eagerProxyAndReady(playlist, startIdx, count) {
+    var self = this;
+    var rm = {};
+    var firstItem = playlist[startIdx];
+
+    // 先处理当前视频
+    function readyCurrent() {
+      if (!firstItem || !firstItem.video_url) { rm[startIdx] = true; self.setData({ readyMap: rm }); return Promise.resolve(); }
+      if (!needsProxy(firstItem.video_url) || firstItem.video_url.indexOf(config.baseURL) === 0 || firstItem._proxied) {
+        rm[startIdx] = true; self.setData({ readyMap: rm }); return Promise.resolve();
       }
+      return buildProxiedUrl(firstItem.video_url, (firstItem.video_id || 'video') + '.mp4').then(function(proxyUrl) {
+        if (proxyUrl && playlist[startIdx]) {
+          playlist[startIdx] = Object.assign({}, playlist[startIdx], { video_url: proxyUrl, _proxied: true });
+          rm[startIdx] = true;
+          self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[startIdx]), readyMap: rm });
+          self._playIdx(startIdx);
+        } else {
+          wx.showToast({ title: '视频链接已过期', icon: 'none' });
+        }
+      }).catch(function() {
+        wx.showToast({ title: '视频加载失败', icon: 'none' });
+      });
     }
-    await Promise.allSettled(tasks);
+
+    // 并行预加载后续视频
+    readyCurrent().then(function() {
+      self._eagerProxyRange(playlist, startIdx + 1, count - 1);
+    });
+  },
+
+  // 预代理指定范围内的视频（并行），代理完成后立即加入 readyMap
+  _eagerProxyRange(playlist, startIdx, count) {
+    var self = this;
+    var end = Math.min(startIdx + count, playlist.length);
+    for (var i = startIdx; i < end; i++) {
+      (function(idx) {
+        var item = playlist[idx];
+        if (!item || !item.video_url || item._proxied || item._proxyPending) return;
+        if (!needsProxy(item.video_url) || item.video_url.indexOf(config.baseURL) === 0) {
+          // 不需要代理，直接标记 ready
+          var rm = Object.assign({}, self.data.readyMap);
+          rm[idx] = true;
+          self.setData({ readyMap: rm });
+          return;
+        }
+        item._proxyPending = true;
+        buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
+          if (proxyUrl && playlist[idx]) {
+            playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true, _proxyPending: false });
+            var rm = Object.assign({}, self.data.readyMap);
+            rm[idx] = true;
+            self.setData({ playlist: playlist, readyMap: rm });
+          }
+        }).catch(function() {
+          if (playlist[idx]) playlist[idx]._proxyPending = false;
+        });
+      })(i);
+    }
   },
 });
