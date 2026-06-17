@@ -157,12 +157,13 @@ Page({
   },
 
   onAbout() {
-    var accountInfo = wx.getAccountInfoSync ? wx.getAccountInfoSync() : null;
-    var version = (accountInfo && accountInfo.miniProgram) ? accountInfo.miniProgram.version : '';
-    if (version) {
-      this.setData({ appVersion: 'v' + version });
+    try {
+      var info = wx.getAccountInfoSync();
+      var version = info && info.miniProgram ? info.miniProgram.version : '';
+      this.setData({ appVersion: version || '开发版' });
+    } catch (e) {
+      this.setData({ appVersion: '开发版' });
     }
-    // 从后台获取介绍文案
     this._fetchAboutDesc();
     this.setData({ showAbout: true });
   },
