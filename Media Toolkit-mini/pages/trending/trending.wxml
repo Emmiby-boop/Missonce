@@ -75,17 +75,7 @@
       <!-- 信息区 -->
       <view class="card-info">
         <text class="card-title">{{item.title || '暂无标题'}}</text>
-        <view class="card-author-row">
-          <view class="card-author-avatar" style="background:{{item.platformColor || '#07c160'}}">
-            <text class="card-author-avatar-text">{{item.platform ? item.platform.charAt(0) : '?'}}</text>
-          </view>
-          <text class="card-author-name">{{item.author || item.platform || '热门'}}</text>
-          <view class="card-platform-tag" style="background:{{item.platformColor || '#07c160'}}10;color:{{item.platformColor || '#07c160'}}">
-            <text>{{item.platform || '未知'}}</text>
-          </view>
-        </view>
         <view class="card-meta">
-          <text class="card-heat" wx:if="{{item.heat > 0}}">{{item.heat >= 10000 ? (item.heat / 10000).toFixed(1) + '万' : item.heat}} 热度</text>
           <text class="card-time">{{item.timeLabel || '刚刚'}}</text>
         </view>
         <view class="card-action" catchtap="onCopyLink" data-item="{{item}}">

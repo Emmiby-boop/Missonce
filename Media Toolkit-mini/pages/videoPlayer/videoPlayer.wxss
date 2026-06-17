@@ -35,6 +35,8 @@
 
 /* 平台标签 */
 .author-row{display:flex;align-items:center;gap:12rpx}
+.author-avatar{width:48rpx;height:48rpx;border-radius:50%}
+.author-avatar--default{display:flex;align-items:center;justify-content:center;font-size:24rpx;font-weight:700;color:#fff}
 .platform-tag{display:inline-flex;align-items:center;padding:4rpx 12rpx;background:rgba(255,255,255,0.15);border-radius:6rpx}
 .platform-tag-text{font-size:20rpx;color:#fff;font-weight:500;text-shadow:0 1rpx 2rpx rgba(0,0,0,0.3)}
 
