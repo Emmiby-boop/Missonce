@@ -57,16 +57,10 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
       'http://localhost:8080',
     ];
 
+// CORS 由 nginx 处理（避免 CDN 缓存无 CORS 头的响应）
+// API 响应禁止缓存
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   next();
 });
 
