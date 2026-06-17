@@ -104,14 +104,13 @@ Page({
             if (proxyUrl && playlist[ci]) {
               playlist[ci] = Object.assign({}, playlist[ci], { video_url: proxyUrl, _proxied: true });
               self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[ci]), readyIdx: ci });
+              self._playIdx(ci);
             } else {
-              self.setData({ readyIdx: ci });
+              wx.showToast({ title: '视频链接已过期', icon: 'none' });
             }
-            self._playIdx(ci);
             self._lazyProxyRange(playlist, ci + 1, 3);
           }).catch(function() {
-            self.setData({ readyIdx: ci });
-            self._playIdx(ci);
+            wx.showToast({ title: '视频加载失败', icon: 'none' });
             self._lazyProxyRange(playlist, ci + 1, 3);
           });
         } else {
@@ -165,14 +164,13 @@ Page({
           if (proxyUrl && playlist[idx]) {
             playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true });
             self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyIdx: idx });
+            self._playIdx(idx);
           } else {
-            self.setData({ readyIdx: idx });
+            wx.showToast({ title: '视频链接已过期', icon: 'none' });
           }
-          self._playIdx(idx);
           self._lazyProxyRange(playlist, idx + 1, 3);
         }).catch(function() {
-          self.setData({ readyIdx: idx });
-          self._playIdx(idx);
+          wx.showToast({ title: '视频加载失败', icon: 'none' });
           self._lazyProxyRange(playlist, idx + 1, 3);
         });
       } else {

@@ -65,6 +65,27 @@ function safeExecute(fn, defaultValue = null) {
   }
 }
 
+// 解析成功后自动将 CDN 域名加入代理白名单
+// 只有真实解析产出的 URL 才会走到这里，安全可靠
+const _whitelistedDomains = new Set(); // 内存缓存，避免重复写文件
+function _autoWhitelistFromUrl(url) {
+  if (!url) return;
+  try {
+    const hostname = new URL(url).hostname;
+    const parts = hostname.split('.');
+    if (parts.length < 2) return;
+    const domain = parts.slice(-2).join('.');
+    if (!_whitelistedDomains.has(domain)) {
+      const wl = require('../../utils/domainWhitelist');
+      if (!wl.isAllowedProxyDomain(url)) {
+        wl.addProxyDomain(domain);
+        _whitelistedDomains.add(domain);
+        console.log(`[Whitelist] 解析产出新域名，已自动加入: ${domain}`);
+      }
+    }
+  } catch {}
+}
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function fetchWithRetry(parser, platform) {
@@ -250,6 +271,14 @@ async function doParse(text) {
     video_width: contentData.video_width || 0,
     video_height: contentData.video_height || 0,
   };
+
+  // 解析成功后，自动将 CDN 域名加入代理白名单（只有真实解析才会走到这里）
+  _autoWhitelistFromUrl(dataDict.video_url);
+  _autoWhitelistFromUrl(dataDict.cover_url);
+  for (const img of (dataDict.image_list || [])) {
+    const imgUrl = typeof img === 'object' ? img.url : img;
+    _autoWhitelistFromUrl(imgUrl);
+  }
 
   console.log(`[debug] dataDict.resolution: ${dataDict.resolution}, fileSizeBytes: ${dataDict.fileSizeBytes}, duration: ${dataDict.duration}`);
 
