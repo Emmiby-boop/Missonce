@@ -58,10 +58,8 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
     ];
 
 app.use((req, res, next) => {
-  const origin = req.headers.origin || '';
-  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
-  console.log(`[CORS] origin="${origin}" allowed=${isAllowed}`);
-  if (isAllowed) {
+  const origin = req.headers.origin;
+  if (origin) {
     res.header('Access-Control-Allow-Origin', origin);
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
