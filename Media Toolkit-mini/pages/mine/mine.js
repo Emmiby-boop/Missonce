@@ -1,3 +1,4 @@
+import STORAGE_KEYS from "../../utils/storageKeys";
 import { isLoggedIn, getUserInfo, logout, silentLogin } from '../../utils/auth';
 
 Page({
@@ -21,7 +22,7 @@ Page({
     });
     
     // 统计历史记录
-    const history = wx.getStorageSync('parse_history') || [];
+    const history = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
     this.setData({ historyCount: history.length });
     this.calcCache();
   },
@@ -49,7 +50,7 @@ Page({
     // 从本地存储读最新数据，避免覆盖 _id 等字段
     var userInfo = getUserInfo() || {};
     userInfo.avatarUrl = avatarUrl;
-    wx.setStorageSync('user_info', userInfo);
+    wx.setStorageSync(STORAGE_KEYS.USER_INFO, userInfo);
     this.setData({ userInfo: userInfo });
     this._syncProfile(userInfo);
     wx.showToast({ title: '头像已更新', icon: 'success' });
@@ -61,7 +62,7 @@ Page({
     if (!nickName || !this.data.isLoggedIn) return;
     var userInfo = getUserInfo() || {};
     userInfo.nickName = nickName;
-    wx.setStorageSync('user_info', userInfo);
+    wx.setStorageSync(STORAGE_KEYS.USER_INFO, userInfo);
     this.setData({ userInfo: userInfo });
   },
 
@@ -71,7 +72,7 @@ Page({
     var userInfo = getUserInfo() || {};
     if (userInfo.nickName !== nickName) {
       userInfo.nickName = nickName;
-      wx.setStorageSync('user_info', userInfo);
+      wx.setStorageSync(STORAGE_KEYS.USER_INFO, userInfo);
       this.setData({ userInfo: userInfo });
       this._syncProfile(userInfo);
       wx.showToast({ title: '昵称已更新', icon: 'success' });
@@ -171,13 +172,13 @@ Page({
       confirmColor: '#07c160',
       success: (res) => {
         if (res.confirm) {
-          const history = wx.getStorageSync('parse_history');
-          const privacy = wx.getStorageSync('privacy_agreed');
-          const theme = wx.getStorageSync('theme_mode');
+          const history = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY);
+          const privacy = wx.getStorageSync(STORAGE_KEYS.PRIVACY_AGREED);
+          const theme = wx.getStorageSync(STORAGE_KEYS.THEME_MODE);
           wx.clearStorageSync();
-          if (history) wx.setStorageSync('parse_history', history);
-          if (privacy) wx.setStorageSync('privacy_agreed', privacy);
-          if (theme) wx.setStorageSync('theme_mode', theme);
+          if (history) wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, history);
+          if (privacy) wx.setStorageSync(STORAGE_KEYS.PRIVACY_AGREED, privacy);
+          if (theme) wx.setStorageSync(STORAGE_KEYS.THEME_MODE, theme);
           this.calcCache();
           wx.showToast({ title: '已清除', icon: 'success' });
         }

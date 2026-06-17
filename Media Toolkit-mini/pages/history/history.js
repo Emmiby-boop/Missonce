@@ -1,3 +1,4 @@
+import STORAGE_KEYS from "../../utils/storageKeys";
 import { formatTime } from '../../utils/time';
 import { isLoggedIn, syncHistoryToCloud } from '../../utils/auth';
 
@@ -25,7 +26,7 @@ Page({
   async load() {
     try {
       // 直接从本地读取（同步已在 app.js 和首页完成）
-      const raw = wx.getStorageSync('parse_history') || [];
+      const raw = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
       const list = [...raw]
         .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
         .map(item => ({
@@ -105,7 +106,7 @@ Page({
   onTap(e) {
     const item = e.currentTarget.dataset.item;
 
-    wx.setStorageSync('current_result', {
+    wx.setStorageSync(STORAGE_KEYS.CURRENT_RESULT, {
       video_url: item.video_url || '',
       title: item.title || '',
       cover_url: item.cover_url || '',
@@ -136,7 +137,7 @@ Page({
       success: (res) => {
         if (res.confirm) {
           const allList = this.data.allList.filter(i => i.video_id !== item.video_id);
-          wx.setStorageSync('parse_history', allList);
+          wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, allList);
           const list = [...allList].map(i => ({
             ...i,
             timeStr: i.timestamp ? this.formatSmartTime(i.timestamp) : '',
@@ -158,7 +159,7 @@ Page({
       confirmColor: '#ba1a1a',
       success: async (res) => {
         if (res.confirm) {
-          wx.removeStorageSync('parse_history');
+          wx.removeStorageSync(STORAGE_KEYS.PARSE_HISTORY);
           this.setData({ allList: [], groupedList: [], keyword: '' });
           // 同步清空到云端，等待完成避免竞态
           if (isLoggedIn()) await syncHistoryToCloud([]).catch(() => {});
@@ -201,7 +202,7 @@ Page({
         if (!res.confirm) return;
         const ids = new Set(vids);
         const allList = this.data.allList.filter(i => !ids.has(i.video_id));
-        wx.setStorageSync('parse_history', allList);
+        wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, allList);
         const list = allList.map(i => ({ ...i, timeStr: i.timestamp ? this.formatSmartTime(i.timestamp) : '' }));
         this.setData({ allList: list, selectedMap: {}, editMode: false });
         this.applyGrouping(list, this.data.keyword);

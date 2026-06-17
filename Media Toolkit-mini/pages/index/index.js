@@ -1,3 +1,4 @@
+import STORAGE_KEYS from "../../utils/storageKeys";
 import { request } from '../../utils/request';
 import { getClipboardData } from '../../utils/clipboard';
 import { extractUrl } from '../../utils/util';
@@ -27,9 +28,9 @@ Page({
   },
 
   onShow() {
-    const trendingUrl = wx.getStorageSync('trending_url');
+    const trendingUrl = wx.getStorageSync(STORAGE_KEYS.TRENDING_URL);
     if (trendingUrl) {
-      wx.removeStorageSync('trending_url');
+      wx.removeStorageSync(STORAGE_KEYS.TRENDING_URL);
       this.setData({ inputValue: trendingUrl });
       setTimeout(() => this.onSubmit(), 300);
     }
@@ -86,7 +87,7 @@ Page({
   _bgSyncHistory() {
     if (!isLoggedIn()) return;
     fetchHistoryFromCloud().then(cloudList => {
-      const raw = wx.getStorageSync('parse_history') || [];
+      const raw = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
       // 本地有数据时以本地为准（含删除操作），不再从云端合并
       if (raw.length > 0) {
         // 只上传本地到云端，不下载合并
@@ -94,7 +95,7 @@ Page({
       } else if (cloudList && cloudList.length > 0) {
         // 本地为空时从云端恢复（新设备首次同步）
         const merged = mergeHistory(raw, cloudList);
-        wx.setStorageSync('parse_history', merged);
+        wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, merged);
         syncHistoryToCloud(merged).catch(() => {});
       }
     }).catch(() => {});
@@ -104,7 +105,7 @@ Page({
   _bgPrecacheTrending() {
     var self = this;
     try {
-      var cache = wx.getStorageSync('trending_parse_cache') || {};
+      var cache = wx.getStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE) || {};
       var cacheKeys = Object.keys(cache);
       if (cacheKeys.length >= 5) return;
       if (self._precacheRunning) return;
@@ -118,7 +119,7 @@ Page({
           chain = chain.then(function() {
             return request('/api/parse', { method: 'POST', data: { text: item.url } }).then(function(r) {
               if (r.retcode === 200 && r.data) {
-                var c = wx.getStorageSync('trending_parse_cache') || {};
+                var c = wx.getStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE) || {};
                 c[item.url] = {
                   video_url: r.data.video_url || '', title: r.data.title || '',
                   cover_url: r.data.cover_url || '', video_id: r.data.video_id || '',
@@ -126,7 +127,7 @@ Page({
                   audio_url: r.data.audio_url || '', quality_options: r.data.quality_options || [],
                   duration: r.data.duration || '', timestamp: Date.now(),
                 };
-                wx.setStorageSync('trending_parse_cache', c);
+                wx.setStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE, c);
               }
             }).catch(function() {});
           });
@@ -135,15 +136,15 @@ Page({
       };
 
       // 优先用 app.js 预拉取的缓存
-      var trendingList = wx.getStorageSync('trending_cache') || [];
+      var trendingList = wx.getStorageSync(STORAGE_KEYS.TRENDING_CACHE) || [];
       if (trendingList.length > 0) {
         doPrecache(trendingList).then(function() { self._precacheRunning = false; }).catch(function() { self._precacheRunning = false; });
       } else {
         // 缓存为空时从 API 拉取
         request('/api/trending/merged').then(function(res) {
           if (res.retcode === 200 && res.data && res.data.list) {
-            wx.setStorageSync('trending_cache', res.data.list);
-            wx.setStorageSync('trending_cache_time', Date.now());
+            wx.setStorageSync(STORAGE_KEYS.TRENDING_CACHE, res.data.list);
+            wx.setStorageSync(STORAGE_KEYS.TRENDING_CACHE_TIME, Date.now());
             return doPrecache(res.data.list);
           }
           self._precacheRunning = false;
@@ -288,7 +289,7 @@ Page({
       }
 
       // 有数据了再跳转
-      wx.setStorageSync('current_result', {
+      wx.setStorageSync(STORAGE_KEYS.CURRENT_RESULT, {
         video_url: data.video_url || '',
         title: data.title || '',
         cover_url: data.cover_url || '',
@@ -319,7 +320,7 @@ Page({
 
   saveHistory(data) {
     try {
-      let list = wx.getStorageSync('parse_history') || [];
+      let list = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
       // 去重：仅当 video_id 有效时才剔除旧记录
       const vid = data.video_id;
       if (vid) {
@@ -337,7 +338,7 @@ Page({
         author: data.author || {},
         timestamp: Date.now()
       });
-      wx.setStorageSync('parse_history', list);
+      wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, list);
       // 同步到云端
       if (isLoggedIn()) {
         syncHistoryToCloud(list).catch(() => {});

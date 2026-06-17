@@ -3,11 +3,7 @@
  * 支持本地存储和云开发（可选）
  */
 
-const STORAGE_KEYS = {
-  USER_INFO: 'user_info',
-  OPENID: 'openid',
-  LOGIN_TIME: 'login_time',
-};
+import STORAGE_KEYS from './storageKeys';
 
 // session 有效期 7 天
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;

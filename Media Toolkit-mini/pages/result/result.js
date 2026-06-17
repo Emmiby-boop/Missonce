@@ -1,3 +1,4 @@
+import STORAGE_KEYS from "../../utils/storageKeys";
 import { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, buildProxiedUrl, needsProxy } from '../../utils/file';
 import { copyToClipboard } from '../../utils/clipboard';
 import { track } from '../../utils/stats';
@@ -34,7 +35,7 @@ Page({
   onLoad: async function() {
     this._isDestroyed = false;
 
-    const result = wx.getStorageSync('current_result');
+    const result = wx.getStorageSync(STORAGE_KEYS.CURRENT_RESULT);
     if (!result) {
       wx.showToast({ title: '解析结果已过期', icon: 'none' });
       setTimeout(() => {

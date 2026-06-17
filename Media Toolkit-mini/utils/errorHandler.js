@@ -26,4 +26,59 @@ function getUserMessage(response) {
   return '网络异常，请检查网络后重试';
 }
 
-export { getUserMessage, ERROR_MAP };
+/**
+ * 统一错误提示
+ * @param {Error|string|object} err - 错误对象 / 字符串 / API 响应
+ * @param {string} fallback - 默认提示（如果没有可读信息）
+ */
+function toastError(err, fallback) {
+  let msg = fallback || '操作失败，请重试';
+
+  if (typeof err === 'string') {
+    msg = err;
+  } else if (err?.retcode) {
+    msg = getUserMessage(err);
+  } else if (err?.errMsg) {
+    msg = err.errMsg;
+  } else if (err?.message) {
+    // 过滤技术性错误信息
+    if (err.message.includes('timeout') || err.message.includes('超时')) {
+      msg = '请求超时，请检查网络';
+    } else if (err.message.includes('fail') && !err.message.includes('abort')) {
+      msg = '网络连接失败，请重试';
+    } else if (err.message.includes('abort')) {
+      return; // 用户主动取消，不提示
+    } else {
+      msg = err.message.length > 30 ? fallback || '操作失败' : err.message;
+    }
+  }
+
+  wx.showToast({ title: msg, icon: 'none', duration: 2000 });
+}
+
+/**
+ * 包装异步请求，自动处理 loading 状态和错误提示
+ * @param {Object} opts
+ * @param {string} opts.loadingTitle - loading 提示文字，不传则不显示
+ * @param {string} opts.errorFallback - 错误兜底提示
+ * @param {Function} opts.fn - 异步函数，返回 API 响应 { retcode, retdesc, data }
+ * @returns {Promise<object|null>} 成功返回 data，失败 toast 后返回 null
+ */
+async function safeRequest(opts) {
+  const { loadingTitle, errorFallback, fn } = opts;
+  if (loadingTitle) wx.showLoading({ title: loadingTitle, mask: true });
+
+  try {
+    const res = await fn();
+    wx.hideLoading();
+    if (res?.retcode === 200) return res.data ?? res;
+    toastError(res, errorFallback);
+    return null;
+  } catch (err) {
+    wx.hideLoading();
+    toastError(err, errorFallback);
+    return null;
+  }
+}
+
+export { getUserMessage, toastError, safeRequest, ERROR_MAP };

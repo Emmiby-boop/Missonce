@@ -1,3 +1,4 @@
+import STORAGE_KEYS from "../../utils/storageKeys";
 import { request } from '../../utils/request';
 import { showToast } from '../../utils/ui';
 import { track } from '../../utils/stats';
@@ -28,7 +29,7 @@ Page({
   onLoad() {
     track('page_view', { page: 'trending' });
     // 优先读缓存（app.js 启动时已预拉取）
-    var cached = wx.getStorageSync('trending_cache');
+    var cached = wx.getStorageSync(STORAGE_KEYS.TRENDING_CACHE);
     if (cached && cached.length > 0) {
       this._processItems(cached);
     }
@@ -39,7 +40,7 @@ Page({
   onShow() {
     if (!this._hasLoaded) {
       this._hasLoaded = true;
-      var cached = wx.getStorageSync('trending_cache');
+      var cached = wx.getStorageSync(STORAGE_KEYS.TRENDING_CACHE);
       if (cached && cached.length > 0) {
         this._processItems(cached);
       }
@@ -70,8 +71,8 @@ Page({
       const res = await request('/api/trending/merged');
       if (res.retcode === 200) {
         // 更新缓存
-        wx.setStorageSync('trending_cache', res.data.list || []);
-        wx.setStorageSync('trending_cache_time', Date.now());
+        wx.setStorageSync(STORAGE_KEYS.TRENDING_CACHE, res.data.list || []);
+        wx.setStorageSync(STORAGE_KEYS.TRENDING_CACHE_TIME, Date.now());
         this._processItems(res.data.list || []);
         // 后台预缓存前 5 条热门视频的解析结果
         this._precacheTopItems(this.data.allItems);
@@ -86,7 +87,7 @@ Page({
   // 后台预缓存热门视频（不阻塞 UI）
   _precacheTopItems(items) {
     var self = this;
-    var cache = wx.getStorageSync('trending_parse_cache') || {};
+    var cache = wx.getStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE) || {};
     var toCache = items.filter(function(i) { return i.url && !cache[i.url]; }).slice(0, 5);
     if (!toCache.length) return;
     var chain = Promise.resolve();
@@ -177,7 +178,7 @@ Page({
     track('trending_view_detail', { platform: item.platform });
 
     // 检查缓存
-    const cache = wx.getStorageSync('trending_parse_cache') || {};
+    const cache = wx.getStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE) || {};
     const cached = cache[item.url];
     if (cached && cached.video_url) {
       this._goToPlayer(cached);
@@ -189,10 +190,10 @@ Page({
   },
 
   _goToPlayer(parsed) {
-    wx.setStorageSync('current_result', { ...parsed, timestamp: Date.now() });
+    wx.setStorageSync(STORAGE_KEYS.CURRENT_RESULT, { ...parsed, timestamp: Date.now() });
     this._saveHistory(parsed);
     // 存储热门列表供播放页使用
-    wx.setStorageSync('trending_playlist', this.data.allItems.map(function(item) {
+    wx.setStorageSync(STORAGE_KEYS.TRENDING_PLAYLIST, this.data.allItems.map(function(item) {
       return { url: item.url, title: item.title || '', cover: item.cover || '', platform: item.platform || '' };
     }));
     wx.navigateTo({
@@ -214,8 +215,8 @@ Page({
         this._cacheParseResult(item.url, parsed);
         this._saveHistory(parsed);
         // 设置热门播放列表，供 videoPlayer 上下滑动
-        wx.setStorageSync('trending_playlist', this.data.allItems.map(function(t) { return { video_url: t.videoUrl || '', cover_url: t.cover || '', title: t.title || '', video_id: t.id, platform: t.platform || '抖音', url: t.url, source: 'trending' }; }));
-        wx.setStorageSync('current_result', { ...parsed, timestamp: Date.now() });
+        wx.setStorageSync(STORAGE_KEYS.TRENDING_PLAYLIST, this.data.allItems.map(function(t) { return { video_url: t.videoUrl || '', cover_url: t.cover || '', title: t.title || '', video_id: t.id, platform: t.platform || '抖音', url: t.url, source: 'trending' }; }));
+        wx.setStorageSync(STORAGE_KEYS.CURRENT_RESULT, { ...parsed, timestamp: Date.now() });
         wx.navigateTo({
           url: '/pages/videoPlayer/videoPlayer?url=' + encodeURIComponent(parsed.video_url || '') +
             '&cover=' + encodeURIComponent(parsed.cover_url || '') +
@@ -235,7 +236,7 @@ Page({
 
   _cacheParseResult(url, data) {
     try {
-      var cache = wx.getStorageSync('trending_parse_cache') || {};
+      var cache = wx.getStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE) || {};
       // 限制缓存上限 50 条，超出时清理最旧的
       var keys = Object.keys(cache);
       if (keys.length >= 50) {
@@ -249,7 +250,7 @@ Page({
         audio_url: data.audio_url || '', quality_options: data.quality_options || [],
         duration: data.duration || '', timestamp: Date.now(),
       };
-      wx.setStorageSync('trending_parse_cache', cache);
+      wx.setStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE, cache);
     } catch (e) {}
   },
 
@@ -272,7 +273,7 @@ Page({
 
   _saveHistory(data) {
     try {
-      let list = wx.getStorageSync('parse_history') || [];
+      let list = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
       const vid = data.video_id;
       if (vid) list = list.filter(item => item.video_id !== vid);
       if (list.length >= 100) list = list.slice(-99);
@@ -282,7 +283,7 @@ Page({
         platform: data.platform || '', image_list: data.image_list || [],
         timestamp: Date.now()
       });
-      wx.setStorageSync('parse_history', list);
+      wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, list);
       // 同步到云端
       if (isLoggedIn()) {
         syncHistoryToCloud(list).catch(() => {});

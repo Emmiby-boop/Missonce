@@ -1,5 +1,6 @@
 import { silentLogin, isLoggedIn, syncHistoryToCloud, fetchHistoryFromCloud } from './utils/auth';
 import { request } from './utils/request';
+import STORAGE_KEYS from './utils/storageKeys';
 
 App({
   onLaunch() {
@@ -45,13 +46,13 @@ App({
   // 启动时预拉取热门列表并缓存
   _precacheTrending() {
     // 检查缓存是否新鲜（10分钟内）
-    var cacheTime = wx.getStorageSync('trending_cache_time') || 0;
+    var cacheTime = wx.getStorageSync(STORAGE_KEYS.TRENDING_CACHE_TIME) || 0;
     if (Date.now() - cacheTime < 10 * 60 * 1000) return;
 
     request('/api/trending/merged').then(function(res) {
       if (res.retcode === 200 && res.data && res.data.list) {
-        wx.setStorageSync('trending_cache', res.data.list);
-        wx.setStorageSync('trending_cache_time', Date.now());
+        wx.setStorageSync(STORAGE_KEYS.TRENDING_CACHE, res.data.list);
+        wx.setStorageSync(STORAGE_KEYS.TRENDING_CACHE_TIME, Date.now());
         console.log('[App] 热门列表已缓存, 共', res.data.list.length, '条');
       }
     }).catch(function(e) {
@@ -77,13 +78,13 @@ App({
   async _syncHistory() {
     if (!isLoggedIn()) return;
     try {
-      let raw = wx.getStorageSync('parse_history') || [];
+      let raw = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
       const cloudList = await fetchHistoryFromCloud();
 
       if (cloudList && cloudList.length > 0) {
         if (raw.length === 0) {
           // 本地为空、云端有数据 → 从云端恢复到本地
-          wx.setStorageSync('parse_history', cloudList);
+          wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, cloudList);
           console.log('[App] 本地为空，从云端恢复', cloudList.length, '条记录');
         } else {
           // 本地有数据（含删除操作），以本地为准，上传覆盖云端
@@ -101,7 +102,7 @@ App({
   },
 
   _initThemePreference() {
-    const saved = wx.getStorageSync('theme_mode');
+    const saved = wx.getStorageSync(STORAGE_KEYS.THEME_MODE);
     if (saved) this.globalData.themeMode = saved;
   },
 
@@ -119,11 +120,11 @@ App({
 
   setThemeMode(mode) {
     this.globalData.themeMode = mode;
-    wx.setStorageSync('theme_mode', mode);
+    wx.setStorageSync(STORAGE_KEYS.THEME_MODE, mode);
   },
 
   checkPrivacyAuthorization() {
-    const privacyAgreed = wx.getStorageSync('privacy_agreed');
+    const privacyAgreed = wx.getStorageSync(STORAGE_KEYS.PRIVACY_AGREED);
     if (privacyAgreed) {
       this.globalData.privacyAgreed = true;
       return;
@@ -141,7 +142,7 @@ App({
       success: (res) => {
         this.globalData._privacyPromptShowing = false;
         if (res.confirm) {
-          wx.setStorageSync('privacy_agreed', true);
+          wx.setStorageSync(STORAGE_KEYS.PRIVACY_AGREED, true);
           this.globalData.privacyAgreed = true;
           wx.showToast({ title: '感谢您的信任', icon: 'success', duration: 1500 });
         }
@@ -152,7 +153,7 @@ App({
   checkAndRequestPrivacy() {
     return new Promise((resolve) => {
       if (this.globalData.privacyAgreed) { resolve(true); return; }
-      const privacyAgreed = wx.getStorageSync('privacy_agreed');
+      const privacyAgreed = wx.getStorageSync(STORAGE_KEYS.PRIVACY_AGREED);
       if (privacyAgreed) { this.globalData.privacyAgreed = true; resolve(true); return; }
 
       wx.showModal({
@@ -163,7 +164,7 @@ App({
         confirmColor: '#00c853',
         success: (res) => {
           if (res.confirm) {
-            wx.setStorageSync('privacy_agreed', true);
+            wx.setStorageSync(STORAGE_KEYS.PRIVACY_AGREED, true);
             this.globalData.privacyAgreed = true;
             resolve(true);
           } else {

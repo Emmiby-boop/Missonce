@@ -1,3 +1,4 @@
+import STORAGE_KEYS from "../../utils/storageKeys";
 const app = getApp();
 
 Page({
@@ -17,8 +18,8 @@ Page({
   },
 
   loadState() {
-    const themeMode = app.globalData.themeMode || wx.getStorageSync('theme_mode') || 'auto';
-    const history = wx.getStorageSync('parse_history') || [];
+    const themeMode = app.globalData.themeMode || wx.getStorageSync(STORAGE_KEYS.THEME_MODE) || 'auto';
+    const history = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
     this.setData({
       themeMode: themeMode,
       historyCount: history.length,
@@ -67,16 +68,16 @@ Page({
       success: (res) => {
         if (res.confirm) {
           // 保留关键数据
-          const history = wx.getStorageSync('parse_history');
-          const privacy = wx.getStorageSync('privacy_agreed');
-          const theme = wx.getStorageSync('theme_mode');
+          const history = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY);
+          const privacy = wx.getStorageSync(STORAGE_KEYS.PRIVACY_AGREED);
+          const theme = wx.getStorageSync(STORAGE_KEYS.THEME_MODE);
 
           wx.clearStorageSync();
 
           // 恢复关键数据
-          if (history) wx.setStorageSync('parse_history', history);
-          if (privacy) wx.setStorageSync('privacy_agreed', privacy);
-          if (theme) wx.setStorageSync('theme_mode', theme);
+          if (history) wx.setStorageSync(STORAGE_KEYS.PARSE_HISTORY, history);
+          if (privacy) wx.setStorageSync(STORAGE_KEYS.PRIVACY_AGREED, privacy);
+          if (theme) wx.setStorageSync(STORAGE_KEYS.THEME_MODE, theme);
 
           this.calcCacheSize();
           wx.showToast({ title: '缓存已清除', icon: 'success' });
@@ -97,7 +98,7 @@ Page({
       confirmColor: '#EF4444',
       success: (res) => {
         if (res.confirm) {
-          wx.removeStorageSync('parse_history');
+          wx.removeStorageSync(STORAGE_KEYS.PARSE_HISTORY);
           this.setData({ historyCount: 0 });
           wx.showToast({ title: '已清空', icon: 'success' });
         }

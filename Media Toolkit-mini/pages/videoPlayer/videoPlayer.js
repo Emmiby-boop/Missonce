@@ -30,7 +30,7 @@ Page({
 
   onLoad: async function (options) {
     const { url, cover, title, videoid, fromShare, source } = options;
-    const cachedResult = wx.getStorageSync('current_result');
+    const cachedResult = wx.getStorageSync(STORAGE_KEYS.CURRENT_RESULT);
     const isImageMode = !url && cachedResult && cachedResult.image_list && cachedResult.image_list.length > 0;
 
     if (isImageMode) {
@@ -59,8 +59,8 @@ Page({
     // 根据来源构建播放列表
     if (source === 'trending') {
       // 热门来源：从缓存的热门列表构建（只有已解析的才有 video_url）
-      const trendingList = wx.getStorageSync('trending_playlist') || [];
-      const cache = wx.getStorageSync('trending_parse_cache') || {};
+      const trendingList = wx.getStorageSync(STORAGE_KEYS.TRENDING_PLAYLIST) || [];
+      const cache = wx.getStorageSync(STORAGE_KEYS.TRENDING_PARSE_CACHE) || {};
       var parsed = [];
       for (var t = 0; t < trendingList.length; t++) {
         var ti = trendingList[t];
@@ -84,7 +84,7 @@ Page({
     } else {
       // 默认：从历史记录构建
       try {
-        const history = wx.getStorageSync('parse_history') || [];
+        const history = wx.getStorageSync(STORAGE_KEYS.PARSE_HISTORY) || [];
         const recent = [...history].reverse().filter(h => h.video_url);
         if (recent.length > 0) {
           playlist = recent.map((h, i) => ({ video_url: h.video_url, cover_url: h.cover_url || '', title: h.title || '', video_id: h.video_id || '', platform: h.platform || '', author: h.author || {}, audio_url: h.audio_url || '', idx: i }));
