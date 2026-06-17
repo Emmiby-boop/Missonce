@@ -378,6 +378,4 @@ Page({
 
     Promise.allSettled(tasks);
   },
-    }
-  },
 });
