@@ -46,12 +46,11 @@ Page({
       this._doLogin();
       return;
     }
-    // 更新本地存储
-    var userInfo = this.data.userInfo || {};
+    // 从本地存储读最新数据，避免覆盖 _id 等字段
+    var userInfo = getUserInfo() || {};
     userInfo.avatarUrl = avatarUrl;
     wx.setStorageSync('userInfo', userInfo);
     this.setData({ userInfo: userInfo });
-    // 同步到云端
     this._syncProfile(userInfo);
     wx.showToast({ title: '头像已更新', icon: 'success' });
   },
@@ -60,7 +59,7 @@ Page({
   onNicknameInput(e) {
     var nickName = e.detail.value;
     if (!nickName || !this.data.isLoggedIn) return;
-    var userInfo = this.data.userInfo || {};
+    var userInfo = getUserInfo() || {};
     userInfo.nickName = nickName;
     wx.setStorageSync('userInfo', userInfo);
     this.setData({ userInfo: userInfo });
@@ -69,7 +68,7 @@ Page({
   onNicknameBlur(e) {
     var nickName = e.detail.value;
     if (!nickName || !this.data.isLoggedIn) return;
-    var userInfo = this.data.userInfo || {};
+    var userInfo = getUserInfo() || {};
     if (userInfo.nickName !== nickName) {
       userInfo.nickName = nickName;
       wx.setStorageSync('userInfo', userInfo);
