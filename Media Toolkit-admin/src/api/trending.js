@@ -320,11 +320,6 @@ async function fetchXiaohongshuHot() {
     return [];
   }
 }
-    if (e.message.includes('未配置')) throw e;
-    console.error('[Trending] 小红书接口失败:', e.message);
-    throw new Error('小红书接口调用失败: ' + e.message);
-  }
-}
 
 // 平台同步器映射
 const syncMap = {
