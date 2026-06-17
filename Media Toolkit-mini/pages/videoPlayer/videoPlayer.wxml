@@ -84,12 +84,8 @@
 
   <!-- 底部信息 -->
   <view class="bottom-panel">
-    <view class="author-row" wx:if="{{!isImageMode}}">
-      <image class="author-avatar" wx:if="{{currentItem.author && currentItem.author.avatar}}" src="{{currentItem.author.avatar}}" mode="aspectFill" />
-      <view class="author-avatar author-avatar--default" wx:else style="background:{{currentItem.platform === '抖音' ? '#161823' : currentItem.platform === '快手' ? '#FF4906' : currentItem.platform === '小红书' ? '#FE2C55' : '#07c160'}}">
-        <text>{{currentItem.platform ? currentItem.platform.charAt(0) : '?'}}</text>
-      </view>
-      <text class="author-name">@{{currentItem.author && currentItem.author.nickname ? currentItem.author.nickname : (currentItem.platform || '未知')}}</text>
+    <view class="author-row" wx:if="{{!isImageMode && currentItem.author && currentItem.author.nickname}}">
+      <text class="author-name">@{{currentItem.author.nickname}}</text>
       <view class="platform-tag" wx:if="{{currentItem.platform}}">
         <text class="platform-tag-text">{{currentItem.platform}}</text>
       </view>

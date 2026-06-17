@@ -213,6 +213,15 @@
   overflow: hidden;
 }
 
+.card-author {
+  font-size: 22rpx;
+  color: #6b7280;
+  max-width: 160rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .card-meta {
   display: flex;
   align-items: center;

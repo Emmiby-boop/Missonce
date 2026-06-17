@@ -130,6 +130,7 @@ Page({
         platform: item.platform || '',
         platformColor: PLATFORM_COLORS[item.platform] || '#07c160',
         heat: item.heat || 0,
+        author: item.author || '',
         source: item.source || '',
         timeLabel: timeLabel,
         type: type,

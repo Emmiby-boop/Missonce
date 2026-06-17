@@ -76,9 +76,8 @@
       <view class="card-info">
         <text class="card-title">{{item.title || '暂无标题'}}</text>
         <view class="card-meta">
+          <text class="card-author" wx:if="{{item.author}}">{{item.author}}</text>
           <text class="card-time">{{item.timeLabel || '刚刚'}}</text>
-          <text class="card-dot">·</text>
-          <text class="card-size" wx:if="{{item.videoCount}}">{{item.videoCount}}个视频</text>
         </view>
       </view>
     </view>
