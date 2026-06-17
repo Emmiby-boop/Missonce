@@ -129,7 +129,6 @@ Page({
         cover: item.cover || '',
         platform: item.platform || '',
         platformColor: PLATFORM_COLORS[item.platform] || '#07c160',
-        author: item.author || item.platform || '热门',
         heat: item.heat || 0,
         source: item.source || '',
         timeLabel: timeLabel,

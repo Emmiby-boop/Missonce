@@ -213,56 +213,10 @@
   overflow: hidden;
 }
 
-.card-author-row {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-  margin: 8rpx 0 4rpx;
-}
-
-.card-author-avatar {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.card-author-avatar-text {
-  font-size: 20rpx;
-  font-weight: 700;
-  color: #fff;
-}
-
-.card-author-name {
-  font-size: 24rpx;
-  color: #6b7280;
-  max-width: 180rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-platform-tag {
-  padding: 2rpx 12rpx;
-  border-radius: 6rpx;
-  font-size: 20rpx;
-  font-weight: 500;
-  margin-left: auto;
-}
-
-.card-heat {
-  font-size: 22rpx;
-  color: #ef4444;
-  font-weight: 500;
-}
-
 .card-meta {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 8rpx;
 }
 
 .card-time {
