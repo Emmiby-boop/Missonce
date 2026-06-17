@@ -90,7 +90,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function fetchWithRetry(parser, platform) {
   const maxAttempts = 3;  // 所有平台统一3次重试
-  const backoff = [0, 600, 1500];  // 指数退避ms
+  const backoff = [0, 300, 800];  // 优化退避时间（原 0/600/1500）
   let lastRes = null;
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -189,19 +189,28 @@ async function doParse(text) {
   }
 
   // 快手：分享短链必须保留完整 URL，不用 WebFetcher
+  // 抖音：已知域名，跳过 redirect 跟踪直接识别
   let realUrl, platform;
   if (/kuaishou\.com/i.test(url) || /v\.kuaishou\.com/i.test(url) || /chenzhongtech\.com/i.test(url)) {
     platform = '快手';
     realUrl = url;
     console.log(`[Kuaishou] 使用原始分享链接，不走 WebFetcher: ${realUrl}`);
   } else {
-    const redirectUrl = await WebFetcher.fetchRedirectUrl(url);
-    if (!redirectUrl) {
-      throw Object.assign(new Error('该链接尚未支持提取'), { status: 400 });
+    const domain = UrlParser.getDomain(url);
+    if (domain && DOMAIN_TO_NAME[domain]) {
+      // 已是支持的域名（如 douyin.com、xiaohongshu.com），直接使用
+      platform = DOMAIN_TO_NAME[domain];
+      realUrl = UrlParser.extractVideoAddress(url);
+      console.log(`[WebFetcher] 直接识别域名: ${domain} -> ${platform}`);
+    } else {
+      const redirectUrl = await WebFetcher.fetchRedirectUrl(url);
+      if (!redirectUrl) {
+        throw Object.assign(new Error('该链接尚未支持提取'), { status: 400 });
+      }
+      const rDomain = UrlParser.getDomain(redirectUrl);
+      platform = DOMAIN_TO_NAME[rDomain];
+      realUrl = UrlParser.extractVideoAddress(redirectUrl);
     }
-    const domain = UrlParser.getDomain(redirectUrl);
-    platform = DOMAIN_TO_NAME[domain];
-    realUrl = UrlParser.extractVideoAddress(redirectUrl);
   }
 
   console.log(`real_url ${realUrl}`);
