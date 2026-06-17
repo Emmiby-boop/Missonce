@@ -77,9 +77,8 @@
         <text class="card-title">{{item.title || '暂无标题'}}</text>
         <view class="card-meta">
           <text class="card-time">{{item.timeLabel || '刚刚'}}</text>
-        </view>
-        <view class="card-action" catchtap="onCopyLink" data-item="{{item}}">
-          <text>复制{{item.typeLabel || '视频'}}</text>
+          <text class="card-dot">·</text>
+          <text class="card-size" wx:if="{{item.videoCount}}">{{item.videoCount}}个视频</text>
         </view>
       </view>
     </view>
