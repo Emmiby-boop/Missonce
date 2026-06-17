@@ -171,11 +171,16 @@ Page({
   _goToPlayer(parsed) {
     wx.setStorageSync('current_result', { ...parsed, timestamp: Date.now() });
     this._saveHistory(parsed);
+    // 存储热门列表供播放页使用
+    wx.setStorageSync('trending_playlist', this.data.allItems.map(function(item) {
+      return { url: item.url, title: item.title || '', cover: item.cover || '', platform: item.platform || '' };
+    }));
     wx.navigateTo({
       url: '/pages/videoPlayer/videoPlayer?url=' + encodeURIComponent(parsed.video_url || '') +
         '&cover=' + encodeURIComponent(parsed.cover_url || '') +
         '&title=' + encodeURIComponent(parsed.title || '') +
-        '&videoid=' + encodeURIComponent(parsed.video_id || '')
+        '&videoid=' + encodeURIComponent(parsed.video_id || '') +
+        '&source=trending'
     });
   },
 
@@ -194,7 +199,8 @@ Page({
           url: '/pages/videoPlayer/videoPlayer?url=' + encodeURIComponent(parsed.video_url || '') +
             '&cover=' + encodeURIComponent(parsed.cover_url || '') +
             '&title=' + encodeURIComponent(parsed.title || '') +
-            '&videoid=' + encodeURIComponent(parsed.video_id || '')
+            '&videoid=' + encodeURIComponent(parsed.video_id || '') +
+            '&source=trending'
         });
         track('parse_success', { platform: parsed.platform });
       } else {

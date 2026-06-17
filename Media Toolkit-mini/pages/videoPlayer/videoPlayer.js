@@ -45,7 +45,7 @@ Page({
   _downloadTasks: [],
 
   onLoad: async function (options) {
-    const { url, cover, title, videoid, fromShare } = options;
+    const { url, cover, title, videoid, fromShare, source } = options;
     const cachedResult = wx.getStorageSync('current_result');
     const isImageMode = !url && cachedResult && cachedResult.image_list && cachedResult.image_list.length > 0;
 
@@ -71,18 +71,47 @@ Page({
 
     const du = decodeURIComponent(url), dc = decodeURIComponent(cover || ''), dt = decodeURIComponent(title || ''), dv = videoid ? decodeURIComponent(videoid) : '';
     let playlist = [], ci = 0;
-    try {
-      const history = wx.getStorageSync('parse_history') || [];
-      const recent = [...history].reverse().filter(h => h.video_url);
-      if (recent.length > 0) {
-        playlist = recent.map((h, i) => ({ video_url: h.video_url, cover_url: h.cover_url || '', title: h.title || '', video_id: h.video_id || '', platform: h.platform || '', author: h.author || {}, audio_url: h.audio_url || '', idx: i }));
-        const f = playlist.findIndex(p => p.video_url === du || p.video_id === dv);
-        ci = f >= 0 ? f : 0;
+
+    // 根据来源构建播放列表
+    if (source === 'trending') {
+      // 热门来源：从缓存的热门列表构建（只有已解析的才有 video_url）
+      const trendingList = wx.getStorageSync('trending_playlist') || [];
+      const cache = wx.getStorageSync('trending_parse_cache') || {};
+      var parsed = [];
+      for (var t = 0; t < trendingList.length; t++) {
+        var ti = trendingList[t];
+        var cached = cache[ti.url];
+        if (cached && cached.video_url) {
+          parsed.push({
+            video_url: cached.video_url, cover_url: cached.cover_url || ti.cover || '',
+            title: cached.title || ti.title || '', video_id: cached.video_id || '',
+            platform: cached.platform || ti.platform || '', author: cached.author || {},
+            audio_url: cached.audio_url || '', idx: parsed.length,
+          });
+        }
+      }
+      if (parsed.length > 0) {
+        playlist = parsed;
+        ci = parsed.findIndex(function(p) { return p.video_url === du || p.video_id === dv; });
+        ci = ci >= 0 ? ci : 0;
       } else {
         playlist = [{ video_url: du, cover_url: dc, title: dt, video_id: dv, platform: '', author: cachedResult?.author || {}, audio_url: cachedResult?.audio_url || '', idx: 0 }];
       }
-    } catch (e) {
-      playlist = [{ video_url: du, cover_url: dc, title: dt, video_id: dv, platform: '', author: cachedResult?.author || {}, audio_url: cachedResult?.audio_url || '', idx: 0 }];
+    } else {
+      // 默认：从历史记录构建
+      try {
+        const history = wx.getStorageSync('parse_history') || [];
+        const recent = [...history].reverse().filter(h => h.video_url);
+        if (recent.length > 0) {
+          playlist = recent.map((h, i) => ({ video_url: h.video_url, cover_url: h.cover_url || '', title: h.title || '', video_id: h.video_id || '', platform: h.platform || '', author: h.author || {}, audio_url: h.audio_url || '', idx: i }));
+          const f = playlist.findIndex(p => p.video_url === du || p.video_id === dv);
+          ci = f >= 0 ? f : 0;
+        } else {
+          playlist = [{ video_url: du, cover_url: dc, title: dt, video_id: dv, platform: '', author: cachedResult?.author || {}, audio_url: cachedResult?.audio_url || '', idx: 0 }];
+        }
+      } catch (e) {
+        playlist = [{ video_url: du, cover_url: dc, title: dt, video_id: dv, platform: '', author: cachedResult?.author || {}, audio_url: cachedResult?.audio_url || '', idx: 0 }];
+      }
     }
 
     const cur = playlist[ci] || playlist[0];
