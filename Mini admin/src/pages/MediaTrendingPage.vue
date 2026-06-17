@@ -9,17 +9,17 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div class="flex gap-2">
         <button @click="syncDouyin" :disabled="syncing" class="btn-soft flex items-center gap-2">
-          <svg v-if="!syncing" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <svg v-if="syncing !== 'douyin'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           <svg v-else class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
           {{ syncing === 'douyin' ? '同步中...' : '同步抖音' }}
         </button>
         <button @click="syncKuaishou" :disabled="syncing" class="btn-soft flex items-center gap-2">
-          <svg v-if="!syncing" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <svg v-if="syncing !== 'kuaishou'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           <svg v-else class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
           {{ syncing === 'kuaishou' ? '同步中...' : '同步快手' }}
         </button>
         <button @click="syncXiaohongshu" :disabled="syncing" class="btn-soft flex items-center gap-2">
-          <svg v-if="!syncing" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <svg v-if="syncing !== 'xiaohongshu'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           <svg v-else class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
           {{ syncing === 'xiaohongshu' ? '同步中...' : '同步小红书' }}
         </button>
@@ -40,8 +40,8 @@
       </div>
     </div>
 
-    <!-- 来源筛选 -->
-    <div class="flex gap-2 flex-wrap">
+    <!-- 来源筛选 + 排序 -->
+    <div class="flex gap-2 flex-wrap items-center">
       <button
         v-for="source in ['all', 'manual', 'douyin', 'kuaishou', 'xiaohongshu']"
         :key="source"
@@ -54,6 +54,14 @@
         {{ source === 'all' ? '全部' : source === 'manual' ? '手动' : source === 'douyin' ? '抖音' : source === 'kuaishou' ? '快手' : '小红书' }}
         <span class="ml-1 text-xs opacity-70">({{ getTrendingCount(source) }})</span>
       </button>
+      <div class="ml-auto flex items-center gap-1">
+        <span class="text-xs text-[var(--text-sub)]">排序：</span>
+        <select v-model="sortBy" class="text-xs px-2 py-1 rounded border border-[var(--border-color)] bg-[var(--bg-body)] text-[var(--text-sub)]">
+          <option value="time">最新</option>
+          <option value="heat">热度</option>
+          <option value="random">随机</option>
+        </select>
+      </div>
     </div>
 
     <!-- 热门列表 -->
@@ -188,8 +196,14 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const API_BASE = 'https://api.missonce.cc'
+const API_KEY = import.meta.env.VITE_ADMIN_API_KEY || ''
+
+function authHeaders() {
+  return API_KEY ? { 'x-api-key': API_KEY, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+}
 
 const trendingSource = ref<'all' | 'manual' | 'douyin' | 'kuaishou' | 'xiaohongshu'>('all')
+const sortBy = ref<'time' | 'heat' | 'random'>('time')
 const trendingLoading = ref(false)
 const trendingItems = ref<any[]>([])
 const showAddModal = ref(false)
@@ -213,8 +227,20 @@ const batchCount = computed(() => {
 })
 
 const filteredTrending = computed(() => {
-  if (trendingSource.value === 'all') return trendingItems.value
-  return trendingItems.value.filter(i => i.source === trendingSource.value)
+  let list = trendingSource.value === 'all'
+    ? [...trendingItems.value]
+    : trendingItems.value.filter(i => i.source === trendingSource.value)
+
+  if (sortBy.value === 'heat') {
+    list.sort((a, b) => (b.heat || 0) - (a.heat || 0))
+  } else if (sortBy.value === 'random') {
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]]
+    }
+  }
+  // 'time' 排序由后端已按 syncedAt 倒序返回，无需前端再排
+  return list
 })
 
 const getTrendingCount = (source: string) => {
@@ -245,7 +271,7 @@ const fetchTrending = async () => {
 const doSync = async (platform: string, label: string) => {
   syncing.value = platform
   try {
-    const res = await fetch(`${API_BASE}/api/trending/sync/${platform}`, { method: 'POST' })
+    const res = await fetch(`${API_BASE}/api/trending/sync/${platform}`, { method: 'POST', headers: authHeaders() })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success(`${label}同步成功，获取 ${data.data?.count || 0} 条`)
@@ -268,7 +294,7 @@ const syncXiaohongshu = () => doSync('xiaohongshu', '小红书')
 const clearPlatform = async (source: string) => {
   if (!confirm(`确定清空 ${source} 的所有数据？`)) return
   try {
-    const res = await fetch(`${API_BASE}/api/trending/clear/${source}`, { method: 'DELETE' })
+    const res = await fetch(`${API_BASE}/api/trending/clear/${source}`, { method: 'DELETE', headers: authHeaders() })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success(`${source} 数据已清空`)
@@ -284,7 +310,7 @@ const clearPlatform = async (source: string) => {
 const clearAll = async () => {
   if (!confirm('确定清空所有热门数据？')) return
   try {
-    const res = await fetch(`${API_BASE}/api/trending/clear/all`, { method: 'DELETE' })
+    const res = await fetch(`${API_BASE}/api/trending/clear/all`, { method: 'DELETE', headers: authHeaders() })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success('所有数据已清空')
@@ -312,7 +338,7 @@ const editTrending = (item: any) => {
 const deleteTrending = async (id: string) => {
   if (!confirm('确定删除该热门内容？')) return
   try {
-    const res = await fetch(`${API_BASE}/api/trending/manual/${id}`, { method: 'DELETE' })
+    const res = await fetch(`${API_BASE}/api/trending/manual/${id}`, { method: 'DELETE', headers: authHeaders() })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success('已删除')
@@ -338,7 +364,7 @@ const saveTrending = async () => {
       : `${API_BASE}/api/trending/manual`
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(trendingForm.value),
     })
     const data = await res.json()
@@ -374,7 +400,7 @@ const batchImport = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/trending/manual/batch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ text: batchText.value, platform: batchPlatform.value }),
     })
     const data = await res.json()

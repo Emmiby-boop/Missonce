@@ -241,7 +241,6 @@ router.delete('/cookies/:platform', requireAdmin, (req, res) => {
 function extractXsrf(cookieStr) {
   const match = cookieStr.match(/a1=([^;]+)/);
   if (!match) return '';
-  // xsrf 是 a1 的 URL-encoded 版本
   return encodeURIComponent(match[1]).replace(/%2F/g, '/');
 }
 
@@ -252,7 +251,69 @@ function randomTraceId() {
   return id;
 }
 
-async function fetchXiaohongshuHot() {
+// 方法1: 通过 homefeed API 获取（需要 cookie，返回完整分享链接）
+async function fetchXiaohongshuByApi() {
+  const cookies = loadCookies();
+  const cookieData = cookies.xiaohongshu;
+  if (!cookieData || !cookieData.cookie) {
+    console.warn('[Trending] 小红书 Cookie 未配置，跳过 API 模式');
+    return [];
+  }
+
+  const cookieStr = cookieData.cookie;
+  const xsrf = extractXsrf(cookieStr);
+
+  try {
+    const resp = await axios.post(
+      'https://edith.xiaohongshu.com/api/sns/web/v1/homefeed',
+      { cursor_score: '', num: 30, refresh_type: 1 },
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://www.xiaohongshu.com/explore',
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Cookie': cookieStr,
+          'X-Xsrf-Token': xsrf,
+          'X-B3-Traceid': randomTraceId(),
+          'Origin': 'https://www.xiaohongshu.com',
+        },
+        timeout: 15000,
+      }
+    );
+
+    const items = resp.data?.data?.items || [];
+    if (!items.length) {
+      console.warn('[Trending] 小红书 homefeed 返回空列表');
+      return [];
+    }
+
+    return items.map(function(item) {
+      const card = item.noteCard || {};
+      const cover = card.cover?.urlDefault || (card.imageList?.[0]?.urlDefault) || '';
+      const noteId = item.id || '';
+      return {
+        id: genId(),
+        source: 'xiaohongshu',
+        title: card.displayTitle || '',
+        cover: cover,
+        platform: '小红书',
+        author: card.user?.nickname || '',
+        heat: card.interactInfo?.likedCount || 0,
+        url: noteId ? `https://www.xiaohongshu.com/explore/${noteId}` : '',
+        syncedAt: Date.now(),
+      };
+    });
+  } catch (e) {
+    if (e.response?.status === 471 || e.response?.data?.code === -1) {
+      console.warn('[Trending] 小红书 Cookie 已过期或签名验证失败');
+    }
+    console.error('[Trending] 小红书 API 失败:', e.message);
+    return [];
+  }
+}
+
+// 方法2: 通过 SSR 抓取（不需要 cookie，但链接可能受限）
+async function fetchXiaohongshuBySsr() {
   try {
     const resp = await axios.get('https://www.xiaohongshu.com/explore', {
       headers: {
@@ -263,23 +324,15 @@ async function fetchXiaohongshuHot() {
     });
 
     const html = resp.data || '';
-    
-    // 从 SSR HTML 中提取笔记数据：{"id":"...","displayTitle":"..."...}
-    const notePattern = /"id":"([0-9a-f]{24})".*?"displayTitle":"([^"]*?)(?<!\\)"/g;
-    const coverPattern = /"urlDefault":"(https?:\\?\/\\?\/[^"]*?(?:xhscdn|xiaohongshu)[^"]*)"/g;
-    
-    const notes = [];
     const htmlWithoutNewlines = html.replace(/\n/g, '');
     
-    // 找所有 displayTitle
-    let titleMatch;
     const titleRegex = /"displayTitle":"((?:[^"\\]|\\.)*)"/g;
     const titles = [];
+    let titleMatch;
     while ((titleMatch = titleRegex.exec(htmlWithoutNewlines)) !== null) {
       titles.push(titleMatch[1].replace(/\\"/g, '"'));
     }
 
-    // 找所有 id (24位hex)
     const idRegex = /"id":"([0-9a-f]{24})"/g;
     const ids = [];
     let idMatch;
@@ -287,7 +340,6 @@ async function fetchXiaohongshuHot() {
       ids.push(idMatch[1]);
     }
 
-    // 找所有封面 urlDefault
     const coverRegex = /"urlDefault":"((?:https?:)?\\?\/\\?\/[^"]*?(?:xhscdn|xiaohongshu)[^"]*)"/g;
     const covers = [];
     let coverMatch;
@@ -295,10 +347,9 @@ async function fetchXiaohongshuHot() {
       covers.push(coverMatch[1].replace(/\\\//g, '/'));
     }
 
-    // 合并匹配结果（按出现顺序对齐）
+    const notes = [];
     const count = Math.min(ids.length, titles.length, 30);
     for (let i = 0; i < count; i++) {
-      // 跳过太短的标题（可能是装饰文本）
       if (titles[i].length < 2) continue;
       notes.push({
         id: genId(),
@@ -321,6 +372,18 @@ async function fetchXiaohongshuHot() {
   }
 }
 
+// 主入口: 优先用 API（有 cookie），降级用 SSR
+async function fetchXiaohongshuHot() {
+  // 优先尝试 API 模式（有 cookie 时可用）
+  const apiResult = await fetchXiaohongshuByApi();
+  if (apiResult.length > 0) {
+    console.log(`[Trending] 小红书 API: 获取到 ${apiResult.length} 条笔记`);
+    return apiResult;
+  }
+  // 降级到 SSR 模式
+  return await fetchXiaohongshuBySsr();
+}
+
 // 平台同步器映射
 const syncMap = {
   douyin: { fn: fetchDouyinHot, label: '抖音' },
@@ -335,7 +398,7 @@ router.get('/trending', (req, res) => {
 
   try {
     const allItems = loadData();
-    allItems.sort((a, b) => (b.heat || 0) - (a.heat || 0));
+    allItems.sort((a, b) => (b.syncedAt || b.createdAt || 0) - (a.syncedAt || a.createdAt || 0) || (b.heat || 0) - (a.heat || 0));
     const pageNum = Math.max(1, parseInt(page) || 1);
     const sizeNum = Math.min(50, Math.max(1, parseInt(pageSize) || 30));
     const start = (pageNum - 1) * sizeNum;
@@ -353,7 +416,7 @@ router.get('/trending', (req, res) => {
 router.get('/trending/merged', (req, res) => {
   try {
     const allItems = loadData();
-    allItems.sort((a, b) => (b.heat || 0) - (a.heat || 0));
+    allItems.sort((a, b) => (b.syncedAt || b.createdAt || 0) - (a.syncedAt || a.createdAt || 0) || (b.heat || 0) - (a.heat || 0));
     return res.json(success({ list: allItems, total: allItems.length }));
   } catch (e) {
     console.error('[Trending] merged error:', e.message);
