@@ -27,7 +27,7 @@
           id="vid_{{idx}}"
           class="player"
           src="{{readyMap[idx] ? v.video_url : ''}}"
-          preload="{{idx <= currentIdx + 1 ? 'auto' : 'none'}}"
+          preload="none"
           controls="{{false}}"
           loop="{{true}}"
           autoplay="{{readyMap[idx] && idx === currentIdx}}"

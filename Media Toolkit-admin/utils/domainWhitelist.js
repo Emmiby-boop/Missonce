@@ -12,7 +12,7 @@ const WHITELIST_FILE = path.join(DATA_DIR, 'domain_whitelist.json');
 
 // 默认白名单（首次无文件时使用）
 const DEFAULT_PROXY_DOMAINS = [
-  'douyincdn.com', 'douyinvod.com', 'douyin.com', 'ixigua.com', 'snssdk.com', 'byteimg.com',
+  'douyincdn.com', 'douyinvod.com', 'idouyinvod.com', 'douyin.com', 'ixigua.com', 'snssdk.com', 'byteimg.com',
   'bilivideo.com', 'biliapi.com', 'bilibili.com', 'upos-sz-static.bilivideo.com',
   'kuaishou.com', 'yximgs.com', 'kwimgs.com',
   'xhscdn.com', 'xiaohongshu.com', 'sns-img-bd.xhscdn.com', 'sns-webpic-qc.xhscdn.com',

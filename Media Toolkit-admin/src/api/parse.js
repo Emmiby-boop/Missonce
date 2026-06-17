@@ -420,7 +420,7 @@ router.get('/proxyDownload', async (req, res) => {
       const host = urlObj.hostname;
       if (host.includes('bilivideo.com') || host.includes('bilibili.com')) {
         referer = 'https://www.bilibili.com/';
-      } else if (host.includes('douyin.com') || host.includes('douyinvod.com') || host.includes('ixigua.com') || host.includes('snssdk.com') || host.includes('byteimg.com')) {
+      } else if (host.includes('douyin.com') || host.includes('douyinvod.com') || host.includes('idouyinvod.com') || host.includes('ixigua.com') || host.includes('snssdk.com') || host.includes('byteimg.com')) {
         referer = 'https://www.douyin.com/';
       } else if (host.includes('kuaishou.com') || host.includes('yximgs.com')) {
         referer = 'https://www.kuaishou.com/';

@@ -6,7 +6,7 @@ import { config } from '../../utils/request';
 // 播放时需要代理的域名（CDN 有 referer/CORS/域名白名单 限制）
 const PLAY_PROXY_DOMAINS = [
   'bilivideo.com', 'bilibili.com',
-  'douyinvod.com', 'byteimg.com', 'ixigua.com', 'snssdk.com',
+  'douyinvod.com', 'idouyinvod.com', 'byteimg.com', 'ixigua.com', 'snssdk.com',
   'douyin.com', 'iesdouyin.com',
   'kuaishou.com', 'yximgs.com', 'kwimgs.com',
   'xhscdn.com', 'xiaohongshu.com',
