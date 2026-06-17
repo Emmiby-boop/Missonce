@@ -140,16 +140,18 @@ function authorizeLogin() {
  * 更新用户资料
  */
 function updateUserProfile(nickName, avatarUrl) {
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     if (!isLoggedIn()) {
       reject(new Error('请先登录'));
       return;
     }
 
-    const userInfo = {
-      nickName: nickName || '',
-      avatarUrl: avatarUrl || ''
-    };
+    // 先读取现有数据，合并更新（保留 _id 等字段）
+    var existing = getUserInfo() || {};
+    var userInfo = Object.assign({}, existing, {
+      nickName: nickName !== undefined ? nickName : existing.nickName,
+      avatarUrl: avatarUrl !== undefined ? avatarUrl : existing.avatarUrl
+    });
 
     // 更新本地存储
     wx.setStorageSync(STORAGE_KEYS.USER_INFO, userInfo);
