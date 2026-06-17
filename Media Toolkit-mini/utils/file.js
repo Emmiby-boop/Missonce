@@ -1,5 +1,22 @@
 import { config, request, getNetworkStatus } from './request';
 
+// 需要代理的域名（播放时 referer/CORS 受限）
+const PROXY_DOMAINS = [
+  'bilivideo.com', 'bilibili.com',
+  'douyinvod.com', 'idouyinvod.com', 'byteimg.com', 'ixigua.com', 'snssdk.com',
+  'douyin.com', 'iesdouyin.com',
+  'kuaishou.com', 'yximgs.com', 'kwimgs.com',
+  'xhscdn.com', 'xiaohongshu.com',
+  'googlevideo.com', 'ytimg.com',
+  'twimg.com', 'fbcdn.net',
+];
+
+function needsProxy(url) {
+  if (!url) return false;
+  try { return PROXY_DOMAINS.some(d => new URL(url).hostname.includes(d)); }
+  catch { return false; }
+}
+
 // 代理下载签名缓存（减少请求次数）
 let _signCache = null;
 let _signCacheTime = 0;
@@ -326,4 +343,4 @@ async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
   };
 }
 
-export { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, ensureWritePhotosAlbumPermission, buildProxiedUrl, getProxySign };
+export { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, ensureWritePhotosAlbumPermission, buildProxiedUrl, getProxySign, needsProxy };

@@ -156,13 +156,13 @@ Page({
       title: '清空历史',
       content: '确定清空所有解析记录？',
       confirmColor: '#ba1a1a',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
           wx.removeStorageSync('parse_history');
           this.setData({ allList: [], groupedList: [], keyword: '' });
+          // 同步清空到云端，等待完成避免竞态
+          if (isLoggedIn()) await syncHistoryToCloud([]).catch(() => {});
           wx.showToast({ title: '已清空', icon: 'success' });
-          // 同步清空到云端
-          if (isLoggedIn()) syncHistoryToCloud([]).catch(() => {});
         }
       }
     });

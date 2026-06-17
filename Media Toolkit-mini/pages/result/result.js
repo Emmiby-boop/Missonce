@@ -1,4 +1,4 @@
-import { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, buildProxiedUrl } from '../../utils/file';
+import { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, buildProxiedUrl, needsProxy } from '../../utils/file';
 import { copyToClipboard } from '../../utils/clipboard';
 import { track } from '../../utils/stats';
 
@@ -67,9 +67,9 @@ Page({
       downloadBtnText = '下载图片';
     }
 
-    // CDN需要代理，避免403（与videoPlayer保持一致）
+    // CDN需要代理，避免403
     let videoUrl = result.video_url || '';
-    if (videoUrl && /bilivideo\.com|bilibili\.com|douyinvod\.com|byteimg\.com|ixigua\.com|snssdk\.com/.test(videoUrl)) {
+    if (videoUrl && needsProxy(videoUrl)) {
       try {
         const proxied = await buildProxiedUrl(videoUrl, `${result.video_id || 'video'}.mp4`);
         if (proxied) videoUrl = proxied;
@@ -262,8 +262,10 @@ Page({
         let successCount = 0;
 
         for (let i = 0; i < images.length; i++) {
-          const url = images[i].url || images[i];
-          if (!url) continue;
+          const rawUrl = images[i].url || images[i];
+          if (!rawUrl) continue;
+          // 第三方域名走代理，避免微信白名单报错
+          const url = needsProxy(rawUrl) ? (await buildProxiedUrl(rawUrl, 'image.jpg').catch(() => rawUrl)) : rawUrl;
           try {
             await new Promise((resolve) => {
               wx.downloadFile({

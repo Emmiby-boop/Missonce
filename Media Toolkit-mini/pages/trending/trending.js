@@ -2,7 +2,6 @@ import { request } from '../../utils/request';
 import { showToast } from '../../utils/ui';
 import { track } from '../../utils/stats';
 import { isLoggedIn, syncHistoryToCloud } from '../../utils/auth';
-import { buildProxiedUrl } from '../../utils/file';
 
 const PLATFORM_COLORS = {
   '抖音': '#161823', '快手': '#FF4906', 'B站': '#00A1D6', '哔哩哔哩': '#00A1D6',
@@ -214,7 +213,8 @@ Page({
         const parsed = res.data;
         this._cacheParseResult(item.url, parsed);
         this._saveHistory(parsed);
-        // 统一跳转到播放页（视频或图集都支持）
+        // 设置热门播放列表，供 videoPlayer 上下滑动
+        wx.setStorageSync('trending_playlist', this.data.allItems.map(function(t) { return { video_url: t.videoUrl || '', cover_url: t.cover || '', title: t.title || '', video_id: t.id, platform: t.platform || '抖音', url: t.url, source: 'trending' }; }));
         wx.setStorageSync('current_result', { ...parsed, timestamp: Date.now() });
         wx.navigateTo({
           url: '/pages/videoPlayer/videoPlayer?url=' + encodeURIComponent(parsed.video_url || '') +

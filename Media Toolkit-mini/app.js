@@ -1,4 +1,4 @@
-import { silentLogin, isLoggedIn, syncHistoryToCloud, fetchHistoryFromCloud, mergeHistory } from './utils/auth';
+import { silentLogin, isLoggedIn, syncHistoryToCloud, fetchHistoryFromCloud } from './utils/auth';
 import { request } from './utils/request';
 
 App({

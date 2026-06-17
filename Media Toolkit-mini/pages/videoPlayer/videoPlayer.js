@@ -1,26 +1,10 @@
-import { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, buildProxiedUrl } from '../../utils/file';
+import { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, buildProxiedUrl, needsProxy } from '../../utils/file';
 import { copyToClipboard } from '../../utils/clipboard';
 import { truncateString } from '../../utils/util';
 import { config } from '../../utils/request';
 
-// 播放时需要代理的域名（CDN 有 referer/CORS/域名白名单 限制）
-const PLAY_PROXY_DOMAINS = [
-  'bilivideo.com', 'bilibili.com',
-  'douyinvod.com', 'idouyinvod.com', 'byteimg.com', 'ixigua.com', 'snssdk.com',
-  'douyin.com', 'iesdouyin.com',
-  'kuaishou.com', 'yximgs.com', 'kwimgs.com',
-  'xhscdn.com', 'xiaohongshu.com',
-  'googlevideo.com', 'ytimg.com',
-  'twimg.com', 'fbcdn.net',
-];
-// 可直接下载的白名单（无需代理）
+// 可直接下载的白名单域名
 const DIRECT_DOMAINS = ['missonce.cc', 'missonce-99', 'tcloudbaseapp.com', 'wx.qlogo.cn', 'cloudbase.net'];
-// 播放用：只代理已知受限域名
-function needsProxy(url) {
-  if (!url) return false;
-  try { return PLAY_PROXY_DOMAINS.some(d => new URL(url).hostname.includes(d)); }
-  catch (e) { return false; }
-}
 // 下载用：第三方域名一律走代理，避免微信域名白名单报错
 function needsDownloadProxy(url) {
   if (!url) return false;
@@ -194,7 +178,7 @@ Page({
       }).catch(function() {
         wx.showToast({ title: '视频加载失败', icon: 'none' });
       });
-    } else if (item._proxied && needsProxy(item.video_url) && item.video_id) {
+    } else if (item._proxied && needsProxy(item.video_url) && item.video_id && item.platform === '抖音') {
       // 代理后仍 403 → douyin CDN 链接过期，重新解析获取新链接
       console.log('[VideoPlayer] douyin URL 过期，尝试重新解析 video_id:', item.video_id);
       wx.showLoading({ title: '重新获取视频...' });

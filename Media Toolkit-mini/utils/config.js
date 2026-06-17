@@ -15,6 +15,9 @@ const config = {
   
   // 最大重试次数
   maxRetries: 1,
+
+  // 广告单元 AppID（对应微信流量主广告）
+  appId: 'wx7fb5f1fa0daab97d',
 };
 
 export default config;
