@@ -35,7 +35,7 @@ Page({
   data: {
     hasParams: false, playlist: [], currentIdx: 0, readyIdx: -1, currentItem: {},
     isPlaying: false, hasRetried: false, fromShare: false,
-    isImageMode: false, imageList: [],
+    isImageMode: false, imageList: [], coverVisible: true,
     iconDownload: '/images/icon-download.png',
     iconCover: '/images/icon-cover.png',
     iconShare: '/images/icon-share.png',
@@ -122,7 +122,7 @@ Page({
     }
 
     // 先渲染，再懒代理后续视频
-    this.setData({ hasParams: true, playlist, currentIdx: ci, readyIdx: -1, currentItem: cur, fromShare: fromShare === 'true' });
+    this.setData({ hasParams: true, playlist, currentIdx: ci, readyIdx: -1, currentItem: cur, fromShare: fromShare === 'true', coverVisible: true });
     wx.nextTick(() => {
       if (!this.data.isImageMode) {
         var self = this;
@@ -183,7 +183,7 @@ Page({
       this._stopAll();
       // 先设 currentIdx 做视觉定位，readyIdx 清空（不加载视频）
       var item = Object.assign({}, this.data.playlist[idx] || {});
-      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false, readyIdx: -1 });
+      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false, readyIdx: -1, coverVisible: true });
 
       var self = this;
       var playlist = this.data.playlist;
@@ -217,7 +217,7 @@ Page({
     if (this.data.isPlaying) this._videoCtx.pause(); else this._videoCtx.play();
   },
 
-  onPlay() { this.setData({ isPlaying: true }); },
+  onPlay() { this.setData({ isPlaying: true, coverVisible: false }); },
   onPause() { this.setData({ isPlaying: false }); },
 
   onVideoError() {

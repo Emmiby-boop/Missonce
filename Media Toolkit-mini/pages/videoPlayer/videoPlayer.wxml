@@ -16,13 +16,12 @@
   <swiper wx:if="{{!isImageMode}}" class="player-swiper" vertical="{{true}}" current="{{currentIdx}}" bindchange="onSwiperChange" duration="{{200}}">
     <swiper-item wx:for="{{playlist}}" wx:key="idx" wx:for-item="v" wx:for-index="idx">
       <view class="player-slide" bindtap="onTapVideo">
-        <!-- 封面图 — 视频加载前显示，避免黑屏 -->
+        <!-- 封面图 — 视频开始播放前显示，play后永远隐藏 -->
         <image
-          wx:if="{{v.cover_url && idx === currentIdx}}"
+          wx:if="{{v.cover_url && idx === currentIdx && coverVisible}}"
           class="player-cover"
           src="{{v.cover_url}}"
           mode="aspectFill"
-          style="opacity: {{idx === readyIdx && isPlaying ? 0 : 1}}"
         />
         <video
           id="vid_{{idx}}"
