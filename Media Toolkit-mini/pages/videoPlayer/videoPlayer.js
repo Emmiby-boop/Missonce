@@ -366,7 +366,6 @@ Page({
         var task = buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
           if (proxyUrl && playlist[idx]) {
             playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true, _proxyPending: false });
-            // 如果代理完成的是当前视频，立即播放
             if (idx === self.data.currentIdx && self.data.readyIdx === -1) {
               self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyIdx: idx });
               self._playIdx(idx);
@@ -374,6 +373,39 @@ Page({
           }
         }).catch(function() {
           if (playlist[idx]) playlist[idx]._proxyPending = false;
+          // 方案C: 代理失败 → 用 video_id 重新解析获取新鲜链接
+          if (item.video_id && item.platform === '抖音') {
+            console.log('[VideoPlayer] 代理失败，尝试重新解析:', item.video_id);
+            wx.showLoading({ title: '重新获取...' });
+            wx.request({
+              url: config.baseURL + '/api/parse',
+              method: 'POST',
+              data: { text: 'https://www.douyin.com/video/' + item.video_id },
+              success: function(parseRes) {
+                wx.hideLoading();
+                if (parseRes.statusCode === 200 && parseRes.data && parseRes.data.succ && parseRes.data.data && parseRes.data.data.video_url) {
+                  playlist[idx] = Object.assign({}, playlist[idx], { video_url: parseRes.data.data.video_url, _proxied: false, _proxyPending: false });
+                  if (idx === self.data.currentIdx && self.data.readyIdx === -1) {
+                    self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyIdx: idx });
+                    self._playIdx(idx);
+                  }
+                } else if (idx === self.data.currentIdx && self.data.readyIdx === -1) {
+                  self.setData({ readyIdx: idx });
+                  self._playIdx(idx);
+                }
+              },
+              fail: function() {
+                wx.hideLoading();
+                if (idx === self.data.currentIdx && self.data.readyIdx === -1) {
+                  self.setData({ readyIdx: idx });
+                  self._playIdx(idx);
+                }
+              }
+            });
+          } else if (idx === self.data.currentIdx && self.data.readyIdx === -1) {
+            self.setData({ readyIdx: idx });
+            self._playIdx(idx);
+          }
         });
         tasks.push(task);
       })(i);
