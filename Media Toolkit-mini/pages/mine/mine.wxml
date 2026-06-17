@@ -36,11 +36,11 @@
       <text class="stat-label">解析历史</text>
       <text class="stat-value">{{historyCount}} 条</text>
     </view>
-    <view class="stat-card" bindtap="goFavorites">
-      <image class="stat-icon" src="/images/icon-download.png" mode="aspectFit" />
-      <text class="stat-label">我的收藏</text>
-      <text class="stat-value">5 个</text>
-    </view>
+      <view class="stat-card" bindtap="goFavorites">
+        <image class="stat-icon" src="/images/icon-download.png" mode="aspectFit" />
+        <text class="stat-label">我的收藏</text>
+        <text class="stat-value">即将上线</text>
+      </view>
   </view>
 
   <!-- 菜单列表 -->

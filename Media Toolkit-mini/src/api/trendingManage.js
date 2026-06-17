@@ -18,7 +18,7 @@ function readManualItems() {
   ensureDataFile();
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } catch {
+  } catch (e) {
     return [];
   }
 }

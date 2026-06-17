@@ -14,7 +14,7 @@ const PROXY_DOMAINS = [
 function needsProxy(url) {
   if (!url) return false;
   try { return PROXY_DOMAINS.some(d => new URL(url).hostname.includes(d)); }
-  catch { return false; }
+  catch (e) { return false; }
 }
 
 // 代理下载签名缓存（减少请求次数）
@@ -193,7 +193,7 @@ function isDirectDownloadDomain(url) {
   try {
     const hostname = new URL(url).hostname;
     return DIRECT_DOWNLOAD_DOMAINS.some(d => hostname.includes(d));
-  } catch {
+  } catch (e) {
     return false;
   }
 }

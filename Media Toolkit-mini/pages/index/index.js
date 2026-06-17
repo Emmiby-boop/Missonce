@@ -1,5 +1,5 @@
 import STORAGE_KEYS from "../../utils/storageKeys";
-import { request } from '../../utils/request';
+import { request, config } from '../../utils/request';
 import { getClipboardData } from '../../utils/clipboard';
 import { extractUrl } from '../../utils/util';
 import { showToast } from '../../utils/ui';
@@ -51,7 +51,7 @@ Page({
   _fetchNotice() {
     // 优先走API读后台数据库，失败则尝试本地CloudBase
     wx.request({
-      url: 'https://api.missonce.cc/api/announcement',
+      url: config.baseURL + '/api/announcement',
       success: (res) => {
         if (res.data?.success && res.data?.data) {
           this.setData({ noticeText: res.data.data.content, noticeUrl: res.data.data.url || '' });
