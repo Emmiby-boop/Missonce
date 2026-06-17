@@ -83,16 +83,24 @@ Page({
   _syncProfile(userInfo) {
     if (!isLoggedIn()) return;
     try {
+      if (!wx.cloud) {
+        console.warn('[Mine] 云开发不可用，跳过同步');
+        return;
+      }
       wx.cloud.callFunction({
         name: 'updateProfile',
         data: {
           nickName: userInfo.nickName || '',
           avatarUrl: userInfo.avatarUrl || ''
         }
+      }).then(function(res) {
+        console.log('[Mine] 资料同步成功:', res.result);
       }).catch(function(err) {
-        console.warn('[Mine] 同步资料失败:', err);
+        console.error('[Mine] 资料同步失败:', err);
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('[Mine] 云函数调用异常:', e);
+    }
   },
 
   // 执行登录
