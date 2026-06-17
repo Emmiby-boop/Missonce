@@ -21,7 +21,7 @@
         <!-- 昵称：输入框获取昵称 -->
         <input class="profile-name-input" type="nickname" value="{{userInfo.nickName || ''}}" placeholder="{{isLoggedIn ? '点击设置昵称' : '点击登录'}}" bindblur="onNicknameBlur" bindinput="onNicknameInput" disabled="{{!isLoggedIn}}" />
         <view class="profile-id" wx:if="{{isLoggedIn}}">
-          <text>ID: {{userInfo._id || '未知'}}</text>
+          <text>ID: {{idShort}}</text>
         </view>
         <text class="profile-desc" wx:else>登录后同步云端数据</text>
       </view>

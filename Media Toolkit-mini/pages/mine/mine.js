@@ -9,10 +9,15 @@ Page({
   },
 
   onShow() {
-    // 同步登录状态
+    var info = getUserInfo();
+    var idShort = '';
+    if (info && info._id) {
+      idShort = info._id.length > 8 ? info._id.substring(0, 8) + '...' : info._id;
+    }
     this.setData({
       isLoggedIn: isLoggedIn(),
-      userInfo: getUserInfo()
+      userInfo: info,
+      idShort: idShort
     });
     
     // 统计历史记录
