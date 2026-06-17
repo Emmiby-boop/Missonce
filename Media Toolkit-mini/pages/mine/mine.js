@@ -6,7 +6,10 @@ Page({
     isLoggedIn: false,
     userInfo: null,
     historyCount: 0,
-    cacheSize: ''
+    cacheSize: '',
+    showAbout: false,
+    appVersion: 'v2.6.0',
+    aboutDesc: '小辣椒去水印精灵是一款免费的视频无水印提取工具，支持抖音、快手、B站等50+主流平台。\n\n提供高清视频下载、音频提取、封面保存等功能。'
   },
 
   onShow() {
@@ -154,14 +157,30 @@ Page({
   },
 
   onAbout() {
-    const accountInfo = wx.getAccountInfoSync ? wx.getAccountInfoSync() : null;
-    const version = accountInfo?.miniProgram?.version || 'v2.5.3';
-    wx.showModal({
-      title: '关于小辣椒去水印精灵',
-      content: `小辣椒去水印精灵是一款免费的视频无水印提取工具，支持抖音、快手、B站等50+主流平台。\n\n提供高清视频下载、音频提取、封面保存等功能。\n\n版本：${version}`,
-      showCancel: false,
-      confirmText: '我知道了',
-      confirmColor: '#07c160',
+    var accountInfo = wx.getAccountInfoSync ? wx.getAccountInfoSync() : null;
+    var version = (accountInfo && accountInfo.miniProgram) ? accountInfo.miniProgram.version : '';
+    if (version) {
+      this.setData({ appVersion: 'v' + version });
+    }
+    // 从后台获取介绍文案
+    this._fetchAboutDesc();
+    this.setData({ showAbout: true });
+  },
+
+  closeAbout() {
+    this.setData({ showAbout: false });
+  },
+
+  _fetchAboutDesc() {
+    var self = this;
+    wx.request({
+      url: (typeof config !== 'undefined' ? config.baseURL : 'https://api.missonce.cc') + '/api/announcement',
+      success: function(res) {
+        if (res.data && res.data.success && res.data.data && res.data.data.content) {
+          self.setData({ aboutDesc: res.data.data.content });
+        }
+      },
+      fail: function() {}
     });
   },
 

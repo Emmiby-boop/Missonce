@@ -344,3 +344,78 @@
   font-size: 22rpx;
   color: var(--text-muted);
 }
+
+/* 关于弹窗 */
+.about-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.about-dialog {
+  width: 580rpx;
+  background: var(--bg-card, #fff);
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
+}
+
+.about-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 40rpx 30rpx;
+  background: linear-gradient(135deg, #07c160, #06ad56);
+}
+
+.about-logo {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 28rpx;
+  margin-bottom: 20rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.about-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+
+.about-version {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.about-body {
+  padding: 40rpx;
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.about-desc {
+  font-size: 28rpx;
+  color: var(--text-primary, #333);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.about-footer {
+  padding: 24rpx 40rpx 36rpx;
+  text-align: center;
+  border-top: 1rpx solid var(--border-color, #eee);
+}
+
+.about-copyright {
+  font-size: 22rpx;
+  color: var(--text-muted, #999);
+  letter-spacing: 1rpx;
+}

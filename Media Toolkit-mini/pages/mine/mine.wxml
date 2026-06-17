@@ -95,4 +95,21 @@
   <view class="logout-btn" bindtap="onLogout">
     <text>退出登录</text>
   </view>
+
+  <!-- 关于弹窗 -->
+  <view class="about-mask" wx:if="{{showAbout}}" bindtap="closeAbout">
+    <view class="about-dialog" catchtap="">
+      <view class="about-header">
+        <image class="about-logo" src="/images/logo-avatar.png" mode="aspectFit" />
+        <text class="about-title">小辣椒去水印精灵</text>
+        <text class="about-version">{{appVersion}}</text>
+      </view>
+      <view class="about-body">
+        <text class="about-desc">{{aboutDesc}}</text>
+      </view>
+      <view class="about-footer">
+        <text class="about-copyright">© 2024-2026 Missonce</text>
+      </view>
+    </view>
+  </view>
 </view>
