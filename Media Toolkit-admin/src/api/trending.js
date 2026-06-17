@@ -253,60 +253,73 @@ function randomTraceId() {
 }
 
 async function fetchXiaohongshuHot() {
-  const cookies = loadCookies();
-  const cookieData = cookies.xiaohongshu;
-  if (!cookieData?.cookie) {
-    console.warn('[Trending] 小红书 Cookie 未配置，请在「Cookie配置」页面设置');
-    throw new Error('小红书 Cookie 未配置，请在管理后台 Cookie 配置页面设置');
-  }
-
-  const cookieStr = cookieData.cookie;
-  const xsrf = extractXsrf(cookieStr);
-
   try {
-    const resp = await axios.post(
-      'https://edith.xiaohongshu.com/api/sns/web/v1/homefeed',
-      { cursor_score: '', num: 30, refresh_type: 1 },
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': 'https://www.xiaohongshu.com/explore',
-          'Content-Type': 'application/json;charset=UTF-8',
-          'Cookie': cookieStr,
-          'X-Xsrf-Token': xsrf,
-          'X-B3-Traceid': randomTraceId(),
-          'Origin': 'https://www.xiaohongshu.com',
-        },
-        timeout: 15000,
-      }
-    );
+    const resp = await axios.get('https://www.xiaohongshu.com/explore', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      timeout: 15000,
+    });
 
-    const items = resp.data?.data?.items || [];
-    if (!items.length) {
-      console.warn('[Trending] 小红书 homefeed 返回空列表');
-      return [];
+    const html = resp.data || '';
+    
+    // 从 SSR HTML 中提取笔记数据：{"id":"...","displayTitle":"..."...}
+    const notePattern = /"id":"([0-9a-f]{24})".*?"displayTitle":"([^"]*?)(?<!\\)"/g;
+    const coverPattern = /"urlDefault":"(https?:\\?\/\\?\/[^"]*?(?:xhscdn|xiaohongshu)[^"]*)"/g;
+    
+    const notes = [];
+    const htmlWithoutNewlines = html.replace(/\n/g, '');
+    
+    // 找所有 displayTitle
+    let titleMatch;
+    const titleRegex = /"displayTitle":"((?:[^"\\]|\\.)*)"/g;
+    const titles = [];
+    while ((titleMatch = titleRegex.exec(htmlWithoutNewlines)) !== null) {
+      titles.push(titleMatch[1].replace(/\\"/g, '"'));
     }
 
-    return items.map((item) => {
-      const card = item.noteCard || {};
-      const cover = card.cover?.urlDefault || (card.imageList?.[0]?.urlDefault) || '';
-      return {
+    // 找所有 id (24位hex)
+    const idRegex = /"id":"([0-9a-f]{24})"/g;
+    const ids = [];
+    let idMatch;
+    while ((idMatch = idRegex.exec(htmlWithoutNewlines)) !== null) {
+      ids.push(idMatch[1]);
+    }
+
+    // 找所有封面 urlDefault
+    const coverRegex = /"urlDefault":"((?:https?:)?\\?\/\\?\/[^"]*?(?:xhscdn|xiaohongshu)[^"]*)"/g;
+    const covers = [];
+    let coverMatch;
+    while ((coverMatch = coverRegex.exec(htmlWithoutNewlines)) !== null) {
+      covers.push(coverMatch[1].replace(/\\\//g, '/'));
+    }
+
+    // 合并匹配结果（按出现顺序对齐）
+    const count = Math.min(ids.length, titles.length, 30);
+    for (let i = 0; i < count; i++) {
+      // 跳过太短的标题（可能是装饰文本）
+      if (titles[i].length < 2) continue;
+      notes.push({
         id: genId(),
         source: 'xiaohongshu',
-        title: card.displayTitle || '',
-        cover,
+        title: titles[i] || '',
+        cover: covers[i] || '',
         platform: '小红书',
-        author: card.user?.nickname || '',
-        heat: card.interactInfo?.likedCount || 0,
-        url: `https://www.xiaohongshu.com/explore/${item.id || ''}`,
-        desc: card.desc || '',
+        author: '小红书推荐',
+        heat: 0,
+        url: ids[i] ? `https://www.xiaohongshu.com/explore/${ids[i]}` : '',
         syncedAt: Date.now(),
-      };
-    });
-  } catch (e) {
-    if (e.response?.status === 471 || e.response?.data?.code === -1) {
-      throw new Error('小红书 Cookie 已过期或签名验证失败，请更新 Cookie');
+      });
     }
+
+    console.log(`[Trending] 小红书 SSR: 提取到 ${notes.length} 条笔记`);
+    return notes;
+  } catch (e) {
+    console.error('[Trending] 小红书 SSR 抓取失败:', e.message);
+    return [];
+  }
+}
     if (e.message.includes('未配置')) throw e;
     console.error('[Trending] 小红书接口失败:', e.message);
     throw new Error('小红书接口调用失败: ' + e.message);
