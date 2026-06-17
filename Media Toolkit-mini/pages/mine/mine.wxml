@@ -4,24 +4,28 @@
 -->
 <view class="page">
   <!-- 用户卡片 -->
-  <view class="profile-card" bindtap="onProfileTap">
+  <view class="profile-card">
     <view class="profile-bg">
       <view class="profile-blob blob-1"></view>
       <view class="profile-blob blob-2"></view>
     </view>
     <view class="profile-content">
-      <image class="profile-avatar" 
-        src="{{userInfo.avatarUrl || '/images/logo-avatar.png'}}" 
-        mode="aspectFill" 
-      />
+      <!-- 头像：点击选择头像 -->
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image class="profile-avatar" 
+          src="{{userInfo.avatarUrl || '/images/logo-avatar.png'}}" 
+          mode="aspectFill" 
+        />
+      </button>
       <view class="profile-info">
-        <text class="profile-name">{{isLoggedIn ? (userInfo.nickName || '微信用户') : '点击登录'}}</text>
+        <!-- 昵称：输入框获取昵称 -->
+        <input class="profile-name-input" type="nickname" value="{{userInfo.nickName || ''}}" placeholder="{{isLoggedIn ? '点击设置昵称' : '点击登录'}}" bindblur="onNicknameBlur" bindinput="onNicknameInput" disabled="{{!isLoggedIn}}" />
         <view class="profile-id" wx:if="{{isLoggedIn}}">
           <text>ID: {{userInfo._id || '未知'}}</text>
         </view>
         <text class="profile-desc" wx:else>登录后同步云端数据</text>
       </view>
-      <text class="profile-arrow">›</text>
+      <text class="profile-arrow" wx:if="{{!isLoggedIn}}" bindtap="_doLogin">›</text>
     </view>
   </view>
 

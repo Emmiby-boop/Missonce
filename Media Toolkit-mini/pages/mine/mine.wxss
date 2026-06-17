@@ -60,6 +60,32 @@
   flex-shrink: 0;
 }
 
+/* 头像按钮 - 去除默认样式 */
+.avatar-btn {
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  line-height: normal;
+  width: 120rpx;
+  height: 120rpx;
+  flex-shrink: 0;
+}
+.avatar-btn::after {
+  border: none;
+}
+
+/* 昵称输入框 */
+.profile-name-input {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 0;
+  margin: 0;
+  height: 48rpx;
+  line-height: 48rpx;
+}
+
 .profile-info {
   flex: 1;
   display: flex;

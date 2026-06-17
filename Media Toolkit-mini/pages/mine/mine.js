@@ -33,21 +33,61 @@ Page({
     }
   },
 
-  // 点击用户卡片
-  onProfileTap() {
-    if (this.data.isLoggedIn) {
-      // 已登录，显示用户信息
-      wx.showModal({
-        title: '用户信息',
-        content: `昵称：${this.data.userInfo?.nickName || '未设置'}\nID：${this.data.userInfo?._id || '未知'}`,
-        showCancel: false,
-        confirmText: '好的',
-        confirmColor: '#07c160',
-      });
-    } else {
-      // 未登录，引导登录
+  // 点击头像 - 选择新头像
+  onChooseAvatar(e) {
+    var avatarUrl = e.detail && e.detail.avatarUrl;
+    if (!avatarUrl) return;
+    if (!this.data.isLoggedIn) {
       this._doLogin();
+      return;
     }
+    // 更新本地存储
+    var userInfo = this.data.userInfo || {};
+    userInfo.avatarUrl = avatarUrl;
+    wx.setStorageSync('userInfo', userInfo);
+    this.setData({ userInfo: userInfo });
+    // 同步到云端
+    this._syncProfile(userInfo);
+    wx.showToast({ title: '头像已更新', icon: 'success' });
+  },
+
+  // 昵称输入框失焦 - 保存昵称
+  onNicknameInput(e) {
+    var nickName = e.detail.value;
+    if (!nickName || !this.data.isLoggedIn) return;
+    var userInfo = this.data.userInfo || {};
+    userInfo.nickName = nickName;
+    wx.setStorageSync('userInfo', userInfo);
+    this.setData({ userInfo: userInfo });
+  },
+
+  onNicknameBlur(e) {
+    var nickName = e.detail.value;
+    if (!nickName || !this.data.isLoggedIn) return;
+    var userInfo = this.data.userInfo || {};
+    if (userInfo.nickName !== nickName) {
+      userInfo.nickName = nickName;
+      wx.setStorageSync('userInfo', userInfo);
+      this.setData({ userInfo: userInfo });
+      this._syncProfile(userInfo);
+      wx.showToast({ title: '昵称已更新', icon: 'success' });
+    }
+  },
+
+  // 同步用户资料到云端
+  _syncProfile(userInfo) {
+    if (!isLoggedIn()) return;
+    try {
+      wx.cloud.callFunction({
+        name: 'updateProfile',
+        data: {
+          nickName: userInfo.nickName || '',
+          avatarUrl: userInfo.avatarUrl || ''
+        }
+      }).catch(function(err) {
+        console.warn('[Mine] 同步资料失败:', err);
+      });
+    } catch (e) {}
   },
 
   // 执行登录
