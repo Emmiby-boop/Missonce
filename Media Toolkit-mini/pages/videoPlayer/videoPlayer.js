@@ -3,8 +3,16 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { truncateString } from '../../utils/util';
 import { config } from '../../utils/request';
 
-// 播放时需要代理的域名（B站、抖音等的 CDN 有 referer/CORS 限制）
-const PLAY_PROXY_DOMAINS = ['bilivideo.com', 'bilibili.com', 'douyinvod.com', 'byteimg.com', 'ixigua.com', 'snssdk.com'];
+// 播放时需要代理的域名（CDN 有 referer/CORS/域名白名单 限制）
+const PLAY_PROXY_DOMAINS = [
+  'bilivideo.com', 'bilibili.com',
+  'douyinvod.com', 'byteimg.com', 'ixigua.com', 'snssdk.com',
+  'douyin.com', 'iesdouyin.com',
+  'kuaishou.com', 'yximgs.com', 'kwimgs.com',
+  'xhscdn.com', 'xiaohongshu.com',
+  'googlevideo.com', 'ytimg.com',
+  'twimg.com', 'fbcdn.net',
+];
 // 可直接下载的白名单（无需代理）
 const DIRECT_DOMAINS = ['missonce.cc', 'missonce-99', 'tcloudbaseapp.com', 'wx.qlogo.cn', 'cloudbase.net'];
 // 播放用：只代理已知受限域名
@@ -46,7 +54,6 @@ Page({
         url: typeof img === 'object' ? (img.url || img) : img,
         live_photo_url: typeof img === 'object' ? (img.live_photo_url || '') : '',
       }));
-      // 图片展示也需要代理，避免微信域名白名单限制
       const imageList = await Promise.all(rawImages.map(async (img) => {
         const proxyUrl = needsDownloadProxy(img.url) ? (await buildProxiedUrl(img.url, 'img.jpg').catch(() => '')) : img.url;
         const proxyLive = img.live_photo_url && needsDownloadProxy(img.live_photo_url)
@@ -78,9 +85,6 @@ Page({
       playlist = [{ video_url: du, cover_url: dc, title: dt, video_id: dv, platform: '', author: cachedResult?.author || {}, audio_url: cachedResult?.audio_url || '', idx: 0 }];
     }
 
-    // 等待代理 URL 就绪后再渲染，避免 B站 403
-    await this._proxyPlaylistUrls(playlist);
-
     const cur = playlist[ci] || playlist[0];
     if (cur) {
       if ((!cur.author || !cur.author.nickname) && cachedResult?.author) cur.author = cachedResult.author;
@@ -88,9 +92,31 @@ Page({
       if (!cur.platform && cachedResult?.platform) cur.platform = cachedResult.platform;
     }
 
+    // 先渲染，再懒代理后续视频
     this.setData({ hasParams: true, playlist, currentIdx: ci, currentItem: cur, fromShare: fromShare === 'true' });
-    // 直接在 onLoad 中启动播放（onReady 可能在此之前触发）
-    wx.nextTick(() => { if (!this.data.isImageMode) this._playIdx(ci); });
+    wx.nextTick(() => {
+      if (!this.data.isImageMode) {
+        // 当前视频如果需要代理，先等代理就绪再播放
+        var self = this;
+        var firstItem = playlist[ci];
+        if (firstItem && firstItem.video_url && needsProxy(firstItem.video_url) && !firstItem.video_url.startsWith(config.baseURL)) {
+          buildProxiedUrl(firstItem.video_url, (firstItem.video_id || 'video') + '.mp4').then(function(proxyUrl) {
+            if (proxyUrl && playlist[ci]) {
+              playlist[ci] = Object.assign({}, playlist[ci], { video_url: proxyUrl, _proxied: true });
+              self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[ci]) });
+            }
+            self._playIdx(ci);
+            self._lazyProxyRange(playlist, ci + 1, 3);
+          }).catch(function() {
+            self._playIdx(ci);
+            self._lazyProxyRange(playlist, ci + 1, 3);
+          });
+        } else {
+          self._playIdx(ci);
+          self._lazyProxyRange(playlist, ci + 1, 3);
+        }
+      }
+    });
   },
 
   onReady() {},
@@ -116,13 +142,32 @@ Page({
   },
 
   onSwiperChange(e) {
-    const idx = e.detail.current;
+    var idx = e.detail.current;
     if (idx === this.data.currentIdx) return;
     if (!this.data.isImageMode) {
       this._stopAll();
-      const item = { ...(this.data.playlist[idx] || {}) };
-      this.setData({ currentIdx: idx, currentItem: item });
-      this._playIdx(idx);
+      var item = Object.assign({}, this.data.playlist[idx] || {});
+      this.setData({ currentIdx: idx, currentItem: item, hasRetried: false });
+
+      // 当前视频如果需要代理，先等代理就绪再播放
+      var self = this;
+      var playlist = this.data.playlist;
+      if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL) && !item._proxied) {
+        buildProxiedUrl(item.video_url, (item.video_id || 'video') + '.mp4').then(function(proxyUrl) {
+          if (proxyUrl && playlist[idx]) {
+            playlist[idx] = Object.assign({}, playlist[idx], { video_url: proxyUrl, _proxied: true });
+            self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]) });
+          }
+          self._playIdx(idx);
+          self._lazyProxyRange(playlist, idx + 1, 3);
+        }).catch(function() {
+          self._playIdx(idx);
+          self._lazyProxyRange(playlist, idx + 1, 3);
+        });
+      } else {
+        self._playIdx(idx);
+        self._lazyProxyRange(playlist, idx + 1, 3);
+      }
     } else {
       this.setData({ currentIdx: idx });
     }
@@ -137,12 +182,30 @@ Page({
   onPause() { this.setData({ isPlaying: false }); },
 
   onVideoError() {
-    if (!this.data.hasRetried) {
-      const url = this.data.currentItem.video_url, r = url.includes('?') ? `${url}&retry=${Date.now()}` : `${url}?retry=${Date.now()}`;
+    const item = this.data.currentItem;
+    if (!item || !item.video_url) return;
+    // 如果当前不是代理 URL，尝试走代理再播
+    if (!item._proxied && needsProxy(item.video_url)) {
+      buildProxiedUrl(item.video_url, `${item.video_id || 'video'}.mp4`).then(proxyUrl => {
+        if (!proxyUrl) { wx.showToast({ title: '视频加载失败', icon: 'none' }); return; }
+        const pl = [...this.data.playlist];
+        const idx = this.data.currentIdx;
+        pl[idx] = { ...pl[idx], video_url: proxyUrl, _proxied: true };
+        this.setData({ playlist: pl, currentItem: { ...this.data.currentItem, video_url: proxyUrl, _proxied: true } });
+        wx.nextTick(() => this._playIdx(idx));
+      }).catch(() => {
+        wx.showToast({ title: '视频加载失败', icon: 'none' });
+      });
+    } else if (!this.data.hasRetried) {
+      // 已经是代理 URL 还失败，带 timestamp 重试一次
+      const url = item.video_url;
+      const r = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
       const pl = [...this.data.playlist]; pl[this.data.currentIdx] = { ...pl[this.data.currentIdx], video_url: r };
       this.setData({ hasRetried: true, playlist: pl, currentItem: { ...this.data.currentItem, video_url: r } });
       wx.nextTick(() => this._playIdx(this.data.currentIdx));
-    } else { wx.showToast({ title: '视频加载失败', icon: 'none' }); }
+    } else {
+      wx.showToast({ title: '视频加载失败', icon: 'none' });
+    }
   },
 
   onPreviewImage(e) {
@@ -277,12 +340,28 @@ Page({
     return { title: '分享一个去水印神器', query: `url=${encodeURIComponent(video_url || '')}&cover=${encodeURIComponent(cover_url || '')}&videoid=${encodeURIComponent(video_id || '')}&title=${encodeURIComponent(title || '')}&fromShare=true`, imageUrl: cover_url || '/images/share-cover.png' };
   },
 
-  async _proxyPlaylistUrls(playlist) {
-    for (let i = 0; i < playlist.length; i++) {
+  // 懒代理：只代理指定范围内的视频（当前+后续N个），不阻塞播放
+  async _lazyProxyRange(playlist, startIdx, count) {
+    const end = Math.min(startIdx + count, playlist.length);
+    const tasks = [];
+    for (let i = startIdx; i < end; i++) {
       const item = playlist[i];
-      if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL)) {
-        try { const p = await buildProxiedUrl(item.video_url, `${item.video_id || 'video'}.mp4`); if (p) playlist[i] = { ...item, video_url: p }; } catch (e) {}
+      if (item.video_url && needsProxy(item.video_url) && !item.video_url.startsWith(config.baseURL) && !item._proxyPending && !item._proxied) {
+        item._proxyPending = true;
+        const idx = i;
+        tasks.push(
+          buildProxiedUrl(item.video_url, `${item.video_id || 'video'}.mp4`).then(p => {
+            if (p && playlist[idx]) {
+              playlist[idx] = { ...playlist[idx], video_url: p, _proxied: true, _proxyPending: false };
+              // 如果正在播放这个 item，更新 UI
+              if (idx === this.data.currentIdx) {
+                this.setData({ playlist: [...playlist], currentItem: { ...playlist[idx] } });
+              }
+            }
+          }).catch(() => { if (playlist[idx]) playlist[idx]._proxyPending = false; })
+        );
       }
     }
+    await Promise.allSettled(tasks);
   },
 });
