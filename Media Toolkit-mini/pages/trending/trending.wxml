@@ -1,0 +1,104 @@
+<!--
+  最新素材 — 与历史页统一风格
+-->
+<view class="page">
+  <!-- 顶部统计 -->
+  <view class="stats-bar">
+    <view class="stats-left">
+      <text class="stats-title">最新素材</text>
+      <text class="stats-count">共 {{list.length}} 条</text>
+    </view>
+    <view class="stats-refresh" bindtap="onRefresh">
+      <text>刷新</text>
+    </view>
+  </view>
+
+  <!-- 搜索栏 -->
+  <view class="search-wrap">
+    <input class="search-input" placeholder="搜索素材..." placeholder-style="color:#9ca3af" value="{{keyword}}" bindinput="onSearch" />
+    <view class="search-clear" wx:if="{{keyword}}" bindtap="onClearSearch">
+      <text>✕</text>
+    </view>
+  </view>
+
+  <!-- 分类 Tab -->
+  <view class="tab-bar">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab-item {{item.key === activeTab ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onTabChange"
+    >
+      <text>{{item.name}}</text>
+    </view>
+  </view>
+
+  <!-- 加载骨架屏 -->
+  <block wx:if="{{loading && !list.length}}">
+    <view class="card-list">
+      <view wx:for="{{[1,2,3]}}" wx:key="*this" class="history-card skeleton-card">
+        <view class="skeleton-thumb"></view>
+        <view class="card-info">
+          <view class="skeleton-line w80"></view>
+          <view class="skeleton-line w50"></view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 内容列表 -->
+  <view class="card-list" wx:if="{{list.length > 0}}">
+    <view
+      class="history-card"
+      wx:for="{{list}}"
+      wx:key="id"
+      bindtap="onItemTap"
+      data-item="{{item}}"
+    >
+      <!-- 缩略图 -->
+      <view class="card-thumb">
+        <image class="card-thumb-img" src="{{item.cover || '/images/default-cover.png'}}" mode="aspectFill" lazy-load />
+        <view class="card-thumb-play">
+          <view class="play-tri"></view>
+        </view>
+        <!-- 平台角标 -->
+        <view class="card-platform" style="background: {{item.platformColor || '#07c160'}};">
+          <text>{{item.platform || '未知'}}</text>
+        </view>
+        <!-- NEW 标签 -->
+        <view class="card-new-tag" wx:if="{{item.isNew}}">
+          <text>NEW</text>
+        </view>
+      </view>
+
+      <!-- 信息区 -->
+      <view class="card-info">
+        <text class="card-title">{{item.title || '暂无标题'}}</text>
+        <view class="card-meta">
+          <text class="card-time">{{item.timeLabel || '刚刚'}}</text>
+        </view>
+        <view class="card-action" catchtap="onCopyLink" data-item="{{item}}">
+          <text>复制{{item.typeLabel || '视频'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && !list.length}}">
+    <view class="empty-icon-wrap">
+      <view class="empty-icon-inner"></view>
+      <view class="empty-icon-corner"></view>
+    </view>
+    <text class="empty-title">暂无素材</text>
+    <text class="empty-desc">下拉刷新获取最新素材</text>
+  </view>
+
+  <!-- 底部 -->
+  <view class="list-footer" wx:if="{{list.length > 0 && !loading}}">
+    <view class="footer-line"></view>
+    <text class="footer-text">没有更多了</text>
+    <view class="footer-line"></view>
+  </view>
+</view>

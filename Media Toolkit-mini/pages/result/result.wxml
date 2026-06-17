@@ -1,0 +1,136 @@
+<!--
+  解析结果 — 小辣椒去水印精灵
+-->
+<view class="page">
+  <!-- 预览区 -->
+  <section class="preview-section">
+    <view class="preview-wrap">
+      <!-- 视频预览 -->
+      <video
+        wx:if="{{video_url}}"
+        class="preview-video"
+        src="{{video_url}}"
+        controls
+        autoplay
+        show-fullscreen-btn="{{true}}"
+        show-center-play-btn="{{false}}"
+        show-play-btn="{{true}}"
+        object-fit="contain"
+        id="videoPlayer"
+        bindinit="onVideoInit"
+      />
+
+      <!-- 图集/实况照片预览 -->
+      <swiper
+        wx:elif="{{image_list.length > 0}}"
+        class="preview-swiper"
+        current="{{currentImageIndex}}"
+        bindchange="onImageSwiperChange"
+        duration="{{200}}"
+      >
+        <swiper-item wx:for="{{image_list}}" wx:key="index">
+          <view class="swiper-item-wrap">
+            <image
+              class="swiper-img"
+              src="{{item.url || item}}"
+              mode="aspectFill"
+              bindtap="onPreviewAllImages"
+            />
+            <!-- LIVE 标识 -->
+            <view class="live-badge" wx:if="{{item.live_photo_url}}">
+              <view class="live-badge-dot"></view>
+              <text>LIVE</text>
+            </view>
+          </view>
+        </swiper-item>
+      </swiper>
+
+      <!-- 封面 -->
+      <view wx:else class="preview-cover">
+        <image class="cover-img" src="{{cover_url}}" mode="aspectFill" />
+      </view>
+
+      <view class="duration-badge" wx:if="{{duration}}">{{duration}}</view>
+    </view>
+  </section>
+
+  <!-- 图集缩略图列表 -->
+  <view class="thumb-strip" wx:if="{{image_list.length > 1}}">
+    <scroll-view scroll-x class="thumb-scroll">
+      <view
+        class="thumb-item {{currentImageIndex === index ? 'active' : ''}}"
+        wx:for="{{image_list}}"
+        wx:key="index"
+        bindtap="onTapThumb"
+        data-index="{{index}}"
+      >
+        <image class="thumb-img" src="{{item.url || item}}" mode="aspectFill" />
+        <view class="thumb-live-dot" wx:if="{{item.live_photo_url}}"></view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 内容区 -->
+  <view class="content-area">
+    <!-- 元数据卡片 -->
+    <view class="meta-card">
+      <view class="platform-tag">
+        <view class="platform-dot" style="background: {{platformColor || '#00c853'}};"></view>
+        <text class="platform-name">{{platform || '未知平台'}}</text>
+        <text class="live-label" wx:if="{{hasLivePhoto}}">实况</text>
+      </view>
+      
+      <text class="meta-title {{titleExpanded ? 'expanded' : ''}}" bindtap="onToggleTitle">{{title || '无标题'}}</text>
+      <text class="expand-btn" wx:if="{{titleNeedExpand}}" bindtap="onToggleTitle">{{titleExpanded ? '收起' : '展开'}}</text>
+      
+      <view class="meta-info">
+        <view class="meta-item">
+          <text class="meta-icon-text">{{resolution || 'HD'}}</text>
+          <text class="meta-text">{{resolutionDesc || '1080P'}}</text>
+        </view>
+        <view class="meta-dot"></view>
+        <view class="meta-item">
+          <image class="meta-icon-img" src="/images/icon-download.png" mode="aspectFit" />
+          <text class="meta-text">{{fileSize || '未知'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮区 -->
+    <view class="action-section">
+      <!-- 下载按钮 -->
+      <view
+        class="btn-download {{isDownloading ? 'downloading' : ''}}"
+        bindtap="onDownloadTap"
+      >
+        <image class="btn-icon" src="/images/icon-download-white.png" mode="aspectFit" wx:if="{{!isDownloading}}" />
+        <view class="btn-close-icon" wx:else></view>
+        <text>{{isDownloading ? '点击取消' : downloadBtnText}}</text>
+      </view>
+
+      <!-- 功能按钮 -->
+      <view class="btn-grid">
+        <view class="grid-btn grid-btn--gallery" bindtap="onSaveAllImages" wx:if="{{image_list.length > 0}}">
+          <image class="grid-icon" src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3YzE2MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTIxIDE1djRhMiAyIDAgMCAxLTIgMkg1YTIgMiAwIDAgMS0yLTJ2LTQiLz48cG9seWxpbmUgcG9pbnRzPSI3IDEwIDEyIDE1IDE3IDEwIi8+PGxpbmUgeDE9IjEyIiB5MT0iMTUiIHgyPSIxMiIgeTI9IjMiLz48L3N2Zz4=" mode="aspectFit" />
+          <text class="grid-label">保存图集</text>
+        </view>
+        <view class="grid-btn grid-btn--share" bindtap="onShareTap">
+          <image class="grid-icon" src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3YzE2MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTgiIGN5PSI1IiByPSIzIi8+PGNpcmNsZSBjeD0iNiIgY3k9IjEyIiByPSIzIi8+PGNpcmNsZSBjeD0iMTgiIGN5PSIxOSIgcj0iMyIvPjxsaW5lIHgxPSI4LjU5IiB5MT0iMTMuNTEiIHgyPSIxNS40MiIgeTI9IjE3LjQ5Ii8+PGxpbmUgeDE9IjE1LjQxIiB5MT0iNi41MSIgeDI9IjguNTkiIHkyPSIxMC40OSIvPjwvc3ZnPg==" mode="aspectFit" />
+          <text class="grid-label">分享好友</text>
+        </view>
+        <view class="grid-btn" bindtap="onCopyText">
+          <image class="grid-icon" src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3YzE2MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3QgeD0iOSIgeT0iOSIgd2lkdGg9IjEzIiBoZWlnaHQ9IjEzIiByeD0iMiIvPjxwYXRoIGQ9Ik01IDE1SDRhMiAyIDAgMCAxLTItMlY0YTIgMiAwIDAgMSAyLTJoOWEyIDIgMCAwIDEgMiAydjEiLz48L3N2Zz4=" mode="aspectFit" />
+          <text class="grid-label">复制文案</text>
+        </view>
+        <view class="grid-btn" bindtap="onExtractAudio" wx:if="{{audio_url}}">
+          <image class="grid-icon" src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3YzE2MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTkgMThWNWwxMi0ydjEzIi8+PGNpcmNsZSBjeD0iNiIgY3k9IjE4IiByPSIzIi8+PGNpcmNsZSBjeD0iMTgiIGN5PSIxNiIgcj0iMyIvPjwvc3ZnPg==" mode="aspectFit" />
+          <text class="grid-label">提取音频</text>
+        </view>
+        <view class="grid-btn" bindtap="onDownloadCover" wx:if="{{cover_url && !hasLivePhoto}}">
+          <image class="grid-icon" src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3YzE2MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBhdGggZD0iTTIxIDE1bC01LTVMNSAyMSIvPjwvc3ZnPg==" mode="aspectFit" />
+          <text class="grid-label">保存封面</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

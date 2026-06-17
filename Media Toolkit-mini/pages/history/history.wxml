@@ -1,0 +1,102 @@
+<!--
+  历史记录 — 与热门页统一风格
+-->
+<view class="page">
+  <!-- 顶部统计 -->
+  <view class="stats-bar">
+    <view class="stats-left">
+      <text class="stats-title">解析记录</text>
+      <text class="stats-count">共 {{allList.length}} 条</text>
+    </view>
+    <view class="stats-actions" wx:if="{{allList.length > 0}}">
+      <view class="stats-clear" bindtap="toggleEditMode">
+        <text>{{editMode ? '完成' : '编辑'}}</text>
+      </view>
+      <view class="stats-clear" bindtap="onClear" wx:if="{{!editMode}}">
+        <text>清空</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索栏 -->
+  <view class="search-wrap">
+    <input class="search-input" placeholder="搜索记录..." placeholder-style="color:#9ca3af" value="{{keyword}}" bindinput="onSearch" />
+    <view class="search-clear" wx:if="{{keyword}}" bindtap="onClearSearch">
+      <text>✕</text>
+    </view>
+  </view>
+
+  <!-- 按日期分组 -->
+  <block wx:for="{{groupedList}}" wx:key="date">
+    <view class="date-header">
+      <view class="date-dot"></view>
+      <text class="date-label">{{item.dateLabel}}</text>
+      <text class="date-count">{{item.items.length}} 条</text>
+    </view>
+
+    <view class="card-list">
+      <view
+        class="history-card"
+        wx:for="{{item.items}}"
+        wx:for-item="record"
+        wx:key="timestamp"
+        bindtap="{{editMode ? 'onSelectItem' : 'onTap'}}"
+        bindlongpress="onLongPress"
+        data-item="{{record}}"
+        data-vid="{{record.video_id}}"
+      >
+        <!-- 编辑模式复选框 -->
+        <view class="card-check" wx:if="{{editMode}}">
+          <view class="check-box {{selectedMap[record.video_id] ? 'checked' : ''}}">
+            <text wx:if="{{selectedMap[record.video_id]}}">✓</text>
+          </view>
+        </view>
+        <!-- 缩略图 -->
+        <view class="card-thumb">
+          <image class="card-thumb-img" src="{{record.cover_url || '/images/default-cover.png'}}" mode="aspectFill" lazy-load />
+          <view class="card-thumb-play">
+            <view class="play-tri"></view>
+          </view>
+          <!-- 平台角标 -->
+          <view class="card-platform" style="background: {{record.platformColor || '#07c160'}};">
+            <text>{{record.platform || '未知'}}</text>
+          </view>
+        </view>
+
+        <!-- 信息区 -->
+        <view class="card-info">
+          <text class="card-title">{{record.title || '无标题'}}</text>
+          <view class="card-meta">
+            <text class="card-time">{{record.timeStr}}</text>
+            <text class="card-dot">·</text>
+            <text class="card-size" wx:if="{{record.fileSize}}">{{record.fileSize}}</text>
+          </view>
+      </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 编辑模式底部删除栏 -->
+  <view class="edit-bar" wx:if="{{editMode && selectedCount > 0}}">
+    <text class="edit-count">已选 {{selectedCount}} 项</text>
+    <view class="edit-delete-btn" bindtap="onDeleteSelected">
+      <text>删除</text>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!allList.length}}">
+    <view class="empty-icon-wrap">
+      <image class="empty-icon" src="/images/icon-history.png" mode="aspectFit" />
+    </view>
+    <text class="empty-title">暂无解析记录</text>
+    <text class="empty-desc">去首页粘贴链接开始使用</text>
+  </view>
+
+  <!-- 底部 -->
+  <view class="list-footer" wx:if="{{allList.length > 0}}">
+    <view class="footer-line"></view>
+    <text class="footer-text">没有更多记录了</text>
+    <view class="footer-line"></view>
+  </view>
+</view>

@@ -194,6 +194,31 @@ Page({
       }).catch(function() {
         wx.showToast({ title: '视频加载失败', icon: 'none' });
       });
+    } else if (item._proxied && needsProxy(item.video_url) && item.video_id) {
+      // 代理后仍 403 → douyin CDN 链接过期，重新解析获取新链接
+      console.log('[VideoPlayer] douyin URL 过期，尝试重新解析 video_id:', item.video_id);
+      wx.showLoading({ title: '重新获取视频...' });
+      var douyinUrl = 'https://www.douyin.com/video/' + item.video_id;
+      wx.request({
+        url: config.baseURL + '/api/parse',
+        method: 'POST',
+        data: { text: douyinUrl },
+        success: function(res) {
+          wx.hideLoading();
+          if (res.statusCode === 200 && res.data && res.data.succ && res.data.data && res.data.data.video_url) {
+            var newUrl = res.data.data.video_url;
+            playlist[idx] = Object.assign({}, playlist[idx], { video_url: newUrl, _proxied: false });
+            self.setData({ playlist: playlist, currentItem: Object.assign({}, playlist[idx]), readyIdx: -1 });
+            wx.nextTick(function() { self.setData({ readyIdx: idx }); self._playIdx(idx); });
+          } else {
+            wx.showToast({ title: '视频已失效', icon: 'none' });
+          }
+        },
+        fail: function() {
+          wx.hideLoading();
+          wx.showToast({ title: '视频已失效', icon: 'none' });
+        }
+      });
     } else if (!self.data.hasRetried) {
       var url = item.video_url;
       var r = url.indexOf('?') >= 0 ? url + '&_t=' + Date.now() : url + '?_t=' + Date.now();

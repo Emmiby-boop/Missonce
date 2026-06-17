@@ -1,0 +1,318 @@
+/* ========================================
+   个人中心 — 极速去水印
+   Velocity Flux 设计系统
+   ======================================== */
+
+.page {
+  min-height: 100vh;
+  background: var(--surface);
+  padding-bottom: 180rpx;
+}
+
+/* 用户卡片 */
+.profile-card {
+  margin: var(--spacing-lg) var(--margin-main);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #006e2a 0%, #07c160 100%);
+}
+
+.profile-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.profile-blob.blob-1 {
+  width: 200rpx;
+  height: 200rpx;
+  top: -60rpx;
+  right: -40rpx;
+}
+
+.profile-blob.blob-2 {
+  width: 140rpx;
+  height: 140rpx;
+  bottom: -30rpx;
+  left: -20rpx;
+}
+
+.profile-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.profile-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.profile-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.profile-name {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.profile-id {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.profile-desc {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.profile-copy {
+  width: 22rpx;
+  height: 22rpx;
+  opacity: 0.7;
+}
+
+.profile-arrow {
+  font-size: 40rpx;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 统计卡片 */
+.stats-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin: 0 var(--margin-main);
+}
+
+.stat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: var(--spacing-md);
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  border: 1rpx solid rgba(194, 198, 216, 0.2);
+  transition: background 0.2s;
+}
+
+.stat-card:active {
+  background: var(--surface-container-low);
+}
+
+.stat-icon {
+  width: 40rpx;
+  height: 40rpx;
+  transition: transform 0.2s;
+}
+
+.stat-card:active .stat-icon {
+  transform: scale(1.1);
+}
+
+.stat-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.stat-value {
+  font-size: 22rpx;
+  color: var(--on-surface-variant);
+}
+
+/* 菜单卡片 */
+.menu-card {
+  margin: var(--spacing-lg) var(--margin-main);
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1rpx solid rgba(194, 198, 216, 0.15);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  transition: background 0.15s;
+}
+
+.menu-item:active {
+  background: var(--surface-container-low);
+}
+
+.menu-icon-box {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menu-icon {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.menu-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--on-surface);
+}
+
+.menu-arrow {
+  width: 24rpx;
+  height: 24rpx;
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+
+.menu-right {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.menu-value {
+  font-size: 24rpx;
+  color: var(--on-surface-variant);
+}
+
+.menu-divider {
+  height: 1rpx;
+  margin-left: 96rpx;
+  background: rgba(194, 198, 216, 0.15);
+}
+
+/* 意见反馈按钮样式 */
+.feedback-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: transparent;
+  border: none;
+  line-height: 1;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.feedback-btn::after {
+  border: none;
+}
+
+/* 联系客服 */
+.support-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 var(--margin-main);
+  padding: var(--spacing-md);
+  background: rgba(0, 110, 42, 0.08);
+  border: 1rpx solid rgba(0, 110, 42, 0.15);
+  border-radius: var(--radius-xl);
+}
+
+.support-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.support-icon-circle {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: #006e2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 110, 42, 0.3);
+}
+
+.support-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.support-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #00732c;
+}
+
+.support-sub {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(0, 115, 44, 0.6);
+  margin-top: 4rpx;
+}
+
+.support-btn {
+  padding: 12rpx 32rpx;
+  background: #006e2a;
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  font-size: 24rpx;
+  font-weight: 600;
+  border: none;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+
+.support-btn:active {
+  transform: scale(0.95);
+}
+
+/* 退出登录 */
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--spacing-lg) var(--margin-main) var(--spacing-md);
+  padding: var(--spacing-md);
+  font-size: 26rpx;
+  color: var(--on-surface-variant);
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.logout-btn:active {
+  opacity: 0.8;
+}
+
+/* 版本 */
+.version {
+  text-align: center;
+  padding: 0 var(--margin-main) var(--spacing-lg);
+  font-size: 22rpx;
+  color: var(--text-muted);
+}

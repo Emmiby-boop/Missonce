@@ -1,0 +1,300 @@
+/* ========================================
+   极速去水印 — Velocity Flux 设计系统
+   全局样式表 (UI 优化版)
+   ======================================== */
+
+page {
+  /* 主色调 */
+  --primary: #0050cb;
+  --primary-light: rgba(0, 80, 203, 0.08);
+  --primary-border: rgba(0, 80, 203, 0.15);
+  --primary-container: #336ae5;
+  --on-primary: #ffffff;
+  --on-primary-container: #f8f7ff;
+
+  /* 品牌绿 — 用于下载/成功等关键操作 */
+  --brand-green: #00c853;
+  --brand-green-light: rgba(0, 200, 83, 0.1);
+
+  /* 表面色 */
+  --surface: #f7f9fc;
+  --surface-container: #eceef1;
+  --surface-container-low: #f2f4f7;
+  --surface-container-lowest: #ffffff;
+  --surface-container-high: #e6e8eb;
+  --surface-dim: #d8dadd;
+
+  /* 文字 (对比度优化) */
+  --on-surface: #191c1e;
+  --on-surface-variant: #424656;
+  --text-secondary: #5f6377;  /* 从 #727687 优化到 4.5:1+ */
+  --text-muted: #6b7280;      /* 从 #c2c6d8 优化到 4.5:1+ */
+
+  /* 边框 & 轮廓 */
+  --outline: #727687;
+  --outline-variant: #c2c6d8;
+
+  /* 语义色 */
+  --success: #00c853;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+
+  /* 沉浸式暗色 */
+  --immersive-bg: #191c1e;
+  --immersive-gradient-end: #2d3133;
+
+  /* 圆角 */
+  --radius-xs: 8rpx;
+  --radius-sm: 12rpx;
+  --radius: 16rpx;
+  --radius-lg: 20rpx;
+  --radius-xl: 24rpx;
+  --radius-2xl: 32rpx;
+  --radius-full: 9999rpx;
+
+  /* 阴影 */
+  --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  --shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  --shadow-green: 0 4rpx 14rpx rgba(0, 200, 83, 0.3);
+
+  /* 间距 */
+  --spacing-xs: 8rpx;
+  --spacing-sm: 12rpx;
+  --spacing-md: 16rpx;
+  --spacing-lg: 24rpx;
+  --spacing-xl: 32rpx;
+  --margin-main: 32rpx;
+
+  /* 触摸目标最小尺寸 (44pt = 88rpx) */
+  --touch-min: 88rpx;
+
+  /* 导航栏背景色（与解析按钮一致） */
+  --header-bg: #07c160;
+  --header-text: #ffffff;
+
+  /* 导航 */
+  --nav-height: 88rpx;
+  --tab-height: 100rpx;
+
+  /* 基础 */
+  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', 'Inter', sans-serif;
+  font-size: 28rpx;
+  color: var(--on-surface);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* ========================================
+   通用工具类
+   ======================================== */
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.safe-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
+
+/* 通用卡片 */
+.card {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1rpx solid rgba(194, 198, 216, 0.2);
+}
+
+.card-padded {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+  border: 1rpx solid rgba(194, 198, 216, 0.2);
+}
+
+/* 按钮基础 */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  background: var(--primary);
+  color: var(--on-primary);
+  border-radius: var(--radius-xl);
+  font-size: 32rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.btn-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  background: var(--brand-green);
+  color: #ffffff;
+  border-radius: var(--radius-xl);
+  font-size: 32rpx;
+  font-weight: 600;
+  border: none;
+  box-shadow: var(--shadow-green);
+}
+
+.btn-brand:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80rpx;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border-radius: var(--radius-xl);
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-secondary:active {
+  transform: scale(0.95);
+}
+
+/* 分割线 */
+.divider {
+  height: 1rpx;
+  background: var(--outline-variant);
+  opacity: 0.2;
+}
+
+/* 底部安全区预留 */
+.pb-safe {
+  padding-bottom: calc(100rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
+}
+
+/* 输入框 */
+.input-area {
+  width: 100%;
+  min-height: 200rpx;
+  padding: var(--spacing-md);
+  background: var(--surface-container-lowest);
+  border: 2rpx solid transparent;
+  border-radius: var(--radius-xl);
+  font-size: 28rpx;
+  color: var(--on-surface);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.input-area:focus {
+  border-color: var(--primary);
+}
+
+/* 平台标签样式 */
+.platform-tag {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 4rpx 12rpx;
+  background: var(--surface-container);
+  border-radius: 4rpx;
+  font-size: 20rpx;
+  color: var(--on-surface-variant);
+}
+
+/* 动画 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* 手风琴 */
+.accordion-content {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+
+.accordion-content.open {
+  max-height: 800rpx;
+}
+
+/* 骨架屏加载动画 */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-low) 50%, var(--surface-container) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+.skeleton-text {
+  height: 28rpx;
+  margin-bottom: 16rpx;
+}
+
+.skeleton-text.short {
+  width: 60%;
+}
+
+.skeleton-btn {
+  height: var(--touch-min);
+  border-radius: var(--radius-xl);
+}
+
+/* 禁用状态 */
+.btn-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 焦点状态 (可访问性) */
+.focusable:focus {
+  outline: 4rpx solid var(--primary);
+  outline-offset: 2rpx;
+}

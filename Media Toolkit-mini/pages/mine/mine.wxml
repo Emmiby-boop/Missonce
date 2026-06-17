@@ -1,0 +1,94 @@
+<!--
+  个人中心 — 小辣椒去水印精灵
+  Velocity Flux 设计系统
+-->
+<view class="page">
+  <!-- 用户卡片 -->
+  <view class="profile-card" bindtap="onProfileTap">
+    <view class="profile-bg">
+      <view class="profile-blob blob-1"></view>
+      <view class="profile-blob blob-2"></view>
+    </view>
+    <view class="profile-content">
+      <image class="profile-avatar" 
+        src="{{userInfo.avatarUrl || '/images/logo-avatar.png'}}" 
+        mode="aspectFill" 
+      />
+      <view class="profile-info">
+        <text class="profile-name">{{isLoggedIn ? (userInfo.nickName || '微信用户') : '点击登录'}}</text>
+        <view class="profile-id" wx:if="{{isLoggedIn}}">
+          <text>ID: {{userInfo._id || '未知'}}</text>
+        </view>
+        <text class="profile-desc" wx:else>登录后同步云端数据</text>
+      </view>
+      <text class="profile-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 统计卡片 -->
+  <view class="stats-row">
+    <view class="stat-card" bindtap="goHistory">
+      <image class="stat-icon" src="/images/icon-history.png" mode="aspectFit" />
+      <text class="stat-label">解析历史</text>
+      <text class="stat-value">{{historyCount}} 条</text>
+    </view>
+    <view class="stat-card" bindtap="goFavorites">
+      <image class="stat-icon" src="/images/icon-download.png" mode="aspectFit" />
+      <text class="stat-label">我的收藏</text>
+      <text class="stat-value">5 个</text>
+    </view>
+  </view>
+
+  <!-- 菜单列表 -->
+  <view class="menu-card">
+    <!-- 意见反馈 -->
+    <button class="menu-item feedback-btn" open-type="feedback">
+      <view class="menu-icon-box" style="background: rgba(0, 80, 203, 0.08);">
+        <image class="menu-icon" src="/images/icon-feedback.png" mode="aspectFit" />
+      </view>
+      <text class="menu-text">意见反馈</text>
+      <image class="menu-arrow" src="/images/icon-arrow.png" mode="aspectFit" />
+    </button>
+
+    <view class="menu-divider"></view>
+
+    <!-- 常见问题 -->
+    <view class="menu-item" bindtap="goHelp">
+      <view class="menu-icon-box" style="background: rgba(123, 81, 0, 0.08);">
+        <image class="menu-icon" src="/images/icon-help.png" mode="aspectFit" />
+      </view>
+      <text class="menu-text">常见问题</text>
+      <image class="menu-arrow" src="/images/icon-arrow.png" mode="aspectFit" />
+    </view>
+
+    <view class="menu-divider"></view>
+
+    <!-- 关于我们 -->
+    <view class="menu-item" bindtap="onAbout">
+      <view class="menu-icon-box" style="background: rgba(66, 70, 86, 0.08);">
+        <image class="menu-icon" src="/images/icon-about.png" mode="aspectFit" />
+      </view>
+      <text class="menu-text">关于我们</text>
+      <image class="menu-arrow" src="/images/icon-arrow.png" mode="aspectFit" />
+    </view>
+
+    <view class="menu-divider"></view>
+
+    <!-- 清除缓存 -->
+    <view class="menu-item" bindtap="onClearCache">
+      <view class="menu-icon-box" style="background: rgba(186, 26, 26, 0.08);">
+        <image class="menu-icon" src="/images/icon-close.png" mode="aspectFit" />
+      </view>
+      <text class="menu-text">清除缓存</text>
+      <view class="menu-right">
+        <text class="menu-value">{{cacheSize}}</text>
+        <image class="menu-arrow" src="/images/icon-arrow.png" mode="aspectFit" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-btn" bindtap="onLogout">
+    <text>退出登录</text>
+  </view>
+</view>

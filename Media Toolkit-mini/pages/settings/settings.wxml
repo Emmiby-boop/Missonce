@@ -1,0 +1,46 @@
+<!--
+  设置 — 小辣椒去水印精灵
+-->
+<view class="page">
+  <view class="section">
+    <view class="section-label">主题设置</view>
+    <view class="card">
+      <view class="item" wx:for="{{themeOptions}}" wx:key="value" bindtap="onThemeChange" data-value="{{item.value}}">
+        <text class="item-label">{{item.label}}</text>
+        <view class="radio {{themeMode === item.value ? 'on' : ''}}">
+          <view class="radio-dot" wx:if="{{themeMode === item.value}}"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-label">数据管理</view>
+    <view class="card">
+      <view class="item" bindtap="onClearCache">
+        <text class="item-label">清除缓存</text>
+        <text class="item-val">{{cacheSize}}</text>
+      </view>
+      <view class="divider"></view>
+      <view class="item" bindtap="onClearHistory">
+        <text class="item-label">清空历史</text>
+        <text class="item-val">{{historyCount}} 条</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-label">其他</view>
+    <view class="card">
+      <view class="item" bindtap="onFeedback">
+        <text class="item-label">意见反馈</text>
+        <text class="item-arrow">›</text>
+      </view>
+      <view class="divider"></view>
+      <view class="item">
+        <text class="item-label">版本</text>
+        <text class="item-val">v2.4.1</text>
+      </view>
+    </view>
+  </view>
+</view>

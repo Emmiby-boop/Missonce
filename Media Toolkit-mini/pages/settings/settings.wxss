@@ -1,0 +1,42 @@
+/* 设置页 */
+.page { background: var(--surface); min-height: 100vh; padding-bottom: 60rpx; }
+
+.section { margin: var(--spacing-lg) var(--margin-main) 0; }
+
+.section-label {
+  font-size: 22rpx; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm); padding-left: 8rpx; text-transform: uppercase;
+}
+
+.card {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1rpx solid rgba(194, 198, 216, 0.15);
+  overflow: hidden;
+}
+
+.item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--spacing-md); transition: background 0.15s;
+}
+.item:active { background: var(--surface-container-low); }
+
+.item-label { font-size: 28rpx; color: var(--on-surface); }
+.item-val { font-size: 24rpx; color: var(--on-surface-variant); }
+.item-arrow { font-size: 28rpx; color: var(--outline-variant); }
+
+.divider {
+  height: 1rpx; margin-left: var(--spacing-md);
+  background: rgba(194, 198, 216, 0.15);
+}
+
+.radio {
+  width: 36rpx; height: 36rpx; border-radius: 50%;
+  border: 3rpx solid var(--outline-variant);
+  display: flex; align-items: center; justify-content: center;
+}
+.radio.on { border-color: var(--primary); }
+.radio-dot {
+  width: 18rpx; height: 18rpx; border-radius: 50%; background: var(--primary);
+}

@@ -1,0 +1,70 @@
+<!--
+  常见问题 — 小辣椒去水印精灵
+  Velocity Flux 设计系统
+-->
+<view class="page">
+  <!-- 搜索栏 -->
+  <view class="search-section">
+    <view class="search-bar">
+      <image class="search-icon" src="/images/search-icon.png" mode="aspectFit" />
+      <input
+        class="search-input"
+        value="{{searchKeyword}}"
+        placeholder="搜索问题，例如：解析失败"
+        placeholder-style="color:#c2c6d8;font-size:26rpx;"
+        bindinput="onSearchInput"
+      />
+    </view>
+  </view>
+
+  <!-- 按分类显示 FAQ -->
+  <block wx:for="{{categoryGroups}}" wx:key="category">
+    <view class="faq-category">
+      <view class="category-title">
+        <view class="category-icon">
+          <text>{{item.icon}}</text>
+        </view>
+        <text class="category-name">{{item.category}}</text>
+      </view>
+
+      <view class="faq-list">
+        <view
+          wx:for="{{item.items}}"
+          wx:for-item="q"
+          wx:key="id"
+          class="faq-item"
+        >
+          <view
+            class="faq-question {{q.showAnswer ? 'expanded' : ''}}"
+            data-index="{{q.dataIndex}}"
+            bindtap="toggleAnswer"
+          >
+            <text class="faq-q-text">{{q.question}}</text>
+            <view class="faq-arrow {{q.showAnswer ? 'rotated' : ''}}">
+              <text>▾</text>
+            </view>
+          </view>
+          <view class="faq-answer {{q.showAnswer ? 'open' : ''}}">
+            <view class="faq-answer-inner">
+              <text class="faq-a-text">{{q.answer}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 未找到 -->
+  <view class="no-result" wx:if="{{searchKeyword && filteredQuestions.length === 0}}">
+    <text>未找到相关问题</text>
+  </view>
+
+  <!-- 联系客服 -->
+  <view class="contact-section">
+    <text class="contact-hint">没有找到您的问题？</text>
+    <button class="contact-btn" open-type="contact" bindcontact="handleContact">
+      <image class="contact-icon" src="/images/question-icon.png" mode="aspectFit" />
+      <text>联系在线客服</text>
+    </button>
+  </view>
+</view>

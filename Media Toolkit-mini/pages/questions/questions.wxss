@@ -1,0 +1,198 @@
+/* ========================================
+   常见问题 — 极速去水印
+   Velocity Flux 设计系统
+   ======================================== */
+
+.page {
+  min-height: 100vh;
+  background: var(--surface);
+  padding-bottom: 120rpx;
+  box-sizing: border-box;
+}
+
+/* 搜索区 */
+.search-section {
+  padding: var(--spacing-lg) var(--margin-main) 0;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 24rpx;
+  width: 32rpx;
+  height: 32rpx;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  height: 80rpx;
+  padding-left: 68rpx;
+  padding-right: 24rpx;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  border: 1rpx solid var(--outline-variant);
+  font-size: 26rpx;
+  color: var(--on-surface);
+  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.02);
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 4rpx rgba(0, 200, 83, 0.15);
+}
+
+/* 分类 */
+.faq-category {
+  padding: var(--spacing-lg) var(--margin-main) 0;
+}
+
+.category-title {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: var(--spacing-sm);
+}
+
+.category-icon {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+}
+
+.category-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--brand-green);
+}
+
+/* FAQ 列表 */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.faq-item {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-xl);
+  border: 1rpx solid rgba(194, 198, 216, 0.25);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+/* 问题行 */
+.faq-question {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+  transition: background 0.15s;
+}
+
+.faq-question:active {
+  background: rgba(194, 198, 216, 0.1);
+}
+
+.faq-q-text {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--on-surface);
+  line-height: 1.5;
+}
+
+.faq-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36rpx;
+  height: 36rpx;
+  color: var(--outline);
+  font-size: 24rpx;
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+
+.faq-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+/* 答案 */
+.faq-answer {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+
+.faq-answer.open {
+  max-height: 800rpx;
+}
+
+.faq-answer-inner {
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
+
+.faq-a-text {
+  font-size: 26rpx;
+  color: var(--on-surface-variant);
+  line-height: 1.7;
+}
+
+/* 未找到 */
+.no-result {
+  text-align: center;
+  padding: 60rpx 0;
+  font-size: 26rpx;
+  color: var(--text-muted);
+}
+
+/* 联系客服 */
+.contact-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 60rpx var(--margin-main) var(--spacing-xl);
+}
+
+.contact-hint {
+  font-size: 22rpx;
+  color: var(--text-muted);
+}
+
+.contact-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  height: 80rpx;
+  padding: 0 48rpx;
+  background: var(--surface-container);
+  border: 1rpx solid rgba(194, 198, 216, 0.5);
+  border-radius: var(--radius-full);
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--on-surface);
+  transition: all 0.2s;
+}
+
+.contact-btn:active {
+  background: var(--surface-container-high);
+  transform: scale(0.95);
+}
+
+.contact-icon {
+  width: 32rpx;
+  height: 32rpx;
+}
