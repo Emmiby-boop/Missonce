@@ -460,7 +460,11 @@ router.get('/proxyDownload', async (req, res) => {
     if (filename) {
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     }
-    // 不设置 Content-Length，使用 chunked 传输避免 ERR_CONTENT_LENGTH_MISMATCH
+    // 转发上游 Content-Length（供客户端显示下载进度）
+    const contentLength = response.headers['content-length'];
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
 
     // 跟踪流传输进度
     let bytesTransferred = 0;
