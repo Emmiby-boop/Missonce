@@ -2,6 +2,7 @@ import { downloadCoverToPhotosAlbum, downloadVideoToPhotosAlbum, buildProxiedUrl
 import { copyToClipboard } from '../../utils/clipboard';
 import { truncateString } from '../../utils/util';
 import { config } from '../../utils/request';
+import STORAGE_KEYS from '../../utils/storageKeys';
 
 // 可直接下载的白名单域名
 const DIRECT_DOMAINS = ['missonce.cc', 'missonce-99', 'tcloudbaseapp.com', 'wx.qlogo.cn', 'cloudbase.net'];
