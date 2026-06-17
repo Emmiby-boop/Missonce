@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { success, error, badRequest, serverError, notFound } = require('../../utils/response');
 const CommonUtils = require('../../utils/douyin_utils/commonUtils');
+const { requireAdmin } = require('../../utils/adminAuth');
 
 // 数据持久化路径
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
@@ -208,7 +209,7 @@ router.get('/cookies', (req, res) => {
 });
 
 // POST /api/cookies/:platform - 保存 Cookie
-router.post('/cookies/:platform', (req, res) => {
+router.post('/cookies/:platform', requireAdmin, (req, res) => {
   const { platform } = req.params;
   const { cookie, expiresAt } = req.body || {};
   if (!cookie) return res.status(400).json(badRequest('Cookie 不能为空'));
@@ -224,7 +225,7 @@ router.post('/cookies/:platform', (req, res) => {
 });
 
 // DELETE /api/cookies/:platform - 删除 Cookie
-router.delete('/cookies/:platform', (req, res) => {
+router.delete('/cookies/:platform', requireAdmin, (req, res) => {
   const { platform } = req.params;
   try {
     const cookies = loadCookies();
@@ -353,7 +354,7 @@ router.get('/trending/merged', (req, res) => {
 });
 
 // ==================== POST /api/trending/sync/:platform ====================
-router.post('/trending/sync/:platform', async (req, res) => {
+router.post('/trending/sync/:platform', requireAdmin, async (req, res) => {
   const { platform } = req.params;
   const syncer = syncMap[platform];
 
@@ -382,7 +383,7 @@ router.post('/trending/sync/:platform', async (req, res) => {
 
 // ==================== POST /api/trending/manual ====================
 // 手动添加热门
-router.post('/trending/manual', (req, res) => {
+router.post('/trending/manual', requireAdmin, (req, res) => {
   const { url, title, platform, cover, desc } = req.body || {};
 
   if (!url) {
@@ -413,7 +414,7 @@ router.post('/trending/manual', (req, res) => {
 
 // ==================== POST /api/trending/manual/batch ====================
 // 批量导入：每行一个链接，可选带标题（用 | 或 tab 分隔），异步补封面
-router.post('/trending/manual/batch', (req, res) => {
+router.post('/trending/manual/batch', requireAdmin, (req, res) => {
   const { text, platform } = req.body || {};
 
   if (!text || !text.trim()) {
@@ -495,7 +496,7 @@ async function enrichCovers(items) {
 }
 
 // ==================== PUT /api/trending/manual/:id ====================
-router.put('/trending/manual/:id', (req, res) => {
+router.put('/trending/manual/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const { url, title, platform, cover, desc } = req.body || {};
 
@@ -522,7 +523,7 @@ router.put('/trending/manual/:id', (req, res) => {
 });
 
 // ==================== DELETE /api/trending/manual/:id ====================
-router.delete('/trending/manual/:id', (req, res) => {
+router.delete('/trending/manual/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
 
   try {
@@ -541,7 +542,7 @@ router.delete('/trending/manual/:id', (req, res) => {
 });
 
 // ==================== DELETE /api/trending/clear/:source ====================
-router.delete('/trending/clear/:source', (req, res) => {
+router.delete('/trending/clear/:source', requireAdmin, (req, res) => {
   const { source } = req.params;
 
   try {
@@ -562,7 +563,7 @@ router.delete('/trending/clear/:source', (req, res) => {
 });
 
 // ==================== DELETE /api/trending/clear/all ====================
-router.delete('/trending/clear/all', (req, res) => {
+router.delete('/trending/clear/all', requireAdmin, (req, res) => {
   try {
     const items = loadData();
     const count = items.length;

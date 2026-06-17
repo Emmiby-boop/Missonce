@@ -325,14 +325,9 @@ router.get('/proxyDownload', async (req, res) => {
     // 2. 域名白名单（防开放代理被滥用）
     if (!isAllowedProxyDomain(url)) {
       try {
-        const hostname = new URL(url).hostname;
-        // 自动添加到白名单（方便后续请求）
-        const wl = require('../../utils/domainWhitelist');
-        const parts = hostname.split('.');
-        const domain = parts.slice(-2).join('.');
-        wl.addProxyDomain(domain);
-        console.log(`[proxyDownload] 域名不在白名单，已自动添加: ${domain}, ip=${req.ip}`);
-      } catch { /* URL 格式异常，跳过 */ }
+        console.warn(`[proxyDownload] 域名不在白名单内, ip=${req.ip}, domain=${new URL(url).hostname}`);
+      } catch { /* URL 格式异常，跳过日志 */ }
+      return res.status(403).json(forbidden('该域名暂不支持代理下载，请在后台白名单中添加'));
     }
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -522,10 +517,15 @@ router.post('/parse', async (req, res) => {
 });
 
 // 签名接口：小程序调用获取 proxyDownload 签名
+// 验证 URL 来自已知平台，防止被滥用为开放代理签名工具
 router.post('/getProxySign', (req, res) => {
   const { url } = req.body;
   if (!url) {
     return res.status(400).json(makeResponse(400, '缺少URL参数', null, false));
+  }
+  // 验证 URL 域名在白名单内（防止给任意 URL 签名）
+  if (!isAllowedProxyDomain(url)) {
+    return res.status(403).json(makeResponse(403, '该域名不在代理白名单内', null, false));
   }
   const ts = Date.now().toString();
   const sign = generateProxySign(url, ts);
@@ -624,18 +624,8 @@ router.get('/announcement', (req, res) => {
   }
 });
 
-// 管理端写入：需要 API Key 认证
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'missonce-admin-2024';
-const IS_PROD = process.env.NODE_ENV === 'production';
-
-function requireAuth(req, res, next) {
-  if (!IS_PROD && !process.env.ADMIN_API_KEY) return next();
-  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
-  if (!apiKey || apiKey !== ADMIN_API_KEY) {
-    return res.status(403).json({ retcode: 403, retdesc: 'API Key 无效', data: null, succ: false });
-  }
-  next();
-}
+// 管理端写入：需要 API Key 认证（使用共享中间件）
+const { requireAdmin: requireAuth } = require('../../utils/adminAuth');
 
 router.put('/announcement', requireAuth, (req, res) => {
   try {

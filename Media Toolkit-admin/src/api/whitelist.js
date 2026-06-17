@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { success, badRequest, serverError } = require('../../utils/response');
 const wl = require('../../utils/domainWhitelist');
+const { requireAdmin } = require('../../utils/adminAuth');
 
 // ==================== GET /api/whitelist ====================
 // 获取所有白名单
@@ -18,7 +19,7 @@ router.get('/whitelist', (req, res) => {
 
 // ==================== POST /api/whitelist/proxy ====================
 // 添加代理域名
-router.post('/whitelist/proxy', (req, res) => {
+router.post('/whitelist/proxy', requireAdmin, (req, res) => {
   const { domain } = req.body || {};
   if (!domain || typeof domain !== 'string') {
     return res.status(400).json(badRequest('域名不能为空'));
@@ -37,7 +38,7 @@ router.post('/whitelist/proxy', (req, res) => {
 
 // ==================== DELETE /api/whitelist/proxy/:domain ====================
 // 移除代理域名
-router.delete('/whitelist/proxy/:domain', (req, res) => {
+router.delete('/whitelist/proxy/:domain', requireAdmin, (req, res) => {
   try {
     const removed = wl.removeProxyDomain(req.params.domain);
     if (removed) {
@@ -52,7 +53,7 @@ router.delete('/whitelist/proxy/:domain', (req, res) => {
 
 // ==================== POST /api/whitelist/audio ====================
 // 添加音频域名
-router.post('/whitelist/audio', (req, res) => {
+router.post('/whitelist/audio', requireAdmin, (req, res) => {
   const { domain } = req.body || {};
   if (!domain || typeof domain !== 'string') {
     return res.status(400).json(badRequest('域名不能为空'));
@@ -71,7 +72,7 @@ router.post('/whitelist/audio', (req, res) => {
 
 // ==================== DELETE /api/whitelist/audio/:domain ====================
 // 移除音频域名
-router.delete('/whitelist/audio/:domain', (req, res) => {
+router.delete('/whitelist/audio/:domain', requireAdmin, (req, res) => {
   try {
     const removed = wl.removeAudioDomain(req.params.domain);
     if (removed) {
@@ -86,7 +87,7 @@ router.delete('/whitelist/audio/:domain', (req, res) => {
 
 // ==================== POST /api/whitelist/reset ====================
 // 恢复默认白名单
-router.post('/whitelist/reset', (req, res) => {
+router.post('/whitelist/reset', requireAdmin, (req, res) => {
   try {
     wl.resetToDefaults();
     return res.json(success(null, '已恢复默认白名单'));

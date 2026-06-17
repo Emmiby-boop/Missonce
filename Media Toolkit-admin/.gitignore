@@ -1,0 +1,8 @@
+node_modules/
+.env
+.DS_Store
+static/videos/
+static/images/
+data/
+*.log
+*.bak

@@ -86,6 +86,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const API_BASE = 'https://api.missonce.cc'
+const API_KEY = import.meta.env.VITE_ADMIN_API_KEY || ''
 
 const proxyDomains = ref<string[]>([])
 const audioDomains = ref<string[]>([])
@@ -111,7 +112,7 @@ const addProxyDomain = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/whitelist/proxy`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
       body: JSON.stringify({ domain: d }),
     })
     const data = await res.json()
@@ -129,7 +130,7 @@ const addProxyDomain = async () => {
 
 const removeProxyDomain = async (domain: string) => {
   try {
-    const res = await fetch(`${API_BASE}/api/whitelist/proxy/${encodeURIComponent(domain)}`, { method: 'DELETE' })
+    const res = await fetch(`${API_BASE}/api/whitelist/proxy/${encodeURIComponent(domain)}`, { method: 'DELETE', headers: { 'x-api-key': API_KEY } })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success('已移除')
@@ -148,7 +149,7 @@ const addAudioDomain = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/whitelist/audio`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
       body: JSON.stringify({ domain: d }),
     })
     const data = await res.json()
@@ -166,7 +167,7 @@ const addAudioDomain = async () => {
 
 const removeAudioDomain = async (domain: string) => {
   try {
-    const res = await fetch(`${API_BASE}/api/whitelist/audio/${encodeURIComponent(domain)}`, { method: 'DELETE' })
+    const res = await fetch(`${API_BASE}/api/whitelist/audio/${encodeURIComponent(domain)}`, { method: 'DELETE', headers: { 'x-api-key': API_KEY } })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success('已移除')
@@ -182,7 +183,7 @@ const removeAudioDomain = async (domain: string) => {
 const resetDefaults = async () => {
   if (!confirm('确定恢复默认白名单？')) return
   try {
-    const res = await fetch(`${API_BASE}/api/whitelist/reset`, { method: 'POST' })
+    const res = await fetch(`${API_BASE}/api/whitelist/reset`, { method: 'POST', headers: { 'x-api-key': API_KEY } })
     const data = await res.json()
     if (data.retcode === 200) {
       ElMessage.success('已恢复默认')
