@@ -119,45 +119,24 @@ function _localLogin() {
 
 /**
  * 用户授权登录（获取头像昵称）
+ * wx.getUserProfile 已废弃，改为直接使用本地存储的用户信息
+ * 如需更新头像昵称，请使用 <button open-type="chooseAvatar"> + <input type="nickname">
  */
 function authorizeLogin() {
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     if (!isLoggedIn()) {
       reject(new Error('请先进行静默登录'));
       return;
     }
-
-    wx.getUserProfile({
-      desc: '用于完善用户资料',
-      success: (profileRes) => {
-        if (profileRes.userInfo) {
-          const userInfo = profileRes.userInfo;
-          
-          // 更新本地存储
-          wx.setStorageSync(STORAGE_KEYS.USER_INFO, userInfo);
-          
-          // 如果云开发可用，同步到云端
-          if (isCloudAvailable()) {
-            wx.cloud.callFunction({
-              name: 'updateProfile',
-              data: {
-                nickName: userInfo.nickName,
-                avatarUrl: userInfo.avatarUrl
-              }
-            }).catch((err) => {
-              console.warn('[Login] 更新用户资料失败:', err);
-            });
-          }
-          
-          resolve(userInfo);
-        } else {
-          reject(new Error('用户拒绝授权'));
-        }
-      },
-      fail: (err) => {
-        reject(err);
-      }
-    });
+    var userInfo = getUserInfo();
+    if (userInfo) {
+      resolve(userInfo);
+    } else {
+      // 没有用户信息时返回默认值
+      var defaultInfo = { nickName: '微信用户', avatarUrl: '' };
+      wx.setStorageSync(STORAGE_KEYS.USER_INFO, defaultInfo);
+      resolve(defaultInfo);
+    }
   });
 }
 
