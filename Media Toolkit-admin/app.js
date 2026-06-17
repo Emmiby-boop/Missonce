@@ -48,8 +48,9 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
   : [
       'https://servicewechat.com',   // 微信小程序
-      'https://missonce-99',         // CloudBase 管理后台
-      'https://missonce.cc',         // Mini admin 管理后台
+      'https://missonce-99',                                    // CloudBase 管理后台（前缀匹配）
+      'https://missonce-99-1gfaff6n002f6ac1-1318542519.tcloudbaseapp.com',  // CloudBase 完整域名
+      'https://missonce.cc',                                    // Mini admin 管理后台
       'http://localhost:3000',       // 本地开发
       'http://localhost:3001',
       'http://localhost:5173',       // Vite dev server
@@ -59,6 +60,7 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 app.use((req, res, next) => {
   const origin = req.headers.origin || '';
   const isAllowed = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  console.log(`[CORS] origin="${origin}" allowed=${isAllowed}`);
   if (isAllowed) {
     res.header('Access-Control-Allow-Origin', origin);
   }
