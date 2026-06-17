@@ -94,6 +94,7 @@ app.use('/api', adConfigRouter);
 app.use('/api', require('./src/api/stats'));
 app.use('/api', require('./src/api/trending'));
 app.use('/api', require('./src/api/audio'));
+app.use('/api', require('./src/api/whitelist'));
 
 // 健康检查
 app.get('/api/health', (req, res) => {

@@ -325,9 +325,14 @@ router.get('/proxyDownload', async (req, res) => {
     // 2. 域名白名单（防开放代理被滥用）
     if (!isAllowedProxyDomain(url)) {
       try {
-        console.warn(`[proxyDownload] 域名不在白名单内, ip=${req.ip}, domain=${new URL(url).hostname}`);
-      } catch { /* URL 格式异常，跳过日志 */ }
-      return res.status(403).json(forbidden('该域名暂不支持代理下载'));
+        const hostname = new URL(url).hostname;
+        // 自动添加到白名单（方便后续请求）
+        const wl = require('../../utils/domainWhitelist');
+        const parts = hostname.split('.');
+        const domain = parts.slice(-2).join('.');
+        wl.addProxyDomain(domain);
+        console.log(`[proxyDownload] 域名不在白名单，已自动添加: ${domain}, ip=${req.ip}`);
+      } catch { /* URL 格式异常，跳过 */ }
     }
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');

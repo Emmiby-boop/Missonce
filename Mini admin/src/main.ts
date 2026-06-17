@@ -25,6 +25,12 @@ const PageAdsManager = defineAsyncComponent(() => import("./pages/PageAdsManager
 const ContactConfigPage = defineAsyncComponent(() => import("./pages/ContactConfigPage.vue"));
 const UserManagerPage = defineAsyncComponent(() => import("./pages/UserManagerPage.vue"));
 const MediaParsePage = defineAsyncComponent(() => import("./pages/MediaParsePage.vue"));
+const MediaTrendingPage = defineAsyncComponent(() => import("./pages/MediaTrendingPage.vue"));
+const MediaPlatformsPage = defineAsyncComponent(() => import("./pages/MediaPlatformsPage.vue"));
+const MediaCookiesPage = defineAsyncComponent(() => import("./pages/MediaCookiesPage.vue"));
+const MediaWhitelistPage = defineAsyncComponent(() => import("./pages/MediaWhitelistPage.vue"));
+const MediaOpsPage = defineAsyncComponent(() => import("./pages/MediaOpsPage.vue"));
+const MediaAnnouncementPage = defineAsyncComponent(() => import("./pages/MediaAnnouncementPage.vue"));
 
 const routes = [
   { path: "/", component: DashboardPage },
@@ -46,7 +52,14 @@ const routes = [
   { path: "/page-ads", component: PageAdsManager },
   { path: "/contact-config", component: ContactConfigPage },
   { path: "/user-manager", component: UserManagerPage },
-  { path: "/media-parse", component: MediaParsePage },
+  { path: "/media", component: MediaParsePage },
+  { path: "/media-trending", component: MediaTrendingPage },
+  { path: "/media-platforms", component: MediaPlatformsPage },
+  { path: "/media-cookies", component: MediaCookiesPage },
+  { path: "/media-whitelist", component: MediaWhitelistPage },
+  { path: "/media-ops", component: MediaOpsPage },
+  { path: "/media-announcement", component: MediaAnnouncementPage },
+  { path: "/media-parse", redirect: "/media" },
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
