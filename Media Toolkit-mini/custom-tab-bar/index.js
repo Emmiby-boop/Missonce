@@ -15,10 +15,6 @@ Component({
 
   lifetimes: {
     attached: function() {
-      // 先用本地缓存立即渲染（无闪烁）
-      var cached = wx.getStorageSync('page_config') || {};
-      this._filterTabs(cached);
-      // 再从服务器拉最新配置更新
       this._loadTabs();
     },
   },
