@@ -56,9 +56,9 @@ Component({
         var page = pageConfig[tab.pagePath];
         return !page || page.enabled !== false;
       });
-      var selected = this.data.selected;
-      if (selected >= filtered.length) selected = 0;
-      this.setData({ tabs: filtered, selected: selected });
+      this.setData({ tabs: filtered }, function() {
+        this._updateSelected();
+      });
     },
 
     _updateSelected: function() {
