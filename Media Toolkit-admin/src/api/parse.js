@@ -469,10 +469,24 @@ router.get('/proxyDownload', async (req, res) => {
     if (filename) {
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     }
-    // 转发上游 Content-Length（供客户端显示下载进度）
+    // 转发上游 Content-Length
     const contentLength = response.headers['content-length'];
     if (contentLength) {
       res.setHeader('Content-Length', contentLength);
+    }
+
+    // 尝试上传到 COS，返回 COS 临时 URL（全球加速下载更快）
+    try {
+      const cos = require('../../utils/cos');
+      const ext = contentType.includes('video') ? '.mp4' : contentType.includes('image') ? '.jpg' : '';
+      const cosKey = 'proxy/' + crypto.createHash('md5').update(url).digest('hex') + ext;
+      const cl = parseInt(contentLength, 10) || 0;
+      const cosUrl = await cos.uploadStream(response.data, cosKey, cl);
+      console.log(`[perf][proxyDownload] COS 上传完成: ${Date.now() - t0}ms`);
+      return res.json(makeResponse(200, '成功', { download_url: cosUrl }, true));
+    } catch (cosErr) {
+      console.error(`[perf][proxyDownload] COS 上传失败: ${cosErr.message}`);
+      // COS 失败时回退到直接代理（响应头已设置）
     }
 
     // 跟踪流传输进度
