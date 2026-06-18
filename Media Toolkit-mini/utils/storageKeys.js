@@ -23,6 +23,8 @@ const STORAGE_KEYS = {
   // ── 系统 ──
   THEME_MODE: 'theme_mode',                // 主题模式（light/dark/auto）
   PRIVACY_AGREED: 'privacy_agreed',        // 隐私协议同意标识
+  PAGE_CONFIG: 'page_config',              // 页面开关配置
+  PAGE_CONFIG_TIME: 'page_config_time',    // 页面配置缓存时间
 };
 
 export default STORAGE_KEYS;

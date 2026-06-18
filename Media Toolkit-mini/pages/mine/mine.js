@@ -153,7 +153,21 @@ Page({
   },
 
   goSettings() {
+    var app = getApp();
+    if (app.isPageEnabled && !app.isPageEnabled('pages/settings/settings')) {
+      wx.showToast({ title: '该功能即将上线', icon: 'none' });
+      return;
+    }
     wx.navigateTo({ url: '/pages/settings/settings' });
+  },
+
+  goHelp() {
+    var app = getApp();
+    if (app.isPageEnabled && !app.isPageEnabled('pages/questions/questions')) {
+      wx.showToast({ title: '该功能即将上线', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({ url: '/pages/questions/questions' });
   },
 
   onAbout() {

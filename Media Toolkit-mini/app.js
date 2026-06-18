@@ -32,6 +32,9 @@ App({
 
     // 启动时立即预拉取热门列表（不阻塞）
     this._precacheTrending();
+
+    // 拉取页面开关配置
+    this._fetchPageConfig();
   },
 
   globalData: {
@@ -41,6 +44,7 @@ App({
     _privacyPromptShowing: false,
     darkMode: false,
     themeMode: 'none',
+    pageConfig: {},
   },
 
   // 启动时预拉取热门列表并缓存
@@ -58,6 +62,33 @@ App({
     }).catch(function(e) {
       console.warn('[App] 预拉取热门列表失败:', e);
     });
+  },
+
+  // 拉取页面开关配置（30分钟缓存）
+  _fetchPageConfig() {
+    var cacheTime = wx.getStorageSync('page_config_time') || 0;
+    if (Date.now() - cacheTime < 30 * 60 * 1000) return;
+
+    var self = this;
+    wx.request({
+      url: (typeof config !== 'undefined' ? config.baseURL : 'https://api.missonce.cc') + '/api/page-config',
+      success: function(res) {
+        if (res.data && res.data.success && res.data.data && res.data.data.pages) {
+          wx.setStorageSync('page_config', res.data.data.pages);
+          wx.setStorageSync('page_config_time', Date.now());
+          self.globalData.pageConfig = res.data.data.pages;
+          console.log('[App] 页面配置已缓存');
+        }
+      },
+      fail: function() {}
+    });
+  },
+
+  // 检查页面是否启用
+  isPageEnabled(pagePath) {
+    var pages = this.globalData.pageConfig || wx.getStorageSync('page_config') || {};
+    var page = pages[pagePath];
+    return page ? page.enabled !== false : true; // 默认启用
   },
 
   async _doLogin() {

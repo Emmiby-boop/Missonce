@@ -96,6 +96,7 @@ const navGroups: NavGroup[] = [
       { path: '/media-cookies', label: 'Cookie配置' },
       { path: '/media-whitelist', label: '域名白名单' },
       { path: '/media-ops', label: '运维工具' },
+      { path: '/media-page-config', label: '页面管理' },
       { path: '/media-announcement', label: '解析公告' },
     ]
   },

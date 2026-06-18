@@ -29,6 +29,7 @@ const MediaTrendingPage = defineAsyncComponent(() => import("./pages/MediaTrendi
 const MediaPlatformsPage = defineAsyncComponent(() => import("./pages/MediaPlatformsPage.vue"));
 const MediaCookiesPage = defineAsyncComponent(() => import("./pages/MediaCookiesPage.vue"));
 const MediaWhitelistPage = defineAsyncComponent(() => import("./pages/MediaWhitelistPage.vue"));
+const MediaPageConfigPage = defineAsyncComponent(() => import("./pages/MediaPageConfig.vue"));
 const MediaOpsPage = defineAsyncComponent(() => import("./pages/MediaOpsPage.vue"));
 const MediaAnnouncementPage = defineAsyncComponent(() => import("./pages/MediaAnnouncementPage.vue"));
 
@@ -57,6 +58,7 @@ const routes = [
   { path: "/media-platforms", component: MediaPlatformsPage },
   { path: "/media-cookies", component: MediaCookiesPage },
   { path: "/media-whitelist", component: MediaWhitelistPage },
+  { path: "/media-page-config", component: MediaPageConfigPage },
   { path: "/media-ops", component: MediaOpsPage },
   { path: "/media-announcement", component: MediaAnnouncementPage },
   { path: "/media-parse", redirect: "/media" },

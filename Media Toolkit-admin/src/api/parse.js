@@ -682,4 +682,63 @@ router.put('/announcement', requireAuth, (req, res) => {
   }
 });
 
+// ==================== 页面管理配置 ====================
+const PAGE_CONFIG_FILE = path.join(__dirname, '..', '..', 'data', 'page_config.json');
+
+const DEFAULT_PAGE_CONFIG = {
+  pages: {
+    'pages/index/index': { enabled: true, title: '首页', tab: true },
+    'pages/trending/trending': { enabled: true, title: '热门', tab: true },
+    'pages/history/history': { enabled: true, title: '历史', tab: true },
+    'pages/mine/mine': { enabled: true, title: '我的', tab: true },
+    'pages/result/result': { enabled: true, title: '解析结果' },
+    'pages/videoPlayer/videoPlayer': { enabled: true, title: '播放器' },
+    'pages/questions/questions': { enabled: true, title: '常见问题' },
+    'pages/settings/settings': { enabled: true, title: '设置' },
+  },
+  updatedAt: Date.now()
+};
+
+function loadPageConfig() {
+  try {
+    if (fs.existsSync(PAGE_CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(PAGE_CONFIG_FILE, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('[PageConfig] 读取配置失败:', e.message);
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_PAGE_CONFIG));
+}
+
+function savePageConfig(data) {
+  const dir = path.dirname(PAGE_CONFIG_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(PAGE_CONFIG_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// 小程序端读取页面配置（无需认证）
+router.get('/page-config', (req, res) => {
+  try {
+    const config = loadPageConfig();
+    res.json({ success: true, data: config });
+  } catch (e) {
+    res.json({ success: true, data: DEFAULT_PAGE_CONFIG });
+  }
+});
+
+// 管理端更新页面配置
+router.put('/page-config', requireAuth, (req, res) => {
+  try {
+    const { pages } = req.body || {};
+    if (!pages) return res.status(400).json({ retcode: 400, retdesc: '缺少配置数据', data: null, succ: false });
+    const config = loadPageConfig();
+    config.pages = Object.assign(config.pages, pages);
+    config.updatedAt = Date.now();
+    savePageConfig(config);
+    res.json({ success: true, data: config });
+  } catch (e) {
+    res.status(500).json({ retcode: 500, retdesc: '保存失败', data: null, succ: false });
+  }
+});
+
 module.exports = router;
