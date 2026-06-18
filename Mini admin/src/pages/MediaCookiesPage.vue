@@ -59,6 +59,11 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const API_BASE = 'https://api.missonce.cc'
+const API_KEY = import.meta.env.VITE_ADMIN_API_KEY || ''
+
+function authHeaders() {
+  return API_KEY ? { 'x-api-key': API_KEY, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+}
 
 const cookiePlatforms = [
   { key: 'douyin', name: '抖音', color: '#161823', desc: '获取抖音视频直链' },
@@ -83,7 +88,7 @@ const saveCookie = async (platform: string) => {
     const body: any = { cookie }
     if (expireForms.value[platform]) body.expiresAt = new Date(expireForms.value[platform]).getTime()
     const res = await fetch(`${API_BASE}/api/cookies/${platform}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(body),
     })
     const data = await res.json()
     if (data.retcode === 200) {
@@ -99,7 +104,7 @@ const saveCookie = async (platform: string) => {
 const deleteCookie = async (platform: string) => {
   if (!confirm(`确定删除 ${platform} 的 Cookie？`)) return
   try {
-    await fetch(`${API_BASE}/api/cookies/${platform}`, { method: 'DELETE' })
+    await fetch(`${API_BASE}/api/cookies/${platform}`, { method: 'DELETE', headers: authHeaders() })
     ElMessage.success('已删除')
     await loadCookieStatus()
   } catch (e) { ElMessage.error('删除失败') }
