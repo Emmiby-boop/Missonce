@@ -52,13 +52,16 @@ Component({
     },
 
     _filterTabs: function(pageConfig) {
+      var self = this;
       var filtered = allTabs.filter(function(tab) {
         var page = pageConfig[tab.pagePath];
         return !page || page.enabled !== false;
       });
-      this.setData({ tabs: filtered }, function() {
-        this._updateSelected();
-      });
+      self.setData({ tabs: filtered });
+      // setData 后延迟一帧再匹配，确保 DOM 更新
+      setTimeout(function() {
+        self._updateSelected();
+      }, 50);
     },
 
     _updateSelected: function() {
