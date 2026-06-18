@@ -200,11 +200,14 @@ function isDirectDownloadDomain(url) {
 }
 
 // 执行单次下载尝试
-function executeDownload(url, timeout) {
+function executeDownload(url, timeout, referer) {
   return new Promise((resolve, reject) => {
+    const headers = {};
+    if (referer) headers['Referer'] = referer;
     const task = wx.downloadFile({
       url: url,
       timeout: timeout || 600000,
+      header: Object.keys(headers).length > 0 ? headers : undefined,
       success: (res) => {
         if (res.statusCode === 200) {
           resolve({ tempFilePath: res.tempFilePath, task });
@@ -254,9 +257,24 @@ async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
       let progressShown = false;
 
       const startDownload = (url, attempt) => {
+        // 根据域名设置正确的 Referer
+        var dlReferer = '';
+        try {
+          var host = new URL(url).hostname;
+          if (host.indexOf('douyin') >= 0 || host.indexOf('ixigua') >= 0 || host.indexOf('snssdk') >= 0 || host.indexOf('byteimg') >= 0) {
+            dlReferer = 'https://www.douyin.com/';
+          } else if (host.indexOf('kuaishou') >= 0 || host.indexOf('yximgs') >= 0 || host.indexOf('kwimgs') >= 0) {
+            dlReferer = 'https://www.kuaishou.com/';
+          } else if (host.indexOf('xhscdn') >= 0 || host.indexOf('xiaohongshu') >= 0) {
+            dlReferer = 'https://www.xiaohongshu.com/';
+          } else if (host.indexOf('bilibili') >= 0 || host.indexOf('bilivideo') >= 0) {
+            dlReferer = 'https://www.bilibili.com/';
+          }
+        } catch (e) {}
         downloadTask = wx.downloadFile({
           url: url,
           timeout: 600000,
+          header: dlReferer ? { 'Referer': dlReferer } : undefined,
           success: (res) => {
             if (done) return;
             done = true;
