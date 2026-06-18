@@ -27,6 +27,20 @@ Page({
   },
 
   onLoad() {
+    // 检查页面是否被禁用
+    var app = getApp();
+    if (app.isPageEnabled && !app.isPageEnabled('pages/trending/trending')) {
+      wx.showModal({
+        title: '功能暂未开放',
+        content: '该功能即将上线，敬请期待',
+        showCancel: false,
+        confirmText: '我知道了',
+        success: function() {
+          wx.switchTab({ url: '/pages/index/index' });
+        }
+      });
+      return;
+    }
     track('page_view', { page: 'trending' });
     // 优先读缓存（app.js 启动时已预拉取）
     var cached = wx.getStorageSync(STORAGE_KEYS.TRENDING_CACHE);

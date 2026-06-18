@@ -19,6 +19,19 @@ Page({
   },
 
   onShow() {
+    var app = getApp();
+    if (app.isPageEnabled && !app.isPageEnabled('pages/history/history')) {
+      wx.showModal({
+        title: '功能暂未开放',
+        content: '该功能即将上线，敬请期待',
+        showCancel: false,
+        confirmText: '我知道了',
+        success: function() {
+          wx.switchTab({ url: '/pages/index/index' });
+        }
+      });
+      return;
+    }
     this.setData({ isLoggedIn: isLoggedIn() });
     this.load();
   },
