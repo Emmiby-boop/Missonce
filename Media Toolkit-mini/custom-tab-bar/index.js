@@ -15,15 +15,19 @@ Component({
 
   lifetimes: {
     attached: function() {
-      // 优先读 app.js 已缓存的配置（启动时已拉取）
-      var app = getApp();
-      var pageConfig = (app && app.globalData && app.globalData.pageConfig) || {};
-      if (Object.keys(pageConfig).length > 0) {
-        this._filterTabs(pageConfig);
-      } else {
-        // 没有缓存才请求服务器
-        this._loadTabs();
+      // 优先读本地存储（上次启动已缓存，同步可用）
+      var cached = wx.getStorageSync('page_config');
+      if (cached && Object.keys(cached).length > 0) {
+        this._filterTabs(cached);
       }
+      // 再用 app.globalData（可能刚更新）
+      var app = getApp();
+      var gd = (app && app.globalData && app.globalData.page_config) || {};
+      if (Object.keys(gd).length > 0) {
+        this._filterTabs(gd);
+      }
+      // 后台拉最新配置（覆盖缓存）
+      this._loadTabs();
     },
   },
 

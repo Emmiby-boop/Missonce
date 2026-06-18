@@ -64,13 +64,14 @@ App({
     });
   },
 
-  // 拉取页面开关配置（每次启动都拉取最新）
+  // 拉取页面开关配置
   _fetchPageConfig() {
     var self = this;
     wx.request({
       url: (typeof config !== 'undefined' ? config.baseURL : 'https://api.missonce.cc') + '/api/page-config',
       success: function(res) {
         if (res.data && res.data.success && res.data.data && res.data.data.pages) {
+          // 同时写入 globalData 和本地存储（tabBar 从存储读）
           wx.setStorageSync('page_config', res.data.data.pages);
           self.globalData.pageConfig = res.data.data.pages;
           console.log('[App] 页面配置已更新');
