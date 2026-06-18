@@ -187,6 +187,7 @@ const DIRECT_DOWNLOAD_DOMAINS = [
   'ytimg.com', 'googlevideo.com',
   'twimg.com',
   'fbcdn.net',
+  'cos.ap-hongkong.myqcloud.com',
 ];
 
 function isDirectDownloadDomain(url) {

@@ -42,7 +42,8 @@
   "simulatorPluginLibVersion": {},
   "downloadFileDomainList": [
     "cdn.simpleicons.org",
-    "api.missonce.cc"
+    "api.missonce.cc",
+    "cos.ap-hongkong.myqcloud.com"
   ],
   "cloudfunctionRoot": "cloudfunctions/",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
