@@ -24,7 +24,7 @@
       },
       {
         "pagePath": "pages/trending/trending",
-        "text": "热门",
+        "text": "发现",
         "iconPath": "images/trending.png",
         "selectedIconPath": "images/trending-active.png"
       },
