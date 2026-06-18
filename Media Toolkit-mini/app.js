@@ -64,20 +64,16 @@ App({
     });
   },
 
-  // 拉取页面开关配置（30分钟缓存）
+  // 拉取页面开关配置（每次启动都拉取最新）
   _fetchPageConfig() {
-    var cacheTime = wx.getStorageSync('page_config_time') || 0;
-    if (Date.now() - cacheTime < 30 * 60 * 1000) return;
-
     var self = this;
     wx.request({
       url: (typeof config !== 'undefined' ? config.baseURL : 'https://api.missonce.cc') + '/api/page-config',
       success: function(res) {
         if (res.data && res.data.success && res.data.data && res.data.data.pages) {
           wx.setStorageSync('page_config', res.data.data.pages);
-          wx.setStorageSync('page_config_time', Date.now());
           self.globalData.pageConfig = res.data.data.pages;
-          console.log('[App] 页面配置已缓存');
+          console.log('[App] 页面配置已更新');
         }
       },
       fail: function() {}

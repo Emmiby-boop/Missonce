@@ -30,29 +30,24 @@ Component({
   methods: {
     _loadTabs: function() {
       var self = this;
-      // 读取页面配置
-      var pageConfig = wx.getStorageSync('page_config') || {};
-
-      // 如果配置为空，从服务器拉取
-      if (Object.keys(pageConfig).length === 0) {
-        wx.request({
-          url: config.baseURL + '/api/page-config',
-          success: function(res) {
-            if (res.data && res.data.success && res.data.data && res.data.data.pages) {
-              pageConfig = res.data.data.pages;
-              wx.setStorageSync('page_config', pageConfig);
-              self._filterTabs(pageConfig);
-            } else {
-              self._filterTabs({});
-            }
-          },
-          fail: function() {
+      // 每次都从服务器拉取最新配置
+      wx.request({
+        url: config.baseURL + '/api/page-config',
+        success: function(res) {
+          if (res.data && res.data.success && res.data.data && res.data.data.pages) {
+            var pageConfig = res.data.data.pages;
+            wx.setStorageSync('page_config', pageConfig);
+            self._filterTabs(pageConfig);
+          } else {
             self._filterTabs({});
           }
-        });
-      } else {
-        self._filterTabs(pageConfig);
-      }
+        },
+        fail: function() {
+          // 失败时用本地缓存
+          var pageConfig = wx.getStorageSync('page_config') || {};
+          self._filterTabs(pageConfig);
+        }
+      });
     },
 
     _filterTabs: function(pageConfig) {
