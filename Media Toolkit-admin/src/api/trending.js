@@ -78,28 +78,7 @@ async function getTtwid() {
   return cachedTtwid || '';
 }
 
-async function fetchFeedOnce(ttwid, dyCookie) {
-  const msToken = commonUtils.getMsToken();
-  const cookieParts = [];
-  if (ttwid) cookieParts.push(`ttwid=${ttwid}`);
-  if (dyCookie) cookieParts.push(dyCookie);
-
-  const feedUrl = `https://www.douyin.com/aweme/v1/web/tab/feed/?device_platform=webapp&aid=6383&channel=channel_pc_web&count=20&msToken=${msToken}`;
-  let aBogus = '';
-  try { aBogus = commonUtils.getABogus(feedUrl, commonUtils.userAgent); } catch (e) {}
-  const url = aBogus ? `${feedUrl}&a_bogus=${aBogus}` : feedUrl;
-
-  const resp = await axios.get(url, {
-    headers: {
-      'User-Agent': commonUtils.userAgent,
-      'Referer': 'https://www.douyin.com/',
-      'Cookie': cookieParts.join('; '),
-    },
-    timeout: 15000,
-  });
-  return resp.data?.aweme_list || [];
-}
-
+// ==================== 抖音推荐流获取 ====================
 async function fetchDouyinHot() {
   try {
     const cookies = loadCookies();
@@ -112,11 +91,30 @@ async function fetchDouyinHot() {
     const ttwid = await getTtwid();
     const seen = {};
     const items = [];
-    const rounds = 6;
+    const rounds = 10;
 
     for (let i = 0; i < rounds; i++) {
       try {
-        const awemeList = await fetchFeedOnce(ttwid, dyCookie);
+        const msToken = commonUtils.getMsToken();
+        const cookieParts = [];
+        if (ttwid) cookieParts.push(`ttwid=${ttwid}`);
+        if (dyCookie) cookieParts.push(dyCookie);
+
+        const feedUrl = `https://www.douyin.com/aweme/v1/web/tab/feed/?device_platform=webapp&aid=6383&channel=channel_pc_web&count=20&msToken=${msToken}`;
+        let aBogus = '';
+        try { aBogus = commonUtils.getABogus(feedUrl, commonUtils.userAgent); } catch (e) {}
+        const url = aBogus ? `${feedUrl}&a_bogus=${aBogus}` : feedUrl;
+
+        const resp = await axios.get(url, {
+          headers: {
+            'User-Agent': commonUtils.userAgent,
+            'Referer': 'https://www.douyin.com/',
+            'Cookie': cookieParts.join('; '),
+          },
+          timeout: 15000,
+        });
+
+        const awemeList = resp.data?.aweme_list || [];
         for (const item of awemeList) {
           const aweme = item.aweme_info || item;
           const id = aweme.aweme_id;
@@ -132,7 +130,7 @@ async function fetchDouyinHot() {
           items.push({
             id: genId(),
             source: 'douyin',
-            title: aweme.desc || '',
+            title: (aweme.desc || '').slice(0, 100),
             cover: video.dynamic_cover?.url_list?.[0] || video.cover?.url_list?.[0] || '',
             platform: '抖音',
             author: aweme.author?.nickname || '',
@@ -140,13 +138,13 @@ async function fetchDouyinHot() {
             url: shareUrl,
             videoUrl: playAddr[playAddr.length - 1] || playAddr[0] || '',
             awemeId: id,
-            desc: aweme.desc || '',
+            desc: (aweme.desc || '').slice(0, 100),
             duration: video.duration || 0,
             syncedAt: Date.now(),
           });
         }
         if (awemeList.length === 0) break;
-        if (i < rounds - 1) await sleep(800);
+        if (i < rounds - 1) await sleep(1500);
       } catch (e) {
         console.warn(`[Trending] 抖音推荐流第${i + 1}轮失败:`, e.message);
       }
