@@ -19,6 +19,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 2 });
+    }
     var app = getApp();
     if (app.isPageEnabled && !app.isPageEnabled('pages/history/history')) {
       wx.showModal({
