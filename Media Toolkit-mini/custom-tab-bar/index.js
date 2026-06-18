@@ -15,7 +15,15 @@ Component({
 
   lifetimes: {
     attached: function() {
-      this._loadTabs();
+      // 优先读 app.js 已缓存的配置（启动时已拉取）
+      var app = getApp();
+      var pageConfig = (app && app.globalData && app.globalData.pageConfig) || {};
+      if (Object.keys(pageConfig).length > 0) {
+        this._filterTabs(pageConfig);
+      } else {
+        // 没有缓存才请求服务器
+        this._loadTabs();
+      }
     },
   },
 
