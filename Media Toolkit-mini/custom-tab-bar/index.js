@@ -52,7 +52,10 @@ Component({
     },
 
     switchTab: function(e) {
+      var index = e.currentTarget.dataset.index;
       var path = e.currentTarget.dataset.path;
+      // 立即更新选中状态（不等 onShow）
+      this.setData({ selected: index });
       wx.switchTab({ url: '/' + path });
     },
   },
