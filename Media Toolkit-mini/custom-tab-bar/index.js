@@ -15,18 +15,21 @@ Component({
 
   lifetimes: {
     attached: function() {
-      // 优先读本地存储（上次启动已缓存，同步可用）
+      // 首次启动：用默认配置（发现页关闭），不依赖本地存储
       var cached = wx.getStorageSync('page_config');
       if (cached && Object.keys(cached).length > 0) {
+        // 有缓存直接用
         this._filterTabs(cached);
+      } else {
+        // 无缓存：用默认配置（发现页关闭）
+        this._filterTabs({
+          'pages/index/index': { enabled: true },
+          'pages/trending/trending': { enabled: false },
+          'pages/history/history': { enabled: true },
+          'pages/mine/mine': { enabled: true },
+        });
       }
-      // 再用 app.globalData（可能刚更新）
-      var app = getApp();
-      var gd = (app && app.globalData && app.globalData.page_config) || {};
-      if (Object.keys(gd).length > 0) {
-        this._filterTabs(gd);
-      }
-      // 后台拉最新配置（覆盖缓存）
+      // 后台拉最新配置覆盖
       this._loadTabs();
     },
   },

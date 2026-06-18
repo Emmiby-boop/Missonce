@@ -688,7 +688,7 @@ const PAGE_CONFIG_FILE = path.join(__dirname, '..', '..', 'data', 'page_config.j
 const DEFAULT_PAGE_CONFIG = {
   pages: {
     'pages/index/index': { enabled: true, title: '首页', tab: true },
-    'pages/trending/trending': { enabled: true, title: '发现', tab: true },
+    'pages/trending/trending': { enabled: false, title: '发现', tab: true },
     'pages/history/history': { enabled: true, title: '历史', tab: true },
     'pages/mine/mine': { enabled: true, title: '我的', tab: true },
     'pages/result/result': { enabled: true, title: '解析结果' },
