@@ -43,14 +43,10 @@ Component({
           if (res.data && res.data.success && res.data.data && res.data.data.pages) {
             wx.setStorageSync('page_config', res.data.data.pages);
             self._filterTabs(res.data.data.pages);
-          } else {
-            // 服务器无数据，显示全部 tab
-            self.setData({ tabs: allTabs, selected: self.data.selected || 0 });
           }
         },
         fail: function() {
-          // 请求失败，显示全部 tab
-          self.setData({ tabs: allTabs, selected: self.data.selected || 0 });
+          // 请求失败，保持当前 tabs 不变（用默认或缓存的配置）
         }
       });
     },
