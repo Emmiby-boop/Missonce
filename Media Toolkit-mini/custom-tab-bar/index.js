@@ -15,6 +15,10 @@ Component({
 
   lifetimes: {
     attached: function() {
+      // 先用本地缓存立即渲染（无闪烁）
+      var cached = wx.getStorageSync('page_config') || {};
+      this._filterTabs(cached);
+      // 再从服务器拉最新配置更新
       this._loadTabs();
     },
   },
@@ -26,17 +30,11 @@ Component({
         url: config.baseURL + '/api/page-config',
         success: function(res) {
           if (res.data && res.data.success && res.data.data && res.data.data.pages) {
-            var pageConfig = res.data.data.pages;
-            wx.setStorageSync('page_config', pageConfig);
-            self._filterTabs(pageConfig);
-          } else {
-            self._filterTabs({});
+            wx.setStorageSync('page_config', res.data.data.pages);
+            self._filterTabs(res.data.data.pages);
           }
         },
-        fail: function() {
-          var pageConfig = wx.getStorageSync('page_config') || {};
-          self._filterTabs(pageConfig);
-        }
+        fail: function() {}
       });
     },
 
@@ -45,11 +43,15 @@ Component({
         var page = pageConfig[tab.pagePath];
         return !page || page.enabled !== false;
       });
-      this.setData({ tabs: filtered });
+      // 确保 selected 不越界
+      var selected = this.data.selected;
+      if (selected >= filtered.length) {
+        selected = 0;
+      }
+      this.setData({ tabs: filtered, selected: selected });
     },
 
     switchTab: function(e) {
-      var index = e.currentTarget.dataset.index;
       var path = e.currentTarget.dataset.path;
       wx.switchTab({ url: '/' + path });
     },
