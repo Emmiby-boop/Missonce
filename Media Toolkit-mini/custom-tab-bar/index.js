@@ -43,18 +43,29 @@ Component({
         var page = pageConfig[tab.pagePath];
         return !page || page.enabled !== false;
       });
-      // 确保 selected 不越界
       var selected = this.data.selected;
-      if (selected >= filtered.length) {
-        selected = 0;
-      }
+      if (selected >= filtered.length) selected = 0;
       this.setData({ tabs: filtered, selected: selected });
+    },
+
+    _updateSelected: function() {
+      var pages = getCurrentPages();
+      var current = pages[pages.length - 1];
+      var route = current ? current.route : '';
+      var tabs = this.data.tabs;
+      for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].pagePath === route) {
+          if (this.data.selected !== i) {
+            this.setData({ selected: i });
+          }
+          return;
+        }
+      }
     },
 
     switchTab: function(e) {
       var index = e.currentTarget.dataset.index;
       var path = e.currentTarget.dataset.path;
-      // 立即更新选中状态（不等 onShow）
       this.setData({ selected: index });
       wx.switchTab({ url: '/' + path });
     },
