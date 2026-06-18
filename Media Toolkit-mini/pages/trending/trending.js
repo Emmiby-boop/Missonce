@@ -27,9 +27,6 @@ Page({
   },
 
   onLoad() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar()._updateSelected();
-    }
     // 检查页面是否被禁用
     var app = getApp();
     if (app.isPageEnabled && !app.isPageEnabled('pages/trending/trending')) {

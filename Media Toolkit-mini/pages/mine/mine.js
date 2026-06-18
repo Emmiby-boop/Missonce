@@ -13,9 +13,6 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar()._updateSelected();
-    }
     var info = getUserInfo();
     var idShort = '';
     if (info && info._id) {

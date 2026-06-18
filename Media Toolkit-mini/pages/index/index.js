@@ -28,9 +28,6 @@ Page({
   },
 
   onShow() {
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar()._updateSelected();
-    }
     const trendingUrl = wx.getStorageSync(STORAGE_KEYS.TRENDING_URL);
     if (trendingUrl) {
       wx.removeStorageSync(STORAGE_KEYS.TRENDING_URL);

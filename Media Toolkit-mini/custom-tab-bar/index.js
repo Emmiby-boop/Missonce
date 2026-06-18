@@ -15,13 +15,10 @@ Component({
 
   lifetimes: {
     attached: function() {
-      // 首次启动：用默认配置（发现页关闭），不依赖本地存储
       var cached = wx.getStorageSync('page_config');
       if (cached && Object.keys(cached).length > 0) {
-        // 有缓存直接用
         this._filterTabs(cached);
       } else {
-        // 无缓存：用默认配置（发现页关闭）
         this._filterTabs({
           'pages/index/index': { enabled: true },
           'pages/trending/trending': { enabled: false },
@@ -29,7 +26,6 @@ Component({
           'pages/mine/mine': { enabled: true },
         });
       }
-      // 后台拉最新配置覆盖
       this._loadTabs();
     },
   },
@@ -42,38 +38,36 @@ Component({
         success: function(res) {
           if (res.data && res.data.success && res.data.data && res.data.data.pages) {
             wx.setStorageSync('page_config', res.data.data.pages);
+            var oldLen = self.data.tabs.length;
             self._filterTabs(res.data.data.pages);
+            // 如果 tab 数量变了，重新匹配选中状态
+            if (self.data.tabs.length !== oldLen) {
+              self._matchSelected();
+            }
           }
         },
-        fail: function() {
-          // 请求失败，保持当前 tabs 不变（用默认或缓存的配置）
-        }
+        fail: function() {}
       });
     },
 
     _filterTabs: function(pageConfig) {
-      var self = this;
       var filtered = allTabs.filter(function(tab) {
         var page = pageConfig[tab.pagePath];
         return !page || page.enabled !== false;
       });
-      self.setData({ tabs: filtered });
-      // setData 后延迟一帧再匹配，确保 DOM 更新
-      setTimeout(function() {
-        self._updateSelected();
-      }, 50);
+      this.setData({ tabs: filtered });
     },
 
-    _updateSelected: function() {
+    // 根据当前页面路径匹配选中状态
+    _matchSelected: function() {
       var pages = getCurrentPages();
       var current = pages[pages.length - 1];
-      var route = current ? current.route : '';
+      if (!current) return;
+      var route = current.route || '';
       var tabs = this.data.tabs;
       for (var i = 0; i < tabs.length; i++) {
         if (tabs[i].pagePath === route) {
-          if (this.data.selected !== i) {
-            this.setData({ selected: i });
-          }
+          this.setData({ selected: i });
           return;
         }
       }
