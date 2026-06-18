@@ -465,28 +465,14 @@ router.get('/proxyDownload', async (req, res) => {
       return res.status(400).json(badRequest('该链接不是有效的媒体文件，可能视频地址已过期'));
     }
 
-    // 尝试上传到 COS，返回 COS 临时 URL（高速下载）
-    try {
-      const cos = require('../../utils/cos');
-      const ext = contentType.includes('video') ? '.mp4' : contentType.includes('image') ? '.jpg' : '';
-      const cosKey = 'proxy/' + crypto.createHash('md5').update(url).digest('hex') + ext;
-      const contentLength = parseInt(response.headers['content-length'], 10) || 0;
-      const cosUrl = await cos.uploadStream(response.data, cosKey, contentLength);
-      console.log(`[perf][proxyDownload] COS 上传完成: ${Date.now() - t0}ms, url=${cosUrl?.substring(0, 80)}`);
-      return res.json(makeResponse(200, '成功', { download_url: cosUrl }, true));
-    } catch (cosErr) {
-      console.error(`[perf][proxyDownload] COS 上传失败，回退代理: ${cosErr.message}`);
-      // COS 失败时回退到直接代理
-    }
-
     res.setHeader('Content-Type', contentType);
     if (filename) {
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     }
     // 转发上游 Content-Length（供客户端显示下载进度）
-    const contentLength2 = response.headers['content-length'];
-    if (contentLength2) {
-      res.setHeader('Content-Length', contentLength2);
+    const contentLength = response.headers['content-length'];
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
     }
 
     // 跟踪流传输进度
