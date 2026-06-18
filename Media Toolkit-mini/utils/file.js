@@ -316,9 +316,16 @@ async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
           },
           fail: (err) => {
             if (done) return;
+            // ECONNRESET: 连接被重置，重试一次（COS CDN 可能暂时不稳定）
+            if (err.errMsg && err.errMsg.indexOf('ECONNRESET') >= 0 && attempt === 0) {
+              console.log('[download][video] ECONNRESET，重试...');
+              done = false;
+              setTimeout(function() { startDownload(url, 1); }, 1000);
+              return;
+            }
             if (attempt === 0 && canDirectDownload) {
-              console.log(`[download][video] 直连失败，回退代理`);
-              buildProxiedUrl(videoUrl, `${videoId || 'video'}.mp4`).then(proxyUrl => {
+              console.log('[download][video] 直连失败，回退代理');
+              buildProxiedUrl(videoUrl, (videoId || 'video') + '.mp4').then(function(proxyUrl) {
                 if (!proxyUrl) return reject(new Error('获取代理链接失败'));
                 startDownload(proxyUrl, 1);
               });
@@ -326,7 +333,7 @@ async function downloadVideoToPhotosAlbum(videoUrl, videoId) {
             }
             done = true;
             wx.hideLoading();
-            console.log(`[download][video] 下载失败: ${err.errMsg}, 耗时: ${Date.now() - t0}ms`);
+            console.log('[download][video] 下载失败: ' + err.errMsg + ', 耗时: ' + (Date.now() - t0) + 'ms');
             reject(new Error('下载失败: ' + err.errMsg));
           }
         });
