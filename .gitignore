@@ -1,45 +1,65 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ==========================================
+# 敏感文件 - 绝对不提交
+# ==========================================
 
-node_modules
-dist
-dist-ssr
-*.local
+# 环境变量 / 密钥
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
+# 微信开发者工具私有配置（含本地路径/账号信息）
+project.private.config.json
+
+# ==========================================
+# 依赖 & 构建产物
+# ==========================================
+
+node_modules/
+dist/
+build/
+.cache/
+
+# ==========================================
+# 编辑器 & IDE
+# ==========================================
+
+.vscode/
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# ==========================================
+# 操作系统
+# ==========================================
 
-# CloudBase
-.cloudbase
-cloudbase-state.json
+.DS_Store
+Thumbs.db
+Desktop.ini
 
-# Backup directories (not part of the source code)
-backups/
+# ==========================================
+# 日志
+# ==========================================
 
-# WeChat Mini Program
-project.private.config.json
-miniprogram_npm/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Cloud function dependencies (deployed separately)
-cloudfunctions/*/node_modules/
+# ==========================================
+# WorkBuddy / Trae 本地工作文件
+# ==========================================
+
+.workbuddy/
+.mimocode/
+
+# ==========================================
+# 其他
+# ==========================================
+
+nul
+backup_*/
+*.backup
