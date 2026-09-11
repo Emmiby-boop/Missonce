@@ -132,12 +132,6 @@ npm run deploy     # 部署到 CloudBase Hosting
 
 > 完整清单与依赖集合说明见 [`WeChat Mini/README.md`](./WeChat%20Mini/README.md)
 
-## 🔐 环境与配置说明
-
-- **CloudBase 环境**：`missonce-99-1gfaff6n002f6ac1`
-- **敏感文件不入库**：`.env`、`cloudbaserc.json`、`node_modules/`、构建产物等已在根 `.gitignore` 中排除，请勿提交任何密钥
-- **管理员鉴权**：`cloudfunctions/shared/withAdmin.js` 统一高阶鉴权，支持 Web 后台 `adminToken` 与小程序 `OPENID` 双路径
-
 ## 📄 文档与设计资产
 
 `设计方案/` 目录包含产品审查报告、首页小红书风格改版方案、全站样式方案、团队技术提升方案，以及多套 HTML 高保真原型。
