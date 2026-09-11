@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Admin · 素材管理</title>
+<link rel="stylesheet" href="system.css" />
+</head>
+<body>
+<div class="shell">
+  <!-- ===== SIDEBAR ===== -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-row">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <div><div class="brand-name">Missonce</div><div class="brand-sub">Admin Console</div></div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">总览</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>仪表盘</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>运营分析</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">内容管理</div>
+        <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>资源管理<span class="badge">2,847</span></div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>专题管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>分类标签</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M2 7h20"/><path d="M7 3v4M17 3v4"/></svg>首页 Tab</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h4M7 11h8"/></svg>广告配置</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">运营</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>用户管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>通知管理<span class="badge">3</span></div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>语录管理</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">去水印</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>解析工具</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>热门趋势</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><path d="M17.5 6.5h.01"/></svg>平台管理</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">系统</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>AI 配置</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>管理员</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>操作日志</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>系统设置</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="user-info"><div class="user-name">Admin</div><div class="user-role">超级管理员</div></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--tx3);"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <div class="topbar">
+      <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索资源、用户、配置...<kbd>⌘K</kbd></div>
+      <div class="topbar-spacer"></div>
+      <span class="topbar-env">missonce-99</span>
+      <div class="topbar-divider"></div>
+      <div class="topbar-actions">
+        <button class="topbar-btn" title="刷新"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+        <button class="topbar-btn" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+        <button class="topbar-btn" id="themeBtn" title="切换主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <div><h1>素材资源</h1><div class="subtitle">上传、审核与上架管理</div></div>
+        <div class="actions">
+          <button class="btn btn-pri">一键通过待审</button>
+          <button class="btn btn-sec" id="toggleUp">上传素材</button>
+        </div>
+      </div>
+
+      <div class="card hidden" id="uploader" style="margin-bottom:16px">
+        <div class="card-body"><div class="uploader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22" style="margin-bottom:8px"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg><div>拖拽图片到此处，或点击选择文件上传</div></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-body">
+          <div class="filter-bar">
+            <div class="field"><span>关键词</span><input class="input" placeholder="标题关键词" /></div>
+            <div class="field"><span>类型</span><select class="select"><option>全部</option><option>头像</option><option>壁纸</option></select></div>
+            <div class="field"><span>状态</span><select class="select"><option>全部</option><option>草稿</option><option>待审</option><option>已发布</option><option>已下线</option></select></div>
+            <div class="field"><span>分类</span><select class="select"><option>全部</option><option>动态头像</option><option>女生</option><option>治愈</option></select></div>
+            <div class="field span2"><span>标签（逗号分隔）</span><input class="input" placeholder="例如：治愈,简约,几何" /></div>
+            <div class="field" style="flex:0 0 auto"><button class="btn btn-pri btn-sm">筛选</button></div>
+            <div class="field" style="flex:0 0 auto"><button class="btn btn-ghost btn-sm">重置</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>资源列表</h3>
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-sec btn-sm">批量操作 ▾</button>
+            <span class="card-sub">共 2,847 条</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="res-grid mgmt"><!-- JS 渲染 --></div>
+          <div class="pager">
+            <button>‹</button><button class="active">1</button><button>2</button><button>3</button><button>…</button><button>›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="theme-toggle">
+  <button class="theme-btn on" onclick="setTheme('light')">Light</button>
+  <button class="theme-btn" onclick="setTheme('dark')">Dark</button>
+</div>
+
+<!-- 编辑弹窗 -->
+<div class="modal-mask hidden" id="editMask">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>编辑资源</h3>
+      <button class="topbar-btn" onclick="closeEdit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="edit-img">封面预览</div>
+      <div class="field"><span>标题</span><input class="input" value="国风山水壁纸" /></div>
+      <div class="form-row">
+        <div class="field"><span>类型</span><select class="select"><option>头像</option><option selected>壁纸</option></select></div>
+        <div class="field"><span>状态</span><select class="select"><option selected>已发布</option><option>待审</option><option>草稿</option><option>已下线</option></select></div>
+      </div>
+      <div class="field"><span>分类 <span class="hint">点击下方标签添加</span></span>
+        <input class="input" value="壁纸,治愈" />
+        <div class="chip-row"><span class="chip add">动态头像</span><span class="chip add">女生</span><span class="chip add">治愈</span><span class="chip add">几何</span></div>
+      </div>
+      <div class="field"><span>标签（逗号分隔）</span><textarea class="input">治愈,简约,几何</textarea></div>
+      <div style="border-top:1px solid var(--bd2);padding-top:18px">
+        <p style="font-size:12px;font-weight:600;color:var(--tx3);margin-bottom:12px">热门数据（手动调整）</p>
+        <div class="form-row">
+          <div class="field"><span>热度值</span><input class="input" value="5000" /></div>
+          <div class="field"><span>下载量</span><input class="input" value="1200" /></div>
+          <div class="field"><span>浏览量</span><input class="input" value="8800" /></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeEdit()">取消</button>
+      <button class="btn btn-pri" onclick="closeEdit()">保存更改</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ICON = {
+    ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
+    edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
+    del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>',
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>'
+  };
+  const grad = ['linear-gradient(135deg,#a8edea,#fed6e3)','linear-gradient(135deg,#667eea,#764ba2)','linear-gradient(135deg,#f093fb,#f5576c)','linear-gradient(135deg,#4facfe,#00f2fe)','linear-gradient(135deg,#43e97b,#38f9d7)','linear-gradient(135deg,#fa709a,#fee140)'];
+  const statusBdg = { published:['g','已发布'], review:['o','待审'], draft:['gr','草稿'], offline:['gr','已下线'] };
+  const aiBdg = { success:'✅', pending:'⏳', failed:'❌' };
+  const data = [
+    { id:1, title:'春日樱花壁纸 4K', type:'壁纸', status:'published', ai:'success', down:128 },
+    { id:2, title:'抽象渐变头像', type:'头像', status:'published', ai:'success', down:96 },
+    { id:3, title:'星空夜景系列', type:'壁纸', status:'published', ai:'success', down:312 },
+    { id:4, title:'海洋清新壁纸', type:'壁纸', status:'offline', ai:'failed', down:58 },
+    { id:5, title:'治愈系插画头像', type:'头像', status:'review', ai:'pending', down:0 },
+    { id:6, title:'赛博朋克壁纸', type:'壁纸', status:'published', ai:'success', down:204 },
+    { id:7, title:'动漫少女头像', type:'头像', status:'review', ai:'pending', down:0 },
+    { id:8, title:'莫兰迪色壁纸', type:'壁纸', status:'published', ai:'success', down:176 },
+    { id:9, title:'卡通动物头像', type:'头像', status:'draft', ai:null, down:0 },
+    { id:10, title:'国风山水壁纸', type:'壁纸', status:'published', ai:'success', down:340 },
+  ];
+  const grid = document.querySelector('.res-grid.mgmt');
+  data.forEach((d,i) => {
+    const [bs, bl] = statusBdg[d.status];
+    const card = document.createElement('div'); card.className = 'res-card mgmt';
+    card.innerHTML = `
+      <div class="res-thumb" style="background:${grad[i % grad.length]}">
+        <span class="res-type">${d.type}</span>
+        <div class="res-pick" title="选择">${ICON.check}</div>
+        ${d.ai ? `<span class="res-ai" title="AI ${d.ai}">${aiBdg[d.ai]}</span>` : ''}
+        <div class="res-ov">
+          <button class="res-act" title="AI 识别">${ICON.ai}</button>
+          <button class="res-act" title="编辑" onclick="openEdit()">${ICON.edit}</button>
+          <button class="res-act danger" title="删除">${ICON.del}</button>
+        </div>
+      </div>
+      <div class="res-info">
+        <div class="r-title">${d.title}</div>
+        <div class="r-meta"><span class="bdg ${bs}">${bl}</span><span>↓ ${d.down}</span></div>
+      </div>`;
+    card.addEventListener('click', e => { if (e.target.closest('.res-act') || e.target.closest('.res-pick')) return; card.classList.toggle('sel'); });
+    card.querySelector('.res-pick').addEventListener('click', e => { e.stopPropagation(); card.classList.toggle('sel'); });
+    grid.append(card);
+  });
+
+  document.getElementById('toggleUp').addEventListener('click', () => document.getElementById('uploader').classList.toggle('hidden'));
+  function openEdit(){ document.getElementById('editMask').classList.remove('hidden'); }
+  function closeEdit(){ document.getElementById('editMask').classList.add('hidden'); }
+  document.getElementById('editMask').addEventListener('click', e => { if (e.target.id === 'editMask') closeEdit(); });
+
+  function setTheme(t){
+    document.documentElement.className = t;
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('on', b.textContent.toLowerCase() === t));
+  }
+  document.getElementById('themeBtn').addEventListener('click', () => setTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!-- 导航栏 -->
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="navigateBack">
+      <image class="back-icon" src="/images/preview-back.svg" mode="aspectFit" />
+    </view>
+    <text class="nav-title">灵感文案</text>
+    <view class="nav-action {{showSearch ? 'active' : ''}}" bindtap="onToggleSearch">
+      <view class="si-wrap">
+        <view class="si-ring"></view>
+        <view class="si-stick"></view>
+      </view>
+    </view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight}}px;"></view>
+
+<!-- 搜索栏（折叠式） -->
+<view class="search-panel {{showSearch ? 'open' : ''}}">
+  <view class="search-row">
+    <view class="search-field">
+      <view class="search-field-icon">
+        <view class="si-ring-sm"></view>
+        <view class="si-stick-sm"></view>
+      </view>
+      <input
+        class="search-field-input"
+        placeholder="搜索文案..."
+        placeholder-class="search-placeholder"
+        value="{{keyword}}"
+        focus="{{showSearch}}"
+        bindinput="onSearchInput"
+        confirm-type="search"
+        bindconfirm="onSearch"
+      />
+    </view>
+    <view class="search-go" bindtap="onSearch">搜索</view>
+  </view>
+</view>
+
+<!-- 顶部广告 -->
+<ad-unit position="middle" custom-class="native-top-ad" page-path="/subpackages/inspiration-writer/inspiration-writer" immediate="{{true}}"></ad-unit>
+
+<view class="container">
+  <ad-unit kind="interstitial" page-path="/subpackages/inspiration-writer/inspiration-writer"></ad-unit>
+
+  <!-- 分类标签 -->
+  <scroll-view class="cat-scroll" style="top: {{statusBarHeight + navBarHeight}}px;" scroll-x enable-flex enhanced show-scrollbar="{{false}}" scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
+    <view class="cat-row">
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        id="cat-{{item.id}}"
+        class="cat {{currentCategory === item.id ? 'on' : ''}}"
+        bindtap="onCategoryTap"
+        data-category="{{item.id}}"
+      >
+        <text class="cat-label">{{item.name}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 加载态 -->
+  <view wx:if="{{loading && quotes.length === 0}}" class="state-loading">
+    <view class="spinner"></view>
+    <text class="state-label">加载中...</text>
+  </view>
+
+  <!-- 文案列表（沉浸式，按后台配置分段插入广告） -->
+  <view wx:if="{{quotes.length > 0}}" class="feed">
+    <block wx:for="{{sections}}" wx:key="index" wx:for-item="section">
+      <view
+        wx:for="{{section.resources}}"
+        wx:key="_id"
+        class="card"
+        bindtap="onQuoteTap"
+        data-quote="{{item}}"
+        hover-class="card-press"
+        hover-stay-time="100"
+      >
+        <!-- 分类角标 -->
+        <view wx:if="{{item.category}}" class="card-cat">{{item.category}}</view>
+
+        <!-- 装饰引号 -->
+        <text class="card-mark">"</text>
+
+        <!-- 正文 -->
+        <view class="card-body">
+          <text class="card-text">{{item.content}}</text>
+        </view>
+
+        <!-- 底栏 -->
+        <view class="card-foot">
+          <view class="card-tags">
+            <view wx:for="{{item.tags}}" wx:key="*this" class="tag">{{item}}</view>
+          </view>
+          <view class="card-copy">
+            <text>复制</text>
+          </view>
+        </view>
+      </view>
+      <!-- 段间横幅原生模板广告 -->
+      <view class="iw-banner-ad" wx:if="{{section.adAfter}}">
+        <ad-unit position="middle" kind="native" page-path="/subpackages/inspiration-writer/inspiration-writer" immediate="{{true}}" ext-style="width:100%;"></ad-unit>
+      </view>
+    </block>
+  </view>
+
+  <!-- 空态 -->
+  <view wx:if="{{!loading && quotes.length === 0}}" class="state-empty">
+    <text class="empty-mark">"</text>
+    <text class="state-label">暂无文案</text>
+    <text class="state-hint">换个分类或关键词试试</text>
+  </view>
+
+  <!-- 加载更多 -->
+  <view wx:if="{{loading && quotes.length > 0}}" class="state-loading">
+    <view class="spinner small"></view>
+    <text class="state-label">加载更多...</text>
+  </view>
+
+  <!-- 没有更多 -->
+  <view wx:if="{{!hasMore && quotes.length > 0}}" class="state-end">
+    <view class="end-line"></view>
+    <text class="end-text">已经到底了</text>
+    <view class="end-line"></view>
+  </view>
+</view>

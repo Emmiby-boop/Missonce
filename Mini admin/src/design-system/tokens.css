@@ -1,0 +1,75 @@
+/* =====================================================================
+ * Mini Admin — Design Tokens (canonical, per user's redesign)
+ * 主色：微信绿 #07C160；表面：冷 slate（Tailwind slate 调性）
+ * 字体：Figtree(标题) / system+Noto(正文) / IBM Plex Mono(数据)
+ * 语义色：green / red / orange / blue / purple 五色体系
+ * 全部页面与 Naive UI overrides 必须引用此文件（见 naive-theme.ts）。
+ * ===================================================================== */
+
+:root {
+  --pri: #07C160;
+  --pri-h: #06AD56;
+  --pri-s: #E8F8EE;
+  --pri-10: rgba(7, 193, 96, 0.1);
+
+  --red: #EF4444;  --red-s: #FEF2F2;
+  --org: #F59E0B;  --org-s: #FFFBEB;
+  --blu: #3B82F6;  --blu-s: #EFF6FF;
+  --pur: #8B5CF6;  --pur-s: #F5F3FF;
+
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --elevated: #FFFFFF;
+
+  --tx: #0F172A;
+  --tx2: #475569;
+  --tx3: #94A3B8;
+  --tx4: #CBD5E1;
+
+  --bd: #E2E8F0;
+  --bd2: #F1F5F9;
+
+  --hover: #F1F5F9;
+  --active: #E8F8EE;
+
+  --shadow-s: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-m: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-l: 0 8px 24px rgba(15, 23, 42, 0.08);
+
+  --r: 10px;   /* card */
+  --rs: 6px;   /* small */
+  --rl: 14px;  /* large */
+
+  --font-h: 'Figtree', system-ui, sans-serif;
+  --font-b: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --font-m: 'IBM Plex Mono', 'SF Mono', 'Cascadia Code', monospace;
+
+  --ease: 0.15s;
+}
+
+:root.dark {
+  --bg: #0B0F19;
+  --surface: #111827;
+  --elevated: #1E293B;
+
+  --tx: #F1F5F9;
+  --tx2: #94A3B8;
+  --tx3: #64748B;
+  --tx4: #334155;
+
+  --bd: #1E293B;
+  --bd2: #1E293B;
+
+  --hover: #1E293B;
+  --active: rgba(7, 193, 96, 0.12);
+
+  --pri-s: rgba(7, 193, 96, 0.15);
+  --red-s: rgba(239, 68, 68, 0.12);
+  --org-s: rgba(245, 158, 11, 0.12);
+  --blu-s: rgba(59, 130, 246, 0.12);
+  --pur-s: rgba(139, 92, 246, 0.12);
+
+  --shadow-s: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-m: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-l: 0 8px 24px rgba(0, 0, 0, 0.4);
+}

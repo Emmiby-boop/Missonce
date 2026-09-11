@@ -1,0 +1,7 @@
+{
+  "navigationStyle": "custom",
+  "onReachBottomDistance": 300,
+  "usingComponents": {
+    "ad-unit": "/components/ad-unit/ad-unit"
+  }
+}

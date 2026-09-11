@@ -1,0 +1,2 @@
+<!-- 辣椒图标组件 - SVG 矢量绘制，支持 size 属性和深色模式 -->
+<view class="spicy-icon" style="width: {{size}}rpx; height: {{size}}rpx;"></view>

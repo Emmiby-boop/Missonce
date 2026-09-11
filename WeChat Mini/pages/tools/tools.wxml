@@ -1,0 +1,80 @@
+<!-- 毛玻璃导航栏 -->
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar">
+    <text class="nav-title">工具箱</text>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
+
+<view class="container">
+  <ad-unit kind="interstitial" page-path="/pages/tools/tools"></ad-unit>
+
+  <!-- Hero 签到卡片（渐变绿玻璃质感） -->
+  <view class="hero-card {{isCheckedIn ? 'checked' : ''}}" catchtap="handleCheckIn">
+    <view class="hero-glow"></view>
+    <view class="hero-content">
+      <view class="hero-text">
+        <text class="hero-tag">{{isCheckedIn ? '已完成' : '今日任务'}}</text>
+        <text class="hero-title">{{isCheckedIn ? '已签到' : '每日签到'}}</text>
+        <text class="hero-sub" wx:if="{{isCheckedIn}}">连续 {{checkInDays}} 天 · 继续保持</text>
+        <text class="hero-sub" wx:else>签到赚辣度值 · 连续7天领好礼</text>
+      </view>
+      <view class="hero-icon-box">
+        <spicy-icon size="56"></spicy-icon>
+      </view>
+    </view>
+    <!-- 未签到时的辣度值提示徽章 -->
+    <view class="hero-badge" wx:if="{{!isCheckedIn}}">+辣度值</view>
+  </view>
+
+  <!-- 创作工具（Bento Box 布局，动态渲染） -->
+  <view class="section" wx:if="{{toolsList.length > 0}}">
+    <view class="section-header">
+      <view class="section-bar bar-primary"></view>
+      <text class="section-label">创作工具</text>
+    </view>
+    <view class="bento-grid">
+      <block wx:for="{{toolsList}}" wx:key="id">
+        <!-- 方形卡片 -->
+        <view
+          wx:if="{{item.size === 'square'}}"
+          class="bento-cell square"
+          data-tool="{{item}}"
+          bindtap="onToolTap"
+        >
+          <view class="cell-glow"></view>
+          <view class="cell-icon-box icon-{{item.color || 'primary'}}">
+            <image wx:if="{{item.icon}}" class="cell-icon-img" src="{{item.icon}}" mode="aspectFit"></image>
+            <text wx:else class="cell-icon-text">{{item.title}}</text>
+          </view>
+          <text class="cell-name">{{item.title}}</text>
+          <text class="cell-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
+        </view>
+
+        <!-- 宽形卡片 -->
+        <view
+          wx:else
+          class="bento-cell wide"
+          data-tool="{{item}}"
+          bindtap="onToolTap"
+        >
+          <view class="cell-glow-right"></view>
+          <view class="wide-content">
+            <view class="cell-icon-box icon-{{item.color || 'primary'}}">
+              <image wx:if="{{item.icon}}" class="cell-icon-img" src="{{item.icon}}" mode="aspectFit"></image>
+              <text wx:else class="cell-icon-text">{{item.title}}</text>
+            </view>
+            <view class="wide-text">
+              <text class="cell-name">{{item.title}}</text>
+              <text class="cell-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
+            </view>
+          </view>
+          <text class="cell-arrow">›</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 中部广告位 -->
+  <ad-unit position="middle" custom-class="native-video-mid-ad" page-path="/pages/tools/tools"></ad-unit>
+</view>

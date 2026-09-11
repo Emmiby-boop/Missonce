@@ -1,0 +1,32 @@
+<!--subpackages/store/store.wxml-->
+<view class="store-page">
+  <!-- 错误状态 -->
+  <view wx:if="{{error}}" class="error-state">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bindtap="onRetry">重试</button>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:elif="{{loading}}" class="loading-state">
+    <text class="loading-text">商品加载中...</text>
+  </view>
+
+  <!-- 已配置商品：展示商品卡片列表 -->
+  <view wx:elif="{{hasProducts}}" class="products-container">
+    <store-product
+      wx:for="{{productIds}}"
+      wx:key="*this"
+      appid="{{storeAppid}}"
+      product-id="{{item}}"
+      bind:error="onStoreProductError"
+    />
+  </view>
+
+  <!-- 未配置商品：引导提示 -->
+  <view wx:else class="empty-state">
+    <text class="empty-icon">🛍️</text>
+    <text class="empty-text">暂无商品展示</text>
+    <text class="empty-hint">请在 config/constants.js 中配置 STORE_PRODUCT_IDS</text>
+  </view>
+</view>

@@ -1,0 +1,477 @@
+/* 导入统一骨架屏样式 */
+@import '../../components/skeleton.wxss';
+
+/* ====== Material Design 3 绿色主题变量 ====== */
+page {
+  --md-primary: #006e2f;
+  --md-primary-container: #22c55e;
+  --md-on-primary: #ffffff;
+  --md-on-surface: #0b1c30;
+  --md-secondary: #5c5f61;
+  --md-surface: #f8f9ff;
+  --md-surface-container-low: #eff4ff;
+  --md-outline-variant: #bccbb9;
+}
+
+/* ====== 毛玻璃导航栏 ====== */
+.custom-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: linear-gradient(90deg, rgba(255,255,255,0.88) 0%, rgba(240,253,244,0.85) 60%, rgba(220,252,231,0.82) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1rpx 0 rgba(34, 197, 94, 0.08);
+}
+
+.nav-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-title {
+  color: var(--md-primary);
+  font-size: 34rpx;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.nav-holder {
+  width: 100%;
+}
+
+/* ====== 容器 ====== */
+.container {
+  padding: 24rpx 24rpx 48rpx;
+  min-height: 100vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* 顶部装饰渐变背景 */
+.container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 400rpx;
+  background: linear-gradient(to bottom, rgba(34, 197, 94, 0.08), transparent);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ====== Hero 签到卡片（渐变绿玻璃质感） ====== */
+.hero-card {
+  position: relative;
+  width: 100%;
+  border-radius: 32rpx;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8rpx 30rpx rgba(34, 197, 94, 0.08);
+  margin-bottom: 40rpx;
+  transition: transform 0.2s ease;
+  box-sizing: border-box;
+}
+
+.hero-card:active {
+  transform: scale(0.98);
+}
+
+/* 右上角绿色光晕 */
+.hero-glow {
+  position: absolute;
+  top: -80rpx;
+  right: -80rpx;
+  width: 320rpx;
+  height: 320rpx;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.25), transparent 70%);
+  border-radius: 50%;
+  filter: blur(40rpx);
+  pointer-events: none;
+}
+
+/* 已签到状态 - 更明显的渐变绿 */
+.hero-card.checked {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.hero-card.checked .hero-glow {
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.4), transparent 70%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 36rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.hero-tag {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--md-primary);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4rpx;
+}
+
+.hero-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--md-on-surface);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.hero-sub {
+  font-size: 26rpx;
+  color: var(--md-secondary);
+  margin-top: 6rpx;
+  line-height: 1.4;
+}
+
+/* 右侧图标方块 */
+.hero-icon-box {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: 2rpx solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4rpx 16rpx rgba(34, 197, 94, 0.25);
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.hero-card.checked .hero-icon-box {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+.hero-icon-img {
+  width: 100%;
+  height: 100%;
+}
+
+/* 积分提示徽章 */
+.hero-badge {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  z-index: 3;
+  padding: 6rpx 18rpx;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(34, 197, 94, 0.4);
+  letter-spacing: 0.05em;
+}
+
+/* ====== 分区 ====== */
+.section {
+  margin-bottom: 40rpx;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+  padding: 0 4rpx;
+}
+
+.section-bar {
+  width: 8rpx;
+  height: 32rpx;
+  border-radius: 8rpx;
+}
+
+.bar-primary {
+  background: var(--md-primary-container);
+}
+
+.bar-secondary {
+  background: var(--md-secondary);
+}
+
+.section-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--md-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ====== Bento Box 创作工具 ====== */
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+}
+
+.bento-cell {
+  position: relative;
+  background: #fff;
+  border-radius: 28rpx;
+  box-shadow: 0 4rpx 20rpx rgba(34, 197, 94, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.bento-cell:active {
+  transform: scale(0.96);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* 方形卡片 */
+.bento-cell.square {
+  aspect-ratio: 1;
+  padding: 32rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+  text-align: center;
+}
+
+/* 宽卡片 */
+.bento-cell.wide {
+  grid-column: span 2;
+  padding: 28rpx 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.wide-content {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.wide-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+/* 卡片渐变光晕 */
+.cell-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(34, 197, 94, 0.06), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.bento-cell:active .cell-glow {
+  opacity: 1;
+}
+
+.cell-glow-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200rpx;
+  height: 100%;
+  background: linear-gradient(to left, rgba(34, 197, 94, 0.06), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.bento-cell:active .cell-glow-right {
+  opacity: 1;
+}
+
+/* 图标盒 */
+.cell-icon-box {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* 深色渐变背景，衬托白色描边图标 */
+.icon-primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4rpx 12rpx rgba(34, 197, 94, 0.25);
+}
+
+.icon-secondary {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  box-shadow: 0 4rpx 12rpx rgba(245, 87, 108, 0.25);
+}
+
+/* 浅色背景，衬托彩色填充图标 */
+.icon-tertiary {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
+}
+
+.icon-quaternary {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05));
+}
+
+.icon-store {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(236, 72, 153, 0.05));
+}
+
+.cell-icon-img {
+  width: 52rpx;
+  height: 52rpx;
+}
+
+/* 彩色填充图标稍大一些 */
+.cell-icon-img.colorful {
+  width: 56rpx;
+  height: 56rpx;
+}
+
+/* 🔥 文字图标（后台动态配置时，用工具名首字作为图标） */
+.cell-icon-text {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.15);
+  max-width: 80rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 浅色背景下的文字图标用深色 */
+.icon-tertiary .cell-icon-text,
+.icon-quaternary .cell-icon-text,
+.icon-store .cell-icon-text {
+  color: #1f2937;
+  text-shadow: none;
+}
+
+.cell-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--md-on-surface);
+  position: relative;
+  z-index: 2;
+}
+
+.bento-cell.wide .cell-name {
+  font-size: 32rpx;
+}
+
+.cell-desc {
+  font-size: 22rpx;
+  color: var(--md-secondary);
+  position: relative;
+  z-index: 2;
+}
+
+.cell-arrow {
+  font-size: 48rpx;
+  color: var(--md-outline-variant);
+  line-height: 1;
+  position: relative;
+  z-index: 2;
+  font-weight: 300;
+}
+
+/* ====== 深色模式 ====== */
+@media (prefers-color-scheme: dark) {
+  page {
+    --md-on-surface: #eaf1ff;
+    --md-secondary: #9ca3af;
+    --md-surface: #1a1a1a;
+  }
+
+  .custom-nav {
+    background: linear-gradient(90deg, rgba(18,18,18,0.88) 0%, rgba(20,40,28,0.85) 60%, rgba(15,50,30,0.82) 100%);
+    box-shadow: 0 1rpx 0 rgba(34, 197, 94, 0.12);
+  }
+
+  .nav-title {
+    color: #4ae176;
+  }
+
+  .container {
+    background: #1a1a1a;
+  }
+
+  .container::before {
+    background: linear-gradient(to bottom, rgba(34, 197, 94, 0.12), transparent);
+  }
+
+  .hero-card {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.9), rgba(40, 40, 40, 0.6));
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .hero-card.checked {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.08));
+  }
+
+  .hero-title {
+    color: #eaf1ff;
+  }
+
+  .hero-sub {
+    color: #9ca3af;
+  }
+
+  .bento-cell {
+    background: #1f2937;
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+  }
+
+  .cell-name {
+    color: #f3f4f6;
+  }
+
+  .cell-desc {
+    color: #9ca3af;
+  }
+
+  .cell-arrow {
+    color: #4b5563;
+  }
+}

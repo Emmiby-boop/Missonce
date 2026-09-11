@@ -1,0 +1,16 @@
+{
+  "name": "prebuildHomeFeed",
+  "version": "1.0.0",
+  "description": "预构建首页数据缓存云函数，每10分钟自动执行",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  },
+  "triggers": [
+    {
+      "name": "every10min",
+      "type": "timer",
+      "config": "0 */10 * * * * *"
+    }
+  ]
+}

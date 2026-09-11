@@ -1,0 +1,195 @@
+@import 'components/skeleton.wxss';
+
+page {
+  --primary-color: #07C160;
+  --bg-color: #f7f8fa;
+  --card-bg: #ffffff;
+  --text-main: #1f2a44;
+  --text-sub: #94a3b8;
+  --border-color: #e2e8f0;
+  --shadow-color: rgba(16, 42, 66, 0.08);
+
+  background: var(--bg-color);
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text-main);
+  padding-top: 0;
+  min-height: 100vh; /* 确保页面至少一屏高，避免内容少时无法滚动 */
+}
+
+@media (prefers-color-scheme: dark) {
+  page {
+    --primary-color: #10b981;
+    --bg-color: #121212;
+    --card-bg: #1f2937;
+    --text-main: #f3f4f6;
+    --text-sub: #9ca3af;
+    --border-color: #374151;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+
+    background: var(--bg-color);
+    color: var(--text-main);
+  }
+}
+
+.container {
+  padding: 24rpx;
+  min-height: calc(100vh - env(safe-area-inset-bottom));
+}
+
+/* Search bar (shared) */
+.search-header {
+  display: flex;
+  align-items: center;
+}
+
+.search-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 76rpx;
+  padding: 0 22rpx;
+  background: var(--card-bg);
+  border-radius: 999rpx;
+  border: 1rpx solid var(--border-color);
+  box-shadow: 0 10rpx 24rpx var(--shadow-color);
+}
+
+
+.search-icon-img {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 14rpx;
+  opacity: 0.9;
+}
+
+.search-placeholder {
+  font-size: 28rpx;
+  color: var(--text-sub);
+}
+
+.search-cancel {
+  margin-left: 18rpx;
+  font-size: 28rpx;
+  color: var(--text-main);
+  padding: 10rpx 6rpx;
+}
+
+.section-card {
+  background: var(--card-bg);
+  border-radius: 18rpx;
+  box-shadow: 0 8rpx 26rpx var(--shadow-color);
+  overflow: hidden;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.grid-item {
+  width: 48%;
+  margin-bottom: 20rpx;
+  background: var(--card-bg);
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 6rpx 18rpx var(--shadow-color);
+}
+
+.grid-image {
+  width: 100%;
+  height: 300rpx;
+  display: block;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 16rpx 30rpx;
+  margin-right: 16rpx;
+  background: var(--border-color);
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  color: var(--text-sub);
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tag-chip.active {
+  background: var(--primary-color);
+  color: #fff;
+  box-shadow: 0 4rpx 14rpx rgba(7, 193, 96, 0.28);
+}
+
+/* Common Dark Mode overrides */
+@media (prefers-color-scheme: dark) {
+  /* 毛玻璃导航栏统一暗色覆盖（各页面 wxss 已各自声明，此处仅作兜底） */
+  .custom-nav {
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ===== 低端机降级（页面根节点由 JS 挂 low-end class） =====
+   benchmarkLevel ≤ 10 的设备：backdrop-filter blur 每帧 GPU 采样是掉帧/发热主因，
+   统一降级为高不透明度纯色（视觉上仍是"玻璃感"弱化版）。
+   特异度 .low-end .custom-nav (0,2,0) 高于各页面 .custom-nav (0,1,0)，无需 !important */
+.low-end .custom-nav,
+.custom-nav.low-end {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.97);
+}
+
+@media (prefers-color-scheme: dark) {
+  .low-end .custom-nav,
+  .custom-nav.low-end {
+    background: rgba(18, 18, 18, 0.97);
+  }
+}
+
+/* ===== 统一骨架屏动画（从多处提取） ===== */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes shimmer-slide {
+  100% { transform: translateX(100%); }
+}
+
+/* 骨架屏 shimmer 类 */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  transform: translateX(-100%);
+  animation: shimmer-slide 1.5s infinite;
+}
+
+/* ===== 统一旋转加载动画（从多处提取） ===== */
+.loading-spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid #e0e0e0;
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

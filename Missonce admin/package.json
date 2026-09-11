@@ -1,0 +1,22 @@
+{
+  "name": "missonce-admin",
+  "version": "1.0.0",
+  "description": "小辣椒动态头像壁纸 · 后台管理（uni-app 重制，一套代码出微信小程序 + iOS/Android 自签 IPA）",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "uniapp",
+    "miniprogram-admin",
+    "missonce"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@cloudbase/js-sdk": "^3.6.2"
+  },
+  "engines": {
+    "HBuilderX": "^3.8.5"
+  }
+}

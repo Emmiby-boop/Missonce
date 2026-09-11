@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Missonce Admin — 用户管理 UI 原型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --pri:#07C160;--pri-l:#E8F8EE;--pri-d:#06AD56;
+  --red:#FA5151;--red-l:#FFE8E8;
+  --org:#FF9500;--org-l:#FFF3E0;
+  --blu:#10AEFF;--blu-l:#E8F4FF;
+  --pur:#7C5CFC;--pur-l:#F0E8FF;
+  --bg:#F5F6F8;--card:#FFF;--tx:#1A1A2E;--tx2:#8C8CA1;--tx3:#B8B8C8;--bd:#EBEBF0;--dv:#F0F0F5;
+  --r:14px;--rs:10px;--sk:#EDEDF2;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Noto Sans CJK SC',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+
+.header{background:var(--card);padding:28px 40px;border-bottom:1px solid var(--bd);}
+.header h1{font-size:22px;font-weight:700;color:var(--tx);}
+.header p{font-size:14px;color:var(--tx2);margin-top:6px;line-height:1.6;}
+.header .tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.header .tag{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;background:var(--pri-l);color:var(--pri-d);}
+
+.wrap{display:flex;gap:28px;padding:28px 40px;overflow-x:auto;align-items:flex-start;flex-wrap:wrap;}
+.phone{flex-shrink:0;width:326px;height:660px;background:#111;border-radius:40px;padding:8px;position:relative;margin-bottom:40px;}
+.phone-label{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:var(--tx2);white-space:nowrap;}
+.screen{width:100%;height:100%;background:var(--bg);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.statusbar{height:40px;background:var(--card);display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 6px;font-size:11px;font-weight:600;color:var(--tx);flex-shrink:0;}
+.statusbar .time{font-size:13px;font-weight:700;}
+.statusbar .icons{display:flex;gap:4px;align-items:center;}
+.statusbar .icons svg{width:14px;height:14px;}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:#111;border-radius:11px;z-index:20;}
+
+.navbar{height:44px;background:var(--card);display:flex;align-items:center;padding:0 8px;border-bottom:0.5px solid var(--bd);flex-shrink:0;position:relative;}
+.navbar .nav-back{width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-back svg{width:22px;height:22px;color:var(--tx);}
+.navbar .nav-title{position:absolute;left:50%;transform:translateX(-50%);font-size:16px;font-weight:600;color:var(--tx);}
+.navbar .nav-action{position:absolute;right:8px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-action svg{width:20px;height:20px;color:var(--tx2);}
+
+.pg{flex:1;overflow-y:auto;background:var(--bg);padding:12px 14px 80px;}
+.pg::-webkit-scrollbar{display:none;}
+
+/* 搜索 */
+.search-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;}
+.search-wrap{flex:1;height:40px;background:var(--card);border:1px solid var(--dv);border-radius:100px;display:flex;align-items:center;gap:8px;padding:0 14px;}
+.search-wrap svg{width:16px;height:16px;color:var(--tx3);}
+.search-wrap .s-ph{font-size:13px;color:var(--tx3);}
+.search-btn{height:40px;padding:0 16px;border-radius:100px;background:var(--pri);color:#fff;font-size:13px;font-weight:500;display:flex;align-items:center;cursor:pointer;flex-shrink:0;}
+
+/* 分段筛选（与广告配置 / 资源管理原型一致：卡片底 + 绿色选中） */
+.seg{display:flex;background:var(--card);padding:4px;gap:4px;margin-bottom:12px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.seg-item{flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:13px;font-weight:600;color:var(--tx2);cursor:pointer;transition:.15s;}
+.seg-item.on{background:var(--pri);color:#fff;box-shadow:0 2px 8px rgba(7,193,96,.25);}
+
+/* 统计卡 */
+.stats-grid{display:grid;gap:8px;margin-bottom:14px;}
+.stats-grid.g3{grid-template-columns:repeat(3,1fr);}
+.stats-grid.g2{grid-template-columns:repeat(2,1fr);}
+.stat-card{background:var(--card);border-radius:var(--r);padding:12px 8px;text-align:center;box-shadow:0 2rpx 12rpx rgba(0,0,0,.03);}
+.stat-card--primary{background:var(--pri-l);}
+.stat-card--warn{background:var(--org-l);}
+.stat-card--danger{background:var(--red-l);}
+.stat-value{font-size:22px;font-weight:700;color:var(--tx);line-height:1.2;}
+.stat-value--primary{color:var(--pri-d);}
+.stat-value--warn{color:var(--org);}
+.stat-value--danger{color:var(--red);}
+.stat-value--blu{color:var(--blu);}
+.stat-value--pur{color:var(--pur);}
+.stat-label{font-size:11px;color:var(--tx2);margin-top:2px;}
+
+/* 用户卡 */
+.user-card{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:0 2rpx 12rpx rgba(0,0,0,.03);cursor:pointer;}
+.user-card:active{background:#f2f3f5;}
+.user-card__head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.user-avatar{width:44px;height:44px;border-radius:50%;flex-shrink:0;object-fit:cover;}
+.user-avatar--default{display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;}
+.user-card__info{flex:1;min-width:0;}
+.user-card__name{font-size:14px;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-card__id{font-size:11px;color:var(--tx3);margin-top:1px;}
+.badge{padding:2px 9px;border-radius:100px;font-size:10px;font-weight:600;flex-shrink:0;}
+.badge--green{background:var(--pri-l);color:var(--pri-d);}
+.badge--blue{background:var(--blu-l);color:var(--blu);}
+.badge--org{background:var(--org-l);color:var(--org);}
+.badge--pur{background:var(--pur-l);color:var(--pur);}
+.badge--gray{background:var(--dv);color:var(--tx2);}
+.user-card__body{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;}
+.uc-row{display:flex;align-items:center;gap:6px;font-size:11px;}
+.uc-k{color:var(--tx3);}
+.uc-v{color:var(--tx);font-weight:500;}
+.uc-v.green{color:var(--pri-d);}
+.user-card__action{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--dv);}
+.user-card__action text{font-size:12px;color:var(--pri);font-weight:500;}
+.user-card__action svg{width:14px;height:14px;color:var(--pri);}
+
+.list-count{font-size:12px;color:var(--tx2);margin:4px 2px 10px;}
+
+/* 分页 */
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;}
+.pagination-btn{font-size:12px;padding:8px 14px;border-radius:8px;background:var(--card);border:1px solid var(--dv);color:var(--tx);cursor:pointer;}
+.pagination-info{font-size:11px;color:var(--tx2);}
+
+/* 用户详情 */
+.profile-card{background:var(--card);border-radius:var(--r);padding:18px 14px;text-align:center;margin-bottom:12px;box-shadow:0 2rpx 12rpx rgba(0,0,0,.03);}
+.profile-avatar{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;object-fit:cover;}
+.profile-avatar--default{display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;}
+.profile-name{font-size:16px;font-weight:700;color:var(--tx);}
+.profile-id{font-size:11px;color:var(--tx3);margin-top:2px;}
+.profile-meta{display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:10px;color:var(--tx2);}
+
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:0 2rpx 12rpx rgba(0,0,0,.03);}
+.card-title{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:12px;}
+
+/* 当前状态网格 */
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.status-item{background:var(--bg);border-radius:10px;padding:10px;}
+.status-label{font-size:11px;color:var(--tx2);margin-bottom:4px;}
+.status-value{font-size:14px;font-weight:600;color:var(--tx);}
+
+/* 表单 */
+.form-group{margin-bottom:14px;}
+.form-label{font-size:12px;font-weight:600;color:var(--tx);margin-bottom:7px;display:block;}
+.form-hint{font-size:11px;color:var(--tx2);margin-top:5px;line-height:1.5;}
+.form-hint--info{color:var(--blu);}
+
+/* 会员等级选择（优化：分段/列表选择，替代 picker） */
+.level-list{display:flex;flex-direction:column;gap:8px;}
+.level-opt{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--dv);background:var(--card);cursor:pointer;transition:.15s;}
+.level-opt.on{border-color:var(--pri);background:var(--pri-l);}
+.level-opt__radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--tx3);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.level-opt.on .level-opt__radio{border-color:var(--pri);background:var(--pri);}
+.level-opt__radio svg{width:12px;height:12px;color:#fff;display:none;}
+.level-opt.on .level-opt__radio svg{display:block;}
+.level-opt__main{flex:1;}
+.level-opt__name{font-size:13px;font-weight:600;color:var(--tx);}
+.level-opt__desc{font-size:10px;color:var(--tx2);margin-top:1px;}
+.level-opt__price{font-size:12px;font-weight:600;color:var(--tx2);}
+
+/* 输入框 / 开关 */
+.input{width:100%;height:40px;border-radius:10px;border:1px solid var(--bd);padding:0 12px;font-size:13px;color:var(--tx);background:var(--card);outline:none;display:flex;align-items:center;}
+.form-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.toggle{width:46px;height:26px;border-radius:13px;background:var(--dv);position:relative;cursor:pointer;transition:.2s;flex-shrink:0;}
+.toggle.on{background:var(--pri);}
+.toggle .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.toggle.on .knob{left:23px;}
+.form-toggle-text{font-size:12px;color:var(--tx2);line-height:1.4;}
+
+.btn{flex:1;height:44px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;border:none;transition:.15s;}
+.btn:active{transform:scale(.98);}
+.btn-default{background:var(--dv);color:var(--tx);}
+.btn-primary{background:var(--pri);color:#fff;}
+.btn-primary:active{background:var(--pri-d);}
+.btn svg{width:16px;height:16px;}
+.reset-ad-btn{width:100%;height:38px;border-radius:10px;background:var(--card);border:1px solid var(--bd);color:var(--tx2);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* 空/骨架/错误 */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center;}
+.empty .e-ico{width:72px;height:72px;border-radius:50%;background:var(--pri-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.empty .e-ico svg{width:34px;height:34px;color:var(--pri);}
+.empty .e-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.empty .e-btn{padding:10px 28px;border-radius:100px;background:var(--pri);color:#fff;font-size:13px;font-weight:500;cursor:pointer;}
+
+.skeleton{background:var(--sk);border-radius:8px;position:relative;overflow:hidden;}
+.skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:shimmer 1.5s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+.error{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;text-align:center;}
+.error .er-ico{width:64px;height:64px;border-radius:50%;background:var(--red-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.error .er-ico svg{width:30px;height:30px;color:var(--red);}
+.error .er-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.error .er-d{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:18px;}
+.error .er-btn{padding:9px 24px;border-radius:100px;background:var(--card);color:var(--pri);font-size:13px;font-weight:500;border:1px solid var(--pri);cursor:pointer;}
+
+/* Action Sheet */
+.as-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:55;}
+.as-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:56;animation:slideUp .25s ease-out;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.as-head{padding:14px 18px 10px;text-align:center;border-bottom:0.5px solid var(--dv);}
+.as-head .as-title{font-size:14px;font-weight:600;color:var(--tx);}
+.as-head .as-sub{font-size:11px;color:var(--tx2);margin-top:2px;}
+.as-item{display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;border-bottom:0.5px solid var(--dv);}
+.as-item:active{background:#f2f3f5;}
+.as-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.as-ico svg{width:20px;height:20px;color:#fff;}
+.as-ico.pri{background:var(--pri);}
+.as-ico.blu{background:var(--blu);}
+.as-ico.org{background:var(--org);}
+.as-ico.gray{background:var(--tx2);}
+.as-ico.red{background:var(--red);}
+.as-tx .as-t{font-size:14px;font-weight:500;color:var(--tx);}
+.as-tx .as-d{font-size:11px;color:var(--tx2);margin-top:1px;}
+.as-cancel{padding:14px 18px;text-align:center;font-size:15px;font-weight:600;color:var(--tx2);cursor:pointer;}
+
+/* 保存成功 Toast（非阻断提示） */
+.toast{position:absolute;left:50%;bottom:82px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(26,26,46,.92);color:#fff;padding:11px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:toastIn .25s ease-out;max-width:90%;}
+.toast svg{width:16px;height:16px;color:var(--pri);flex-shrink:0;}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,12px);}to{opacity:1;transform:translate(-50%,0);}}
+.sk-card{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:0 2rpx 12rpx rgba(0,0,0,.03);}
+.sk-row{display:flex;align-items:center;gap:10px;}
+
+/* 底部 TabBar */
+.tabbar{height:58px;background:var(--card);border-top:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-around;flex-shrink:0;padding-bottom:6px;}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;opacity:.42;transition:.2s;}
+.tab.on{opacity:1;}
+.tab svg{width:22px;height:22px;color:var(--tx2);}
+.tab.on svg{color:var(--pri);}
+.tab span{font-size:10px;font-weight:500;color:var(--tx2);}
+.tab.on span{color:var(--pri);}
+
+/* Spec */
+.spec-section{padding:28px 40px 40px;border-top:1px solid var(--bd);background:var(--card);margin-top:20px;}
+.spec-section h2{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--tx);}
+.spec-section h3{font-size:15px;font-weight:600;margin:20px 0 10px;color:var(--tx);}
+.spec-section p{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:14px;}
+.stbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;}
+.stbl th{text-align:left;padding:10px 12px;background:#fafbfc;color:var(--tx2);font-weight:500;border-bottom:2px solid var(--pri);}
+.stbl td{padding:10px 12px;border-bottom:0.5px solid var(--dv);color:var(--tx);vertical-align:top;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl code{background:var(--dv);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--pri-d);}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;}
+.note{padding:16px;background:var(--pri-l);border-radius:12px;font-size:13px;color:var(--pri-d);line-height:1.7;margin-top:20px;}
+@media (max-width:1200px){.spec-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Missonce Admin — 用户管理 UI 原型</h1>
+  <p>基于 user-list / user-detail 设计 · 筛选分段栏 · 会员统计卡 · 用户卡片列表 · 会员等级分段选择（优化 picker）· 管理会员操作面板 · 四态（含 loading / success）完备</p>
+  <div class="tags">
+    <span class="tag">筛选分段</span>
+    <span class="tag">会员统计</span>
+    <span class="tag">用户卡片</span>
+    <span class="tag">分段选等级</span>
+    <span class="tag">到期预览</span>
+    <span class="tag">操作面板</span>
+    <span class="tag">四态完备</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ===== PHONE 1: 用户列表 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户管理</span>
+</div>
+<div class="pg">
+  <div class="search-row">
+    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><span class="s-ph">搜索昵称 / ID</span></div>
+    <div class="search-btn">搜索</div>
+  </div>
+
+  <div class="seg">
+    <div class="seg-item on">全部</div>
+    <div class="seg-item">会员</div>
+    <div class="seg-item">普通</div>
+    <div class="seg-item">即将到期</div>
+    <div class="seg-item">已过期</div>
+  </div>
+
+  <!-- 会员统计卡 -->
+  <div class="stats-grid g3">
+    <div class="stat-card stat-card--primary"><div class="stat-value stat-value--primary">12,480</div><div class="stat-label">总会员</div></div>
+    <div class="stat-card"><div class="stat-value stat-value--blu">1,203</div><div class="stat-label">月度</div></div>
+    <div class="stat-card"><div class="stat-value stat-value--pur">642</div><div class="stat-label">年度</div></div>
+  </div>
+  <div class="stats-grid g2">
+    <div class="stat-card stat-card--warn"><div class="stat-value stat-value--warn">38</div><div class="stat-label">7天内到期</div></div>
+    <div class="stat-card stat-card--danger"><div class="stat-value stat-value--danger">156</div><div class="stat-label">已过期</div></div>
+  </div>
+
+  <div class="list-count">共 12,480 条</div>
+
+  <div class="user-card">
+    <div class="user-card__head">
+      <div class="user-avatar user-avatar--default" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);">小</div>
+      <div class="user-card__info"><div class="user-card__name">小辣椒本椒</div><div class="user-card__id">ID: …a3f1e2</div></div>
+      <span class="badge badge--pur">终身会员</span>
+    </div>
+    <div class="user-card__body">
+      <div class="uc-row"><span class="uc-k">注册</span><span class="uc-v">2025-03-12</span></div>
+      <div class="uc-row"><span class="uc-k">积分</span><span class="uc-v">2,340</span></div>
+      <div class="uc-row"><span class="uc-k">到期</span><span class="uc-v">永久</span></div>
+      <div class="uc-row"><span class="uc-k">下载</span><span class="uc-v green">∞</span></div>
+    </div>
+    <div class="user-card__action"><text>管理会员</text><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
+  </div>
+
+  <div class="user-card">
+    <div class="user-card__head">
+      <div class="user-avatar" style="background:linear-gradient(135deg,#A8EDEA,#8FD3F4);"></div>
+      <div class="user-card__info"><div class="user-card__name">清风徐来</div><div class="user-card__id">ID: …7c2e9b</div></div>
+      <span class="badge badge--blue">年度会员</span>
+    </div>
+    <div class="user-card__body">
+      <div class="uc-row"><span class="uc-k">注册</span><span class="uc-v">2025-11-02</span></div>
+      <div class="uc-row"><span class="uc-k">积分</span><span class="uc-v">860</span></div>
+      <div class="uc-row"><span class="uc-k">到期</span><span class="uc-v">2026-11-02</span></div>
+      <div class="uc-row"><span class="uc-k">下载</span><span class="uc-v">120</span></div>
+    </div>
+    <div class="user-card__action"><text>管理会员</text><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
+  </div>
+
+  <div class="user-card">
+    <div class="user-card__head">
+      <div class="user-avatar user-avatar--default" style="background:linear-gradient(135deg,#FFB347,#FFCC33);">阿</div>
+      <div class="user-card__info"><div class="user-card__name">阿橘不胖</div><div class="user-card__id">ID: …5d8a4c</div></div>
+      <span class="badge badge--gray">普通会员</span>
+    </div>
+    <div class="user-card__body">
+      <div class="uc-row"><span class="uc-k">注册</span><span class="uc-v">2026-01-20</span></div>
+      <div class="uc-row"><span class="uc-k">积分</span><span class="uc-v">120</span></div>
+      <div class="uc-row"><span class="uc-k">到期</span><span class="uc-v">—</span></div>
+      <div class="uc-row"><span class="uc-k">下载</span><span class="uc-v">15</span></div>
+    </div>
+    <div class="user-card__action"><text>管理会员</text><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
+  </div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">① 用户列表 — 统计卡 + 搜索 + 卡片</div>
+</div>
+
+<!-- ===== PHONE 2: 用户详情 / 编辑会员 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户详情</span>
+</div>
+<div class="pg">
+  <div class="profile-card">
+    <div class="profile-avatar profile-avatar--default" style="background:linear-gradient(135deg,#A8EDEA,#8FD3F4);"></div>
+    <div class="profile-name">清风徐来</div>
+    <div class="profile-id">ID: …7c2e9b</div>
+    <div class="profile-meta"><span>注册 2025-11-02</span><span>登录 2026-07-08</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">当前状态</div>
+    <div class="status-grid">
+      <div class="status-item"><div class="status-label">会员等级</div><div class="status-value" style="color:var(--blu);">年度会员</div></div>
+      <div class="status-item"><div class="status-label">当前积分</div><div class="status-value">860</div></div>
+      <div class="status-item"><div class="status-label">到期时间</div><div class="status-value">2026-11-02</div></div>
+      <div class="status-item"><div class="status-label">免广告</div><div class="status-value">否</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">编辑会员</div>
+    <div class="form-group">
+      <div class="form-label">会员等级</div>
+      <div class="level-list">
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">普通会员</div><div class="level-opt__desc">无会员权益</div></div></div>
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">月度会员</div><div class="level-opt__desc">30 天</div></div><span class="level-opt__price">¥18</span></div>
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">季度会员</div><div class="level-opt__desc">90 天</div></div><span class="level-opt__price">¥48</span></div>
+        <div class="level-opt on"><div class="level-opt__radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="level-opt__main"><div class="level-opt__name">年度会员</div><div class="level-opt__desc">365 天</div></div><span class="level-opt__price">¥168</span></div>
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">终身会员</div><div class="level-opt__desc">永久有效</div></div><span class="level-opt__price">¥498</span></div>
+      </div>
+      <div class="form-hint form-hint--info">选择「年度会员」→ 到期时间：2026-11-02（自动计算）</div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">积分余额（可选）</div>
+      <div class="input">860</div>
+    </div>
+    <div class="form-group">
+      <div class="form-toggle-row"><span class="form-toggle-text">跳过广告（调试用）</span><div class="toggle"><div class="knob"></div></div></div>
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <div class="form-label">重置下载广告状态</div>
+      <div class="form-hint">删除该用户今天的免费下载记录，下次下载需重新观看激励广告。</div>
+      <div class="reset-ad-btn">重置下载广告状态</div>
+    </div>
+  </div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">② 用户详情 — 分段选等级（优化 picker）</div>
+</div>
+
+<!-- ===== PHONE 3: 会员等级选择 + 到期预览 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户详情</span>
+</div>
+<div class="pg">
+  <div class="profile-card">
+    <div class="profile-avatar profile-avatar--default" style="background:linear-gradient(135deg,#A8EDEA,#8FD3F4);"></div>
+    <div class="profile-name">清风徐来</div>
+    <div class="profile-id">ID: …7c2e9b</div>
+    <div class="profile-meta"><span>注册 2025-11-02</span><span>登录 2026-07-08</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">会员等级（实时预览）</div>
+    <div class="level-list">
+      <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">普通会员</div><div class="level-opt__desc">无会员权益</div></div></div>
+      <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">月度会员</div><div class="level-opt__desc">30 天</div></div><span class="level-opt__price">¥18</span></div>
+      <div class="level-opt on"><div class="level-opt__radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="level-opt__main"><div class="level-opt__name">季度会员</div><div class="level-opt__desc">90 天</div></div><span class="level-opt__price">¥48</span></div>
+      <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">年度会员</div><div class="level-opt__desc">365 天</div></div><span class="level-opt__price">¥168</span></div>
+      <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">终身会员</div><div class="level-opt__desc">永久有效</div></div><span class="level-opt__price">¥498</span></div>
+    </div>
+    <div class="form-hint form-hint--info">选择「季度会员」→ 到期时间：2026-10-08（自动计算）</div>
+  </div>
+</div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">③ 等级选择 — 实时到期预览</div>
+</div>
+
+<!-- ===== PHONE 4: 管理会员操作面板 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户详情</span>
+</div>
+<div class="pg" style="padding-top:0;">
+  <div class="profile-card"><div class="profile-avatar profile-avatar--default" style="background:linear-gradient(135deg,#A8EDEA,#8FD3F4);"></div><div class="profile-name">清风徐来</div></div>
+</div>
+
+<div class="as-mask"></div>
+<div class="as-sheet">
+  <div class="as-head"><div class="as-title">管理会员</div><div class="as-sub">清风徐来 · 年度会员</div></div>
+  <div class="as-item">
+    <div class="as-ico pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6.5L22 9l-5 4.5L18.5 21 12 17l-6.5 4L7 13.5 2 9l7-0.5z"/></svg></div>
+    <div class="as-tx"><div class="as-t">提升会员等级</div><div class="as-d">变更会员等级与到期时间</div></div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico blu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></div>
+    <div class="as-tx"><div class="as-t">调整积分</div><div class="as-d">赠送 / 扣减积分</div></div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico org"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+    <div class="as-tx"><div class="as-t">发送站内通知</div><div class="as-d">推送活动 / 权益提醒</div></div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM3 9h18M9 21V9"/></svg></div>
+    <div class="as-tx"><div class="as-t">重置下载广告</div><div class="as-d">清除今日免费下载记录</div></div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
+    <div class="as-tx"><div class="as-t">限制账号</div><div class="as-d">禁言 / 封禁（需确认）</div></div>
+  </div>
+  <div class="as-cancel">取消</div>
+</div>
+</div>
+<div class="phone-label">④ 管理会员 — 操作面板 Action Sheet</div>
+</div>
+
+<!-- ===== PHONE 5: 搜索筛选 + 空状态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户管理</span>
+</div>
+<div class="pg">
+  <div class="search-row">
+    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><span class="s-ph">终身会员</span></div>
+    <div class="search-btn">搜索</div>
+  </div>
+  <div class="list-count">筛选：终身会员 · 共 0 条</div>
+  <div class="empty">
+    <div class="e-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+    <div class="e-t">未找到用户</div>
+    <div class="e-btn">清除筛选</div>
+  </div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">⑤ 搜索筛选 — 空状态引导</div>
+</div>
+
+<!-- ===== PHONE 6: 加载骨架（loading） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户管理</span>
+</div>
+<div class="pg">
+  <div class="search-row">
+    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><span class="s-ph">搜索昵称 / ID</span></div>
+    <div class="search-btn">搜索</div>
+  </div>
+  <div class="seg">
+    <div class="seg-item on">全部</div>
+    <div class="seg-item">会员</div>
+    <div class="seg-item">普通</div>
+    <div class="seg-item">即将到期</div>
+    <div class="seg-item">已过期</div>
+  </div>
+  <div class="stats-grid g3">
+    <div class="stat-card"><div class="skeleton" style="height:22px;width:54%;margin:0 auto 6px;"></div><div class="skeleton" style="height:11px;width:46%;margin:0 auto;"></div></div>
+    <div class="stat-card"><div class="skeleton" style="height:22px;width:54%;margin:0 auto 6px;"></div><div class="skeleton" style="height:11px;width:46%;margin:0 auto;"></div></div>
+    <div class="stat-card"><div class="skeleton" style="height:22px;width:54%;margin:0 auto 6px;"></div><div class="skeleton" style="height:11px;width:46%;margin:0 auto;"></div></div>
+  </div>
+  <div class="list-count"><div class="skeleton" style="height:12px;width:90px;"></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="skeleton" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="height:14px;width:50%;margin-bottom:8px;"></div><div class="skeleton" style="height:11px;width:70%;"></div></div></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="skeleton" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="height:14px;width:42%;margin-bottom:8px;"></div><div class="skeleton" style="height:11px;width:60%;"></div></div></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="skeleton" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="height:14px;width:56%;margin-bottom:8px;"></div><div class="skeleton" style="height:11px;width:65%;"></div></div></div></div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">⑥ 加载骨架 — loading 态</div>
+</div>
+
+<!-- ===== PHONE 7: 保存成功（success Toast） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户详情</span>
+</div>
+<div class="pg">
+  <div class="profile-card">
+    <div class="profile-avatar profile-avatar--default" style="background:linear-gradient(135deg,#A8EDEA,#8FD3F4);"></div>
+    <div class="profile-name">清风徐来</div>
+    <div class="profile-id">ID: …7c2e9b</div>
+    <div class="profile-meta"><span>注册 2025-11-02</span><span>登录 2026-07-08</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">当前状态</div>
+    <div class="status-grid">
+      <div class="status-item"><div class="status-label">会员等级</div><div class="status-value" style="color:var(--blu);">季度会员</div></div>
+      <div class="status-item"><div class="status-label">当前积分</div><div class="status-value">860</div></div>
+      <div class="status-item"><div class="status-label">到期时间</div><div class="status-value">2026-10-08</div></div>
+      <div class="status-item"><div class="status-label">免广告</div><div class="status-value">否</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">编辑会员</div>
+    <div class="form-group">
+      <div class="form-label">会员等级</div>
+      <div class="level-list">
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">普通会员</div><div class="level-opt__desc">无会员权益</div></div></div>
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">月度会员</div><div class="level-opt__desc">30 天</div></div><span class="level-opt__price">¥18</span></div>
+        <div class="level-opt on"><div class="level-opt__radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="level-opt__main"><div class="level-opt__name">季度会员</div><div class="level-opt__desc">90 天</div></div><span class="level-opt__price">¥48</span></div>
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">年度会员</div><div class="level-opt__desc">365 天</div></div><span class="level-opt__price">¥168</span></div>
+        <div class="level-opt"><div class="level-opt__radio"></div><div class="level-opt__main"><div class="level-opt__name">终身会员</div><div class="level-opt__desc">永久有效</div></div><span class="level-opt__price">¥498</span></div>
+      </div>
+      <div class="form-hint form-hint--info">选择「季度会员」→ 到期时间：2026-10-08（自动计算）</div>
+    </div>
+  </div>
+  <div class="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>会员等级已更新 · 年度 → 季度</div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">⑦ 保存成功 — Toast 提示</div>
+</div>
+
+<!-- ===== PHONE 8: 错误态 + 重试 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">用户管理</span>
+</div>
+<div class="pg">
+  <div class="error">
+    <div class="er-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+    <div class="er-t">用户列表加载失败</div>
+    <div class="er-d">adminUserManager 调用超时<br>请稍后重试</div>
+    <div class="er-btn">重试</div>
+  </div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">⑧ 错误态 — 重试引导</div>
+</div>
+
+</div>
+
+<!-- ===== SPEC SECTION ===== -->
+<div class="spec-section">
+<h2>用户管理 — 设计规范说明</h2>
+
+<div class="spec-grid">
+<div>
+<h3>页面结构</h3>
+<table class="stbl">
+<tr><th>页面</th><th>核心内容</th></tr>
+<tr><td>用户列表</td><td>搜索 + <b>筛选分段栏</b>（全部/会员/普通/即将到期/已过期）+ 会员统计卡（总/月度/年度/7天到期/过期）+ 用户卡片（头像/昵称/等级/注册/积分/到期/下载）</td></tr>
+<tr><td>用户详情</td><td>用户信息卡 + 当前状态网格 + 编辑会员表单</td></tr>
+<tr><td>会员等级</td><td>分段选择列表（替代 picker）+ 实时到期预览</td></tr>
+<tr><td>管理会员</td><td>操作面板：提升等级 / 调积分 / 通知 / 重置广告 / 限制账号</td></tr>
+</table>
+
+<h3>优化要点（对照 user-detail 优化项）</h3>
+<table class="stbl">
+<tr><th>原实现</th><th>设计优化</th></tr>
+<tr><td>会员等级用 picker</td><td>改为分段选择列表，直观可见、点击可达</td></tr>
+<tr><td>到期时间无明确提示</td><td>选择等级后实时显示「到期时间：xxxx（自动计算）」</td></tr>
+<tr><td>操作入口分散</td><td>聚合为「管理会员」操作面板</td></tr>
+<tr><td>列表缺少快速筛选</td><td>新增 <code>.seg</code> 筛选分段栏（全部/会员/普通/即将到期/已过期），与广告配置/资源管理原型一致</td></tr>
+<tr><td>等级档位缺「季度会员」</td><td>补全为 5 档（普通/月度/季度/年度/终身），与规范表对齐</td></tr>
+<tr><td>四态仅演示 empty/error</td><td>新增加载骨架（loading）+ 保存成功 Toast（success），四态完整覆盖</td></tr>
+</table>
+</div>
+
+<div>
+<h3>会员等级体系</h3>
+<table class="stbl">
+<tr><th>等级</th><th>时长</th><th>角标色</th></tr>
+<tr><td>普通会员</td><td>—</td><td>灰</td></tr>
+<tr><td>月度会员</td><td>30 天</td><td>蓝</td></tr>
+<tr><td>季度会员</td><td>90 天</td><td>蓝</td></tr>
+<tr><td>年度会员</td><td>365 天</td><td>蓝</td></tr>
+<tr><td>终身会员</td><td>永久</td><td>紫</td></tr>
+</table>
+
+<h3>设计规范遵循</h3>
+<table class="stbl">
+<tr><th>规范</th><th>实现</th></tr>
+<tr><td>主色</td><td><code>#07C160</code></td></tr>
+<tr><td>字体</td><td>系统字体（设计系统强制）</td></tr>
+<tr><td>图标</td><td>Feather 线性 SVG，stroke-width 2</td></tr>
+<tr><td>触控</td><td>操作项 / 等级选项 ≥44pt</td></tr>
+<tr><td>四态</td><td>loading / empty / error / success</td></tr>
+</table>
+</div>
+</div>
+
+<div class="note">
+  <strong>用户管理原型图</strong><br>
+  8 屏覆盖：用户列表（含筛选分段）/ 用户详情编辑 / 等级分段选择+到期预览 / 管理会员面板 / 搜索筛选空状态 / 加载骨架(loading) / 保存成功 Toast(success) / 错误态<br>
+  本轮优化：① 列表新增 <code>.seg</code> 筛选分段栏（与广告配置/资源管理原型一致）② 补全会员等级「季度会员」档位 ③ 去除 P3 整体压暗、改为清晰聚焦屏 ④ 补全 loading 骨架与 success Toast，四态完整<br>
+  落实 mini-admin-ui-optimization.md：会员等级由 picker 改分段选择 + 到期时间实时预览；user-list 补充错误/异常态<br>
+  严格遵循 mini-admin-design.md：#07C160 主色 · Feather 线性图标 · 系统字体（品牌约束）· 四态完备
+</div>
+</div>
+
+</body>
+</html>

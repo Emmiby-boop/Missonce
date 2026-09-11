@@ -1,0 +1,10 @@
+{
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 300,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "waterfall": "../../components/waterfall/waterfall",
+    "ad-unit": "/components/ad-unit/ad-unit"
+  }
+}

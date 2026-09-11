@@ -1,0 +1,9 @@
+{
+  "name": "testAiConnection",
+  "version": "1.0.0",
+  "description": "AI 连接测试代理（绕过浏览器 CORS 限制）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

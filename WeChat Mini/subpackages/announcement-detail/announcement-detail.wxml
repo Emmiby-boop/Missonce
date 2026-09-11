@@ -1,0 +1,73 @@
+<!-- 自定义导航栏：毛玻璃磨砂（低端机挂 low-end 降级为纯色） -->
+<view class="custom-nav {{lowEnd ? 'low-end' : ''}}" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
+    <view class="nav-back" bindtap="onBack">
+      <image class="back-icon" src="/images/preview-back.svg" mode="aspectFit"></image>
+    </view>
+    <text class="nav-title">{{notification.title || '公告详情'}}</text>
+    <view class="nav-placeholder"></view>
+  </view>
+</view>
+
+<view class="container" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+
+  <!-- 加载中 -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 公告内容 -->
+  <block wx:elif="{{notification}}">
+    <!-- 封面图 -->
+    <view class="cover-wrap" wx:if="{{coverUrl}}">
+      <image class="cover-image" src="{{coverUrl}}" mode="aspectFill" />
+    </view>
+
+    <!-- 文章主体 -->
+    <view class="article-body">
+      <!-- 标题 -->
+      <view class="article-title">{{notification.title}}</view>
+
+      <!-- 元信息 -->
+      <view class="article-meta">
+        <text class="meta-type">{{notification.type === 'activity' ? '活动' : notification.type === 'system' ? '系统' : notification.type === 'update' ? '更新' : '公告'}}</text>
+        <text class="meta-time" wx:if="{{notification.createdAt}}">{{notification.createTimeText}}</text>
+      </view>
+
+      <!-- 摘要 -->
+      <view class="article-summary" wx:if="{{notification.summary}}">
+        <text>{{notification.summary}}</text>
+      </view>
+
+      <!-- 富文本内容 -->
+      <view class="article-content" wx:if="{{contentHtml}}">
+        <rich-text nodes="{{contentHtml}}"></rich-text>
+      </view>
+
+      <!-- 纯文本内容（无富文本时） -->
+      <view class="article-text-content" wx:elif="{{displayContent}}">
+        <text>{{displayContent}}</text>
+      </view>
+
+      <!-- 跳转按钮 -->
+      <view class="article-action" wx:if="{{notification.linkType !== 'none' && notification.linkValue}}">
+        <button class="action-btn" bindtap="handleAction">查看详情</button>
+      </view>
+
+      <!-- 二维码区块（加群/客服等，长按识别） -->
+      <view class="qr-section" wx:if="{{qrUrl}}">
+        <view class="qr-divider"></view>
+        <view class="qr-card">
+          <image class="qr-image" src="{{qrUrl}}" mode="aspectFit" show-menu-by-longpress="{{true}}" />
+          <view class="qr-hint">长按识别二维码</view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 空状态 -->
+  <view class="empty-wrap" wx:else>
+    <text class="empty-text">公告不存在或已失效</text>
+  </view>
+</view>

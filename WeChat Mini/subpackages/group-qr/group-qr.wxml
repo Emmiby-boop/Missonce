@@ -1,0 +1,85 @@
+<!-- 自定义导航栏：毛玻璃磨砂效果 -->
+<view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
+    <view class="nav-back-btn" bindtap="onBack">
+      <text class="nav-back-icon">‹</text>
+    </view>
+    <text class="nav-title">加群交流</text>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight}}px;"></view>
+
+<!-- 页面主体 -->
+<view class="page">
+  <!-- 背景有机光斑 -->
+  <view class="blob blob-1"></view>
+  <view class="blob blob-2"></view>
+  <view class="blob blob-3"></view>
+
+  <!-- 内容区 -->
+  <view class="content">
+    <!-- 徽章 -->
+    <view class="eyebrow">
+      <view class="eyebrow-icon"></view>
+      <text>{{config.eyebrow}}</text>
+    </view>
+
+    <!-- 标题 -->
+    <view class="title">
+      <text class="title-line">{{config.title1}}</text>
+      <text class="title-line title-accent">{{config.title2}}</text>
+    </view>
+
+    <!-- 副标题 -->
+    <text class="subtitle">{{config.subtitle}}</text>
+
+    <!-- 统计卡片 -->
+    <view class="stats">
+      <view class="stat" wx:for="{{config.stats}}" wx:key="index">
+        <text class="stat-value">{{item.value}}</text>
+        <text class="stat-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <!-- 二维码舞台 -->
+    <view class="qr-stage">
+      <view class="qr-ring"></view>
+      <view class="qr-ring qr-ring-2"></view>
+      <view class="qr-blob"></view>
+      <view class="qr-wrap">
+        <image
+          wx:if="{{qrUrl}}"
+          class="qr-image"
+          src="{{qrUrl}}"
+          mode="aspectFit"
+          show-menu-by-longpress="{{true}}"
+        />
+        <view wx:else class="qr-placeholder">
+          <view class="qr-loading"></view>
+        </view>
+      </view>
+      <view class="qr-hint">
+        <view class="qr-hint-icon"></view>
+        <text>长按识别二维码进群</text>
+      </view>
+    </view>
+
+    <!-- 功能卡片 -->
+    <view class="features">
+      <view class="feature" wx:for="{{config.features}}" wx:key="index">
+        <view class="feature-icon feature-icon-{{index + 1}}">
+          <view class="feature-icon-inner"></view>
+        </view>
+        <text class="feature-title">{{item.title}}</text>
+        <text class="feature-desc">{{item.desc}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部 CTA -->
+  <view class="cta-bar">
+    <button class="cta-btn" bindtap="saveQrToAlbum" loading="{{saving}}">
+      <text>保存二维码进群</text>
+    </button>
+  </view>
+</view>

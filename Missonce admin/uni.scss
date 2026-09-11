@@ -1,0 +1,49 @@
+/* ============================================
+ * Missonce Admin (uni-app) — 设计 Token
+ * 镜像 miniprogramadmin/app.wxss 的 CSS 变量，供组件 <style lang="scss"> 编译期使用。
+ * 运行时样式仍使用 App.vue 全局 style 里的 CSS 自定义属性（var(--pri) 等），
+ * 两者保持一致。主色：#07C160（微信绿）
+ * ============================================ */
+
+/* ── Primary ── */
+$pri: #07C160;
+$pri-l: #E8F8EE;
+$pri-d: #06AD56;
+
+/* ── Semantic ── */
+$success: #07C160;
+$danger: #FA5151;
+$danger-l: #FFE8E8;
+$warning: #FF9500;
+$warning-l: #FFF3E0;
+$warning-d: #C77700;
+$info: #10AEFF;
+$info-l: #E8F4FF;
+$purple: #7C5CFC;
+$purple-l: #F0E8FF;
+$cyan: #00B894;
+$cyan-l: #E0F7F4;
+$pink: #E84393;
+$pink-l: #FDF0F5;
+
+/* ── Neutral (Light) ── */
+$bg-page: #F5F6F8;
+$bg-card: #FFFFFF;
+$bg-elevated: #FFFFFF;
+$text-primary: #1A1A2E;
+$text-secondary: #5A5A6E;
+$text-tertiary: #9A9AAB;
+$border: #EBEBF0;
+$divider: #F0F0F5;
+
+/* ── Radius ── */
+$r-lg: 20rpx;
+$r-md: 16rpx;
+$r-sm: 12rpx;
+$r-pill: 100rpx;
+
+/* ── Shadow ── */
+$shadow-card: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
+
+/* ── Safe area ── */
+$safe-bottom: env(safe-area-inset-bottom);

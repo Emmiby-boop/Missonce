@@ -1,0 +1,14 @@
+{
+  "name": "manageAdConfig",
+  "version": "1.0.0",
+  "description": "管理广告配置（广告位 adConfig + 广告单元 ad_units），供小程序管理端调用",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

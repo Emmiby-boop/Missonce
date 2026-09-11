@@ -1,0 +1,20 @@
+/* 辣椒图标 - SVG 矢量绘制，无需图片资源
+   设计要点：
+   1. 经典尖椒造型，上圆下尖，略微弯曲
+   2. 四层渐变主体（亮红→正红→深红→暗红）+ 白色高光带
+   3. 五瓣绿色蒂，喇叭口张开
+   4. 深色模式自动提亮 */
+.spicy-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='b' x1='0.2' y1='0.1' x2='0.8' y2='0.9'><stop offset='0%25' stop-color='%23FF8585'/><stop offset='35%25' stop-color='%23EF4444'/><stop offset='75%25' stop-color='%23B91C1C'/><stop offset='100%25' stop-color='%237F1D1D'/></linearGradient><linearGradient id='s' x1='0.3' y1='0' x2='0.7' y2='1'><stop offset='0%25' stop-color='%2386EFAC'/><stop offset='50%25' stop-color='%2322C55E'/><stop offset='100%25' stop-color='%2315803D'/></linearGradient><linearGradient id='h' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.7'/><stop offset='55%25' stop-color='%23FFFFFF' stop-opacity='0.18'/><stop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/></linearGradient></defs><path d='M20 24C14 30 13 42 17 50C21 57 29 59 35 56C41 53 43 46 42 38C41 30 36 24 30 22C26 21 22 22 20 24Z' fill='url(%23b)'/><path d='M35 55C36 59 38 62 40 60C41 58 40 55 38 53Z' fill='%237F1D1D'/><path d='M23 28C20 34 19 44 22 52C23 53 25 53 26 51C24 43 24 32 27 28C27 26 24 26 23 28Z' fill='url(%23h)'/><path d='M19 19L22 11L27 16L31 8L35 16L40 11L43 19C39 23 35 24 31 24C27 24 23 23 19 19Z' fill='url(%23s)'/><circle cx='31' cy='18' r='2' fill='%2315803D'/></svg>");
+}
+
+@media (prefers-color-scheme: dark) {
+  .spicy-icon {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='b' x1='0.2' y1='0.1' x2='0.8' y2='0.9'><stop offset='0%25' stop-color='%23FFA5A5'/><stop offset='35%25' stop-color='%23F87171'/><stop offset='75%25' stop-color='%23DC2626'/><stop offset='100%25' stop-color='%23991B1B'/></linearGradient><linearGradient id='s' x1='0.3' y1='0' x2='0.7' y2='1'><stop offset='0%25' stop-color='%23BBF7D0'/><stop offset='50%25' stop-color='%234ADE80'/><stop offset='100%25' stop-color='%2316A34A'/></linearGradient><linearGradient id='h' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/><stop offset='55%25' stop-color='%23FFFFFF' stop-opacity='0.22'/><stop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/></linearGradient></defs><path d='M20 24C14 30 13 42 17 50C21 57 29 59 35 56C41 53 43 46 42 38C41 30 36 24 30 22C26 21 22 22 20 24Z' fill='url(%23b)'/><path d='M35 55C36 59 38 62 40 60C41 58 40 55 38 53Z' fill='%23991B1B'/><path d='M23 28C20 34 19 44 22 52C23 53 25 53 26 51C24 43 24 32 27 28C27 26 24 26 23 28Z' fill='url(%23h)'/><path d='M19 19L22 11L27 16L31 8L35 16L40 11L43 19C39 23 35 24 31 24C27 24 23 23 19 19Z' fill='url(%23s)'/><circle cx='31' cy='18' r='2' fill='%2316A34A'/></svg>");
+  }
+}

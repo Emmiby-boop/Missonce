@@ -1,0 +1,90 @@
+<wxs module="utils">
+var optimizeUrl = function(url, type) {
+  if (!url) return '';
+  // cloud:// 云文件ID直接返回，小程序原生组件处理最优
+  if (url.indexOf('cloud://') === 0) return url;
+
+  if (url.indexOf('http') === 0) {
+    // 已包含 imageMogr2 参数，跳过避免重复
+    if (url.indexOf('imageMogr2') > -1) return url;
+
+    // 头像 300px，壁纸/其他 500px
+    var size = type === 'avatar' ? '300x' : '500x';
+    var sep = url.indexOf('?') > -1 ? '&' : '?';
+
+    // GIF 不转 WebP，保持动画特性
+    if (url.indexOf('.gif') > -1) {
+      return url + sep + 'imageMogr2/thumbnail/' + size + '/interlace/1/quality/80';
+    }
+    return url + sep + 'imageMogr2/thumbnail/' + size + '/format/webp/interlace/1/quality/80';
+  }
+
+  return url;
+}
+
+// 检测 GIF
+var isGif = function(url) {
+  if (!url) return false;
+  var lower = url.toLowerCase();
+  return lower.indexOf('.gif') > -1;
+}
+module.exports = {
+  optimizeUrl: optimizeUrl,
+  isGif: isGif
+};
+</wxs>
+
+<!-- 🔥 P0-3 虚拟滚动占位符逻辑（当前未启用，保留以便未来启用 — 见 waterfall.js _updateVisibleRange 注释）。
+     启用时：enableVirtualScroll=true 时不可见项用占位符撑开高度，减少 DOM 节点。 -->
+<wxs module="vscroll">
+var getItemHeight = function(item, colWidth) {
+  if (!item || !colWidth) return 300;
+  if (item._cardType === 'quote') return colWidth * 0.6;
+  if (item._cardType === 'ad') return colWidth * 16 / 9;
+  var isAvatar = item.resourceType === 'avatar' || item.type === 'avatar';
+  return isAvatar ? colWidth : colWidth * 16 / 9;
+};
+module.exports = { getItemHeight: getItemHeight };
+</wxs>
+
+<view class="waterfall-container">
+<block wx:for="{{columns}}" wx:key="index" wx:for-item="col">
+  <view class="waterfall-column">
+    <block wx:for="{{col}}" wx:key="id" wx:for-item="item" wx:for-index="itemIndex">
+      <!-- 🔥 P0-3 虚拟滚动：不可见项用占位符撑开高度（当前未启用） -->
+      <view wx:if="{{enableVirtualScroll && (itemIndex < visibleStart || itemIndex > visibleEnd)}}"
+            class="waterfall-placeholder"
+            style="height:{{vscroll.getItemHeight(item, colWidth)}}px"></view>
+
+      <!-- 可见项正常渲染 -->
+      <block wx:else>
+        <!-- 灵感文案卡片 -->
+        <view class="waterfall-quote-card" wx:if="{{item._cardType === 'quote'}}" bindtap="onQuoteTap" data-item="{{item}}">
+          <view class="quote-text">{{item.text}}</view>
+          <view class="quote-sub">—— 灵感文案</view>
+        </view>
+
+        <!-- 广告卡片：宽度撑满列，高度由 <ad-custom> 自动等比例计算（官方文档要求，禁止强制高度） -->
+        <view class="waterfall-item waterfall-ad-card" wx:elif="{{item._cardType === 'ad'}}">
+          <ad-unit position="middle" kind="native" page-path="/pages/index/index" immediate="{{true}}" debug="{{false}}" ext-style="width:100%;"></ad-unit>
+        </view>
+
+        <!-- 资源卡片 -->
+        <view class="waterfall-item {{item.type === 'avatar' ? 'avatar-item' : 'wallpaper-item'}}" wx:else bindtap="onItemTap" data-item="{{item}}">
+          <image
+            class="waterfall-image"
+            src="{{utils.optimizeUrl(item.coverUrl || item.url, item.resourceType || item.type)}}"
+            mode="aspectFill"
+            lazy-load
+            binderror="onImageError"
+            data-item="{{item}}"
+          ></image>
+          <!-- 右下角标识：动态头像优先，否则显示类型标签 -->
+          <view class="type-tag type-tag-gif" wx:if="{{item.isGif || utils.isGif(item.coverUrl || item.url)}}">动态头像</view>
+          <view class="type-tag" wx:else>{{item.type === 'avatar' ? '头像' : '壁纸'}}</view>
+        </view>
+      </block>
+    </block>
+  </view>
+</block>
+</view>

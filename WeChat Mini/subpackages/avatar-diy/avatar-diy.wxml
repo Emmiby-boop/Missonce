@@ -1,0 +1,305 @@
+<view class="page">
+  <!-- 顶部导航 -->
+  <view class="topbar" style="padding-top: {{statusBarHeight}}px;">
+    <view class="topbar-inner">
+      <view class="icon-btn" bindtap="navigateBack">
+        <view class="icon icon-back"></view>
+      </view>
+      <view class="title">头像DIY</view>
+      <view class="placeholder"></view>
+    </view>
+  </view>
+
+  <!-- 预览区 -->
+  <view class="preview-section">
+    <view class="preview-canvas" style="width: {{previewSize}}px; height: {{previewSize}}px;">
+      <!-- 左侧旋转按钮（仅静态图模式） -->
+      <view class="util-btn util-left" wx:if="{{imageUrl && !isGifBase}}" bindtap="rotateImage">
+        <view class="icon icon-rotate"></view>
+      </view>
+      <!-- 右侧翻转按钮（仅静态图模式） -->
+      <view class="util-btn util-right" wx:if="{{imageUrl && !isGifBase}}" bindtap="flipImage">
+        <view class="icon icon-flip"></view>
+      </view>
+
+      <!-- GIF 底图预览（自动播放） -->
+      <image wx:if="{{isGifBase && imageUrl}}"
+             class="preview-img"
+             src="{{imageUrl}}"
+             mode="aspectFit"
+             style="width: {{previewSize}}px; height: {{previewSize}}px;" />
+      <!-- 静态图 canvas 预览 -->
+      <canvas
+        wx:else
+        type="2d"
+        id="avatarCanvas"
+        class="preview-canvas-el {{(currentTab === 'text' && overlayText) ? 'draggable' : ''}} {{currentFrame ? 'frame-active' : ''}}"
+        style="width: {{previewSize}}px; height: {{previewSize}}px;"
+        bindtouchstart="onTextDragStart"
+        bindtouchmove="onTextDragMove"
+        bindtouchend="onTextDragEnd"
+      ></canvas>
+
+      <!-- 用户上传头像框 overlay（可拖动+双指缩放） -->
+      <image
+        wx:if="{{currentFrame && frameUrl}}"
+        class="frame-overlay"
+        src="{{frameUrl}}"
+        mode="aspectFit"
+        style="left: {{frameX * 100}}%; top: {{frameY * 100}}%; transform: translate(-50%, -50%) scale({{frameScale}});"
+        catchtouchstart="onFrameDragStart"
+        catchtouchmove="onFrameDragMove"
+        catchtouchend="onFrameDragEnd"
+      />
+
+      <!-- GIF 标识 -->
+      <view class="gif-badge" wx:if="{{isGifBase && imageUrl}}">GIF</view>
+
+      <!-- 空状态 -->
+      <view class="empty-state" wx:if="{{!imageUrl}}" bindtap="onRechooseImage">
+        <view class="empty-icon-wrap">
+          <view class="icon icon-add-photo"></view>
+        </view>
+        <view class="empty-text">点击选择图片</view>
+        <view class="empty-hint">支持 JPG / PNG / GIF</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- GIF 模式提示 -->
+  <view class="gif-hint" wx:if="{{isGifBase && imageUrl}}">
+    GIF 模式：装饰效果将在生成时应用到每一帧
+  </view>
+
+  <!-- 隐藏的装饰层 canvas（云函数合成时用于渲染装饰层 PNG） -->
+  <canvas
+    type="2d"
+    id="decoCanvas"
+    class="deco-canvas"
+    style="width: {{outputSize}}px; height: {{outputSize}}px;"
+  ></canvas>
+
+  <!-- 工具栏 -->
+  <view class="tool-ribbon">
+    <view class="tool-ribbon-inner">
+      <view class="tool-item {{currentTab === 'select' ? 'active' : ''}}" data-tab="select" bindtap="switchTab">
+        <view class="icon icon-camera"></view>
+        <view class="tool-label">选图</view>
+      </view>
+      <view class="tool-item {{currentTab === 'border' ? 'active' : ''}}" data-tab="border" bindtap="switchTab">
+        <view class="icon icon-frame"></view>
+        <view class="tool-label">边框</view>
+      </view>
+      <view class="tool-item {{currentTab === 'text' ? 'active' : ''}}" data-tab="text" bindtap="switchTab">
+        <view class="icon icon-text"></view>
+        <view class="tool-label">文字</view>
+      </view>
+      <view class="tool-item {{currentTab === 'filter' ? 'active' : ''}}" data-tab="filter" bindtap="switchTab">
+        <view class="icon icon-sparkle"></view>
+        <view class="tool-label">滤镜</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 内容面板 -->
+  <scroll-view scroll-y class="content-panel" wx:if="{{currentTab !== 'select'}}">
+
+    <!-- 边框面板（预设 / 静态框 / 动态框） -->
+    <block wx:if="{{currentTab === 'border'}}">
+      <!-- 分类标签 -->
+      <view class="category-tabs">
+        <view class="category-tab {{borderCategory === 'preset' ? 'active' : ''}}" data-cat="preset" bindtap="switchBorderCategory">预设</view>
+        <view class="category-tab {{borderCategory === 'static' ? 'active' : ''}}" data-cat="static" bindtap="switchBorderCategory">静态框</view>
+        <view class="category-tab {{borderCategory === 'dynamic' ? 'active' : ''}}" data-cat="dynamic" bindtap="switchBorderCategory">动态框</view>
+      </view>
+
+      <!-- 预设头像框（13 种 canvas 绘制样式） -->
+      <view wx:if="{{borderCategory === 'preset'}}">
+        <view class="options-grid">
+          <view class="grid-item no-label {{currentPreset === 'none' ? 'active' : ''}}" data-preset="none" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-none-preview"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'white' ? 'active' : ''}}" data-preset="white" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-white"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'black' ? 'active' : ''}}" data-preset="black" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-black"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'pink' ? 'active' : ''}}" data-preset="pink" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-pink"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'purple' ? 'active' : ''}}" data-preset="purple" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-purple"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'polaroid' ? 'active' : ''}}" data-preset="polaroid" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-polaroid"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'vintage' ? 'active' : ''}}" data-preset="vintage" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-vintage"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'neon' ? 'active' : ''}}" data-preset="neon" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-neon"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'double' ? 'active' : ''}}" data-preset="double" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-double"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'dots' ? 'active' : ''}}" data-preset="dots" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-dots"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'rainbow' ? 'active' : ''}}" data-preset="rainbow" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-rainbow"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'petal' ? 'active' : ''}}" data-preset="petal" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-petal"></view>
+          </view>
+          <view class="grid-item no-label {{currentPreset === 'gold' ? 'active' : ''}}" data-preset="gold" bindtap="selectPresetFrame">
+            <view class="frame-preview frame-gold"></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 静态头像框（用户上传 PNG） -->
+      <view wx:if="{{borderCategory === 'static'}}">
+        <view class="options-grid" wx:if="{{staticFrames.length > 0}}">
+          <view class="grid-item frame-grid-item {{currentFrame && currentFrame._id === item._id ? 'active' : ''}}"
+                wx:for="{{staticFrames}}" wx:key="_id"
+                data-id="{{item._id}}" data-format="png" bindtap="selectCustomFrame">
+            <image class="frame-thumb-img" src="{{item.displayUrl}}" mode="aspectFit" />
+          </view>
+        </view>
+        <!-- 头像框缩放滑块（选中时显示） -->
+        <view class="slider-card" wx:if="{{currentFrame && frameFormat === 'png'}}">
+          <view class="slider-row">
+            <view class="slider-label">缩放</view>
+            <slider class="slider" min="0.3" max="3" step="0.05" value="{{frameScale}}" block-size="20" activeColor="#07c160" bindchange="onFrameScaleChange" bindchanging="onFrameScaleChanging" />
+            <view class="slider-value">{{frameScale}}</view>
+          </view>
+          <view class="drag-hint">
+            <view class="icon icon-drag"></view>
+            <view class="drag-hint-text">单指拖动位置 · 双指缩放大小</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 动态头像框（用户上传 GIF） -->
+      <view wx:if="{{borderCategory === 'dynamic'}}">
+        <view class="options-grid" wx:if="{{dynamicFrames.length > 0}}">
+          <view class="grid-item frame-grid-item {{currentFrame && currentFrame._id === item._id ? 'active' : ''}}"
+                wx:for="{{dynamicFrames}}" wx:key="_id"
+                data-id="{{item._id}}" data-format="gif" bindtap="selectCustomFrame">
+            <image class="frame-thumb-img" src="{{item.displayUrl}}" mode="aspectFit" />
+          </view>
+        </view>
+        <!-- 头像框缩放滑块（选中时显示） -->
+        <view class="slider-card" wx:if="{{currentFrame && frameFormat === 'gif'}}">
+          <view class="slider-row">
+            <view class="slider-label">缩放</view>
+            <slider class="slider" min="0.3" max="3" step="0.05" value="{{frameScale}}" block-size="20" activeColor="#07c160" bindchange="onFrameScaleChange" bindchanging="onFrameScaleChanging" />
+            <view class="slider-value">{{frameScale}}</view>
+          </view>
+          <view class="drag-hint">
+            <view class="icon icon-drag"></view>
+            <view class="drag-hint-text">单指拖动位置 · 双指缩放大小</view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 文字面板 -->
+    <block wx:if="{{currentTab === 'text'}}">
+      <view class="panel-title-row">
+        <view class="panel-title">添加文字</view>
+        <view class="clear-text-btn" wx:if="{{overlayText}}" bindtap="clearText">清除</view>
+      </view>
+      <view class="text-card">
+        <input class="text-input" placeholder="输入文字（如昵称、签名）" value="{{overlayText}}" bindinput="onTextInput" maxlength="20" />
+      </view>
+      <view class="option-row-card">
+        <view class="option-row-label">颜色</view>
+        <view class="color-dots">
+          <view class="color-dot {{textColor === '#fff' ? 'active' : ''}}" style="background:#fff" data-color="#fff" bindtap="selectTextColor"></view>
+          <view class="color-dot {{textColor === '#000' ? 'active' : ''}}" style="background:#000" data-color="#000" bindtap="selectTextColor"></view>
+          <view class="color-dot {{textColor === '#ff4d4f' ? 'active' : ''}}" style="background:#ff4d4f" data-color="#ff4d4f" bindtap="selectTextColor"></view>
+          <view class="color-dot {{textColor === '#07c160' ? 'active' : ''}}" style="background:#07c160" data-color="#07c160" bindtap="selectTextColor"></view>
+          <view class="color-dot {{textColor === '#1890ff' ? 'active' : ''}}" style="background:#1890ff" data-color="#1890ff" bindtap="selectTextColor"></view>
+          <view class="color-dot {{textColor === '#faad14' ? 'active' : ''}}" style="background:#faad14" data-color="#faad14" bindtap="selectTextColor"></view>
+        </view>
+      </view>
+      <view class="slider-card">
+        <view class="slider-row">
+          <view class="slider-label">字号</view>
+          <slider class="slider" min="12" max="48" value="{{textSize}}" block-size="20" activeColor="#07c160" bindchange="onTextSizeChange" />
+          <view class="slider-value">{{textSize}}px</view>
+        </view>
+      </view>
+      <view class="drag-hint" wx:if="{{overlayText}}">
+        <view class="icon icon-drag"></view>
+        <view class="drag-hint-text">在上方预览区拖动文字可自由调整位置</view>
+      </view>
+    </block>
+
+    <!-- 滤镜面板 -->
+    <block wx:if="{{currentTab === 'filter'}}">
+      <view class="panel-title">选择滤镜</view>
+      <scroll-view scroll-x class="filter-scroll" enable-flex>
+        <view class="filter-list">
+          <view class="filter-thumb {{currentFilter === item.key ? 'active' : ''}}"
+                wx:for="{{filterOptions}}" wx:key="key"
+                data-filter="{{item.key}}" bindtap="selectFilter">
+            <image class="filter-thumb-img"
+                   src="{{imageUrl}}"
+                   mode="aspectFill"
+                   style="filter: {{item.cssFilter}}" />
+            <view class="filter-thumb-label">{{item.name}}</view>
+            <view class="filter-check" wx:if="{{currentFilter === item.key}}"></view>
+          </view>
+        </view>
+      </scroll-view>
+    </block>
+  </scroll-view>
+
+  <!-- 选图面板 -->
+  <view class="select-panel" wx:if="{{currentTab === 'select'}}">
+    <view class="select-empty-hint" wx:if="{{!imageUrl}}">
+      <view class="icon icon-add-photo"></view>
+      <view class="select-empty-text">点击上方预览区选择图片</view>
+      <view class="select-empty-sub">支持 JPG / PNG / GIF 格式</view>
+    </view>
+
+    <block wx:if="{{imageUrl}}">
+      <view class="select-rechoose-btn" bindtap="onRechooseImage">
+        <view class="icon icon-camera"></view>
+        <view>重新选择图片</view>
+      </view>
+
+      <view class="gif-params" wx:if="{{isGifBase}}">
+        <view class="panel-title">GIF 参数</view>
+        <view class="slider-card">
+          <view class="slider-row">
+            <view class="slider-label">帧延迟</view>
+            <slider class="slider" min="50" max="500" step="10" value="{{gifFrameDelay}}" block-size="20" activeColor="#07c160" bindchange="onGifFrameDelayChange" />
+            <view class="slider-value">{{gifFrameDelay}}ms</view>
+          </view>
+        </view>
+        <view class="slider-card">
+          <view class="slider-row">
+            <view class="slider-label">最大帧数</view>
+            <slider class="slider" min="5" max="30" step="1" value="{{maxFrames}}" block-size="20" activeColor="#07c160" bindchange="onMaxFramesChange" />
+            <view class="slider-value">{{maxFrames}}帧</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="reset-row">
+        <view class="reset-btn" bindtap="resetAll">重置所有</view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 底部固定保存按钮 -->
+  <view class="bottom-save-bar" wx:if="{{imageUrl}}">
+    <button class="primary-btn bottom-save-btn" bindtap="saveImage" disabled="{{isGenerating}}">
+      {{isGenerating ? '制作中...' : (isGifBase || currentFrame ? '制作头像' : '保存到相册')}}
+    </button>
+  </view>
+</view>

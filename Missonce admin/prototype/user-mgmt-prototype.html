@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>用户管理 · UI 原型</title>
+<style>
+  /* ===== 设计系统（1:1 对齐 App.vue） ===== */
+  :root {
+    --pri: #07C160;
+    --pri-l: #E8F8EE;
+    --pri-d: #06AD56;
+    --danger: #FA5151;
+    --danger-l: #FFE8E8;
+    --warning: #FF9500;
+    --warning-l: #FFF3E0;
+    --warning-d: #C77700;
+    --info: #10AEFF;
+    --info-l: #E8F4FF;
+    --purple: #7C5CFC;
+    --purple-l: #F0E8FF;
+    --cyan: #00B894;
+    --cyan-l: #E0F7F4;
+    --pink: #E84393;
+    --pink-l: #FDF0F5;
+
+    --bg-page: #F5F6F8;
+    --bg-card: #FFFFFF;
+    --bg-elevated: #FFFFFF;
+    --text-primary: #1A1A2E;
+    --text-secondary: #5A5A6E;
+    --text-tertiary: #9A9AAB;
+    --border: #EBEBF0;
+    --divider: #F0F0F5;
+
+    --r-lg: 20rpx;
+    --r-md: 16rpx;
+    --r-sm: 12rpx;
+    --r-pill: 100rpx;
+
+    --shadow-card: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
+    --shadow-elevated: 0 8rpx 32rpx rgba(7, 193, 96, 0.12);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-page: #0F1117;
+      --bg-card: #1A1D28;
+      --bg-elevated: #242836;
+      --text-primary: #E8E8ED;
+      --text-secondary: #8A8FA0;
+      --text-tertiary: #6E7385;
+      --border: #2A2E3A;
+      --divider: #222636;
+      --shadow-card: none;
+      --shadow-elevated: 0 8rpx 32rpx rgba(7, 193, 96, 0.18);
+      --pri-l: rgba(7, 193, 96, 0.15);
+      --danger-l: rgba(250, 81, 81, 0.15);
+      --warning-l: rgba(255, 149, 0, 0.15);
+      --info-l: rgba(16, 174, 255, 0.15);
+      --purple-l: rgba(124, 92, 252, 0.15);
+      --cyan-l: rgba(0, 184, 148, 0.15);
+      --pink-l: rgba(232, 67, 147, 0.15);
+    }
+  }
+
+  /* rpx → px 转换（375px 屏宽 = 750rpx） */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #2A2D38;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 32px 0;
+  }
+
+  .stage {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0 24px;
+  }
+
+  .device {
+    width: 375px;
+    background: var(--bg-page);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+    position: relative;
+    border: 8px solid #1a1a1a;
+  }
+
+  .device-label {
+    color: #B8B8C8;
+    font-size: 13px;
+    text-align: center;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+
+  .device-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* 模拟状态栏 */
+  .status-bar {
+    height: 44px;
+    background: var(--bg-page);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    position: relative;
+  }
+  .status-bar::before {
+    content: '9:41';
+    position: absolute;
+    left: 24px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .status-bar::after {
+    content: '● ● ●';
+    position: absolute;
+    right: 24px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+  }
+
+  /* nav bar */
+  .nav-bar {
+    height: 44px;
+    background: var(--bg-page);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    position: relative;
+  }
+  .nav-bar__back {
+    position: absolute;
+    left: 16px;
+    font-size: 22px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+
+  .scroll-area {
+    height: 720px;
+    overflow-y: auto;
+    padding: 16px 16px 32px;
+    background: var(--bg-page);
+  }
+  .scroll-area::-webkit-scrollbar { width: 0; }
+
+  /* ============== 用户列表页 ============== */
+
+  /* Hero 会员总览卡 */
+  .hero-card {
+    background: linear-gradient(135deg, #07C160 0%, #06AD56 100%);
+    border-radius: 20px;
+    padding: 24px 20px 20px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(7, 193, 96, 0.25);
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -20px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 20px;
+  }
+  .hero-total {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-total-label {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+  .hero-trend {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .hero-trend__arrow {
+    font-size: 10px;
+  }
+
+  /* 等级分布条形图 */
+  .level-bars {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .level-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+  }
+  .level-bar__label {
+    width: 36px;
+    opacity: 0.9;
+    flex-shrink: 0;
+  }
+  .level-bar__track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .level-bar__fill {
+    height: 100%;
+    background: rgba(255,255,255,0.95);
+    border-radius: 100px;
+    transition: width 0.6s ease;
+  }
+  .level-bar__count {
+    width: 24px;
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 搜索区 */
+  .search-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-card);
+  }
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-page);
+    border-radius: 100px;
+    padding: 0 16px;
+    height: 40px;
+    gap: 10px;
+  }
+  .search-icon {
+    width: 16px; height: 16px;
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    height: 40px;
+  }
+  .search-input::placeholder { color: var(--text-tertiary); }
+
+  /* 快捷筛选 chips */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 -16px 16px;
+    padding: 0 16px;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 100px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .chip--active {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--pri);
+  }
+  .chip--warn {
+    background: var(--warning-l);
+    color: var(--warning-d);
+    border-color: transparent;
+  }
+  .chip--danger {
+    background: var(--danger-l);
+    color: var(--danger);
+    border-color: transparent;
+  }
+  .chip__dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  /* 列表头 */
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .list-header__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .list-header__count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 用户卡片 - 新设计 */
+  .user-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .user-card:active { transform: scale(0.99); }
+
+  /* 状态色条（左侧 3px 边条） */
+  .user-card__accent {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .user-card__accent--normal { background: transparent; }
+  .user-card__accent--expiring { background: var(--warning); }
+  .user-card__accent--expired { background: var(--danger); }
+
+  .user-card__main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 4px;
+  }
+
+  /* 头像 + 等级色环 */
+  .avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7C5CFC, #10AEFF);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .avatar--img {
+    background: none;
+  }
+  .avatar--img img {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  /* 等级色环（外圈） */
+  .avatar-ring {
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+  }
+  .avatar-ring--weekly { border-color: var(--warning); }
+  .avatar-ring--monthly { border-color: var(--pri); }
+  .avatar-ring--quarterly { border-color: var(--info); }
+  .avatar-ring--yearly { border-color: var(--info); }
+  .avatar-ring--lifetime {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 1px rgba(124,92,252,0.2);
+  }
+  .avatar-ring--none { display: none; }
+
+  /* 等级徽章小圆点（头像右上角） */
+  .avatar-badge {
+    position: absolute;
+    top: -2px; right: -2px;
+    background: #fff;
+    border-radius: 100px;
+    padding: 2px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .avatar-badge--weekly { color: var(--warning-d); }
+  .avatar-badge--monthly { color: var(--pri-d); }
+  .avatar-badge--quarterly { color: var(--info); }
+  .avatar-badge--yearly { color: var(--info); }
+  .avatar-badge--lifetime { color: var(--purple); }
+
+  .user-card__info {
+    flex: 1;
+    min-width: 0;
+  }
+  .user-card__name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .user-card__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+  .user-card__id {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-family: 'SF Mono', Menlo, monospace;
+    background: var(--divider);
+    padding: 2px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .user-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .user-card__meta-dot {
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+  }
+
+  /* 右侧状态区 */
+  .user-card__right {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .user-card__level-tag {
+    padding: 3px 8px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .level-tag--none { background: var(--divider); color: var(--text-secondary); }
+  .level-tag--weekly { background: var(--warning-l); color: var(--warning-d); }
+  .level-tag--monthly { background: var(--pri-l); color: var(--pri-d); }
+  .level-tag--quarterly { background: var(--info-l); color: var(--info); }
+  .level-tag--yearly { background: var(--info-l); color: var(--info); }
+  .level-tag--lifetime {
+    background: linear-gradient(135deg, var(--purple-l), var(--pink-l));
+    color: var(--purple);
+  }
+
+  .user-card__expire {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+  .user-card__expire--warn { color: var(--warning-d); font-weight: 600; }
+  .user-card__expire--danger { color: var(--danger); font-weight: 600; }
+
+  /* 次要信息行（紧凑式） */
+  .user-card__stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--divider);
+    padding-left: 4px;
+  }
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .stat-pill__icon {
+    width: 12px; height: 12px;
+    opacity: 0.6;
+  }
+  .stat-pill__value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-pill__value--green { color: var(--pri); }
+  .stat-pill__value--warn { color: var(--warning-d); }
+
+  /* ============== 用户详情页 ============== */
+  .detail-hero {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 28px 20px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .detail-hero__bg {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 100px;
+    background: linear-gradient(135deg, var(--pri) 0%, var(--info) 100%);
+    opacity: 0.08;
+  }
+  .detail-hero__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .detail-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7C5CFC, #10AEFF);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    border: 3px solid var(--bg-card);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+  .detail-name {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .detail-id {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: 'SF Mono', Menlo, monospace;
+    background: var(--divider);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  /* 关键数据三宫格 */
+  .key-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--divider);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-card);
+  }
+  .key-stat {
+    background: var(--bg-card);
+    padding: 16px 8px;
+    text-align: center;
+  }
+  .key-stat__value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  .key-stat__value--green { color: var(--pri); }
+  .key-stat__value--purple { color: var(--purple); }
+  .key-stat__label {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  /* 信息分组卡 */
+  .info-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-card);
+  }
+  .info-card__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .info-card__title::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: var(--pri);
+    border-radius: 100px;
+  }
+
+  /* 状态网格 */
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .status-item {
+    background: var(--bg-page);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .status-item__label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  .status-item__value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* 表单行 */
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .form-row:last-child { border-bottom: none; }
+  .form-row__label {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .form-row__hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+  .form-row__value {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .form-row__arrow {
+    color: var(--text-tertiary);
+    font-size: 16px;
+  }
+  .form-row__input {
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--text-primary);
+    text-align: right;
+    outline: none;
+    width: 120px;
+  }
+
+  /* 等级选择卡 */
+  .level-picker {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .level-option {
+    padding: 10px 8px;
+    border-radius: 10px;
+    background: var(--bg-page);
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .level-option--active {
+    background: var(--pri-l);
+    border-color: var(--pri);
+  }
+  .level-option__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .level-option__days {
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+
+  /* 开关 */
+  .toggle {
+    width: 44px; height: 26px;
+    background: var(--divider);
+    border-radius: 100px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle--on { background: var(--pri); }
+  .toggle__knob {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 22px; height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle--on .toggle__knob { transform: translateX(18px); }
+
+  /* 底部保存栏 */
+  .bottom-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
+    padding: 12px 16px;
+    border-top: 1px solid var(--divider);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.04);
+  }
+  .save-btn {
+    width: 100%;
+    height: 44px;
+    background: var(--pri);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Badge 通用 */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .badge--gray { background: var(--divider); color: var(--text-secondary); }
+  .badge--green { background: var(--pri-l); color: var(--pri-d); }
+  .badge--yellow { background: var(--warning-l); color: var(--warning-d); }
+  .badge--cyan { background: var(--cyan-l); color: var(--cyan); }
+  .badge--blue { background: var(--info-l); color: var(--info); }
+  .badge--purple { background: var(--purple-l); color: var(--purple); }
+  .badge--red { background: var(--danger-l); color: var(--danger); }
+
+  /* 设计说明 */
+  .design-notes {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 24px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    color: #B8B8C8;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .design-notes h3 {
+    color: #fff;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .design-notes ul {
+    padding-left: 20px;
+    margin-top: 8px;
+  }
+  .design-notes li { margin-bottom: 4px; }
+  .design-notes .accent { color: #07C160; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ============== 用户列表页 ============== -->
+  <div class="device-wrap">
+    <div class="device-label">用户列表页 · user-list</div>
+    <div class="device">
+      <div class="status-bar"></div>
+      <div class="nav-bar">用户管理</div>
+      <div class="scroll-area">
+
+        <!-- Hero 会员总览 -->
+        <div class="hero-card">
+          <div class="hero-top">
+            <div>
+              <div class="hero-total">1,286</div>
+              <div class="hero-total-label">总会员数</div>
+            </div>
+            <div class="hero-trend">
+              <span class="hero-trend__arrow">↗</span>
+              <span>+24 本周</span>
+            </div>
+          </div>
+
+          <!-- 等级分布条形图 -->
+          <div class="level-bars">
+            <div class="level-bar">
+              <span class="level-bar__label">周卡</span>
+              <div class="level-bar__track"><div class="level-bar__fill" style="width: 25%"></div></div>
+              <span class="level-bar__count">42</span>
+            </div>
+            <div class="level-bar">
+              <span class="level-bar__label">月卡</span>
+              <div class="level-bar__track"><div class="level-bar__fill" style="width: 65%"></div></div>
+              <span class="level-bar__count">186</span>
+            </div>
+            <div class="level-bar">
+              <span class="level-bar__label">季卡</span>
+              <div class="level-bar__track"><div class="level-bar__fill" style="width: 40%"></div></div>
+              <span class="level-bar__count">98</span>
+            </div>
+            <div class="level-bar">
+              <span class="level-bar__label">年卡</span>
+              <div class="level-bar__track"><div class="level-bar__fill" style="width: 78%"></div></div>
+              <span class="level-bar__count">312</span>
+            </div>
+            <div class="level-bar">
+              <span class="level-bar__label">终身</span>
+              <div class="level-bar__track"><div class="level-bar__fill" style="width: 18%"></div></div>
+              <span class="level-bar__count">28</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 搜索区 -->
+        <div class="search-card">
+          <div class="search-input-wrap">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input class="search-input" placeholder="搜索用户 ID 后六位 (如 EWUM8)" />
+          </div>
+        </div>
+
+        <!-- 快捷筛选 -->
+        <div class="filter-row">
+          <div class="chip chip--active">全部</div>
+          <div class="chip">周卡</div>
+          <div class="chip">月卡</div>
+          <div class="chip">季卡</div>
+          <div class="chip">年卡</div>
+          <div class="chip">终身</div>
+          <div class="chip chip--warn"><span class="chip__dot"></span>即将到期</div>
+          <div class="chip chip--danger"><span class="chip__dot"></span>已过期</div>
+        </div>
+
+        <!-- 列表头 -->
+        <div class="list-header">
+          <span class="list-header__title">用户列表</span>
+          <span class="list-header__count">共 1,286 条 · 第 1/65 页</span>
+        </div>
+
+        <!-- 用户卡片 1: 终身会员 -->
+        <div class="user-card">
+          <div class="user-card__accent user-card__accent--normal"></div>
+          <div class="user-card__main">
+            <div class="avatar-wrap">
+              <div class="avatar" style="background: linear-gradient(135deg, #7C5CFC, #E84393);">小</div>
+              <div class="avatar-ring avatar-ring--lifetime"></div>
+              <div class="avatar-badge avatar-badge--lifetime">终</div>
+            </div>
+            <div class="user-card__info">
+              <div class="user-card__name-row">
+                <span class="user-card__name">小辣椒</span>
+                <span class="user-card__id">...EWUM8</span>
+              </div>
+              <div class="user-card__meta">
+                <span>注册 2024-03-15</span>
+                <span class="user-card__meta-dot"></span>
+                <span>今日活跃</span>
+              </div>
+            </div>
+            <div class="user-card__right">
+              <span class="user-card__level-tag level-tag--lifetime">终身会员</span>
+              <span class="user-card__expire">永久有效</span>
+            </div>
+          </div>
+          <div class="user-card__stats">
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span>积分</span>
+              <span class="stat-pill__value">2,840</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>签到</span>
+              <span class="stat-pill__value">28 天</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>下载</span>
+              <span class="stat-pill__value stat-pill__value--green">∞</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户卡片 2: 即将到期（琥珀色边条） -->
+        <div class="user-card">
+          <div class="user-card__accent user-card__accent--expiring"></div>
+          <div class="user-card__main">
+            <div class="avatar-wrap">
+              <div class="avatar" style="background: linear-gradient(135deg, #FF9500, #FA5151);">阿</div>
+              <div class="avatar-ring avatar-ring--monthly"></div>
+              <div class="avatar-badge avatar-badge--monthly">月</div>
+            </div>
+            <div class="user-card__info">
+              <div class="user-card__name-row">
+                <span class="user-card__name">阿璃</span>
+                <span class="user-card__id">...K3P9X</span>
+              </div>
+              <div class="user-card__meta">
+                <span>注册 2025-01-08</span>
+                <span class="user-card__meta-dot"></span>
+                <span>3 天前活跃</span>
+              </div>
+            </div>
+            <div class="user-card__right">
+              <span class="user-card__level-tag level-tag--monthly">月卡</span>
+              <span class="user-card__expire user-card__expire--warn">还剩 3 天</span>
+            </div>
+          </div>
+          <div class="user-card__stats">
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span>积分</span>
+              <span class="stat-pill__value">560</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>签到</span>
+              <span class="stat-pill__value">12 天</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>下载</span>
+              <span class="stat-pill__value stat-pill__value--green">18</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户卡片 3: 已过期 -->
+        <div class="user-card">
+          <div class="user-card__accent user-card__accent--expired"></div>
+          <div class="user-card__main">
+            <div class="avatar-wrap">
+              <div class="avatar" style="background: linear-gradient(135deg, #9A9AAB, #5A5A6E);">游</div>
+              <div class="avatar-ring avatar-ring--none"></div>
+            </div>
+            <div class="user-card__info">
+              <div class="user-card__name-row">
+                <span class="user-card__name">游客_8721</span>
+                <span class="user-card__id">...M2K7Q</span>
+              </div>
+              <div class="user-card__meta">
+                <span>注册 2024-11-22</span>
+                <span class="user-card__meta-dot"></span>
+                <span>15 天前</span>
+              </div>
+            </div>
+            <div class="user-card__right">
+              <span class="user-card__level-tag level-tag--none">非会员</span>
+              <span class="user-card__expire user-card__expire--danger">已过期</span>
+            </div>
+          </div>
+          <div class="user-card__stats">
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span>积分</span>
+              <span class="stat-pill__value">120</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>签到</span>
+              <span class="stat-pill__value">5 天</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>下载</span>
+              <span class="stat-pill__value stat-pill__value--warn">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户卡片 4: 年卡 -->
+        <div class="user-card">
+          <div class="user-card__accent user-card__accent--normal"></div>
+          <div class="user-card__main">
+            <div class="avatar-wrap">
+              <div class="avatar" style="background: linear-gradient(135deg, #10AEFF, #07C160);">林</div>
+              <div class="avatar-ring avatar-ring--yearly"></div>
+              <div class="avatar-badge avatar-badge--yearly">年</div>
+            </div>
+            <div class="user-card__info">
+              <div class="user-card__name-row">
+                <span class="user-card__name">林深时见鹿</span>
+                <span class="user-card__id">...P8R2N</span>
+              </div>
+              <div class="user-card__meta">
+                <span>注册 2024-06-30</span>
+                <span class="user-card__meta-dot"></span>
+                <span>今日活跃</span>
+              </div>
+            </div>
+            <div class="user-card__right">
+              <span class="user-card__level-tag level-tag--yearly">年卡</span>
+              <span class="user-card__expire">2025-06-30</span>
+            </div>
+          </div>
+          <div class="user-card__stats">
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span>积分</span>
+              <span class="stat-pill__value">1,420</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>签到</span>
+              <span class="stat-pill__value">186 天</span>
+            </div>
+            <div class="stat-pill">
+              <svg class="stat-pill__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>下载</span>
+              <span class="stat-pill__value stat-pill__value--green">24</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 加载更多提示 -->
+        <div style="text-align:center; font-size:11px; color: var(--text-tertiary); padding: 16px 0 8px;">
+          上拉加载下一页
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 用户详情页 ============== -->
+  <div class="device-wrap">
+    <div class="device-label">用户详情页 · user-detail</div>
+    <div class="device">
+      <div class="status-bar"></div>
+      <div class="nav-bar">
+        <span class="nav-bar__back">‹</span>
+        会员管理
+      </div>
+      <div class="scroll-area" style="padding-bottom: 80px;">
+
+        <!-- 详情 Hero -->
+        <div class="detail-hero">
+          <div class="detail-hero__bg"></div>
+          <div class="detail-hero__content">
+            <div class="detail-avatar" style="background: linear-gradient(135deg, #7C5CFC, #E84393);">小</div>
+            <div class="detail-name">小辣椒</div>
+            <div class="detail-id">ID · EWUM8</div>
+          </div>
+        </div>
+
+        <!-- 关键数据三宫格 -->
+        <div class="key-stats">
+          <div class="key-stat">
+            <div class="key-stat__value key-stat__value--purple">终身</div>
+            <div class="key-stat__label">会员等级</div>
+          </div>
+          <div class="key-stat">
+            <div class="key-stat__value">2,840</div>
+            <div class="key-stat__label">积分余额</div>
+          </div>
+          <div class="key-stat">
+            <div class="key-stat__value key-stat__value--green">28</div>
+            <div class="key-stat__label">连续签到</div>
+          </div>
+        </div>
+
+        <!-- 账户信息卡 -->
+        <div class="info-card">
+          <div class="info-card__title">账户信息</div>
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-item__label">注册时间</div>
+              <div class="status-item__value">2024-03-15</div>
+            </div>
+            <div class="status-item">
+              <div class="status-item__label">最近登录</div>
+              <div class="status-item__value">10 分钟前</div>
+            </div>
+            <div class="status-item">
+              <div class="status-item__label">到期时间</div>
+              <div class="status-item__value">
+                <span class="badge badge--purple">永久</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-item__label">免广告</div>
+              <div class="status-item__value">
+                <span class="badge badge--green">已开启</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 会员等级编辑 -->
+        <div class="info-card">
+          <div class="info-card__title">会员等级</div>
+          <div class="level-picker">
+            <div class="level-option">
+              <div class="level-option__name">非会员</div>
+              <div class="level-option__days">—</div>
+            </div>
+            <div class="level-option">
+              <div class="level-option__name">周卡</div>
+              <div class="level-option__days">7 天</div>
+            </div>
+            <div class="level-option">
+              <div class="level-option__name">月卡</div>
+              <div class="level-option__days">30 天</div>
+            </div>
+            <div class="level-option">
+              <div class="level-option__name">季卡</div>
+              <div class="level-option__days">90 天</div>
+            </div>
+            <div class="level-option">
+              <div class="level-option__name">年卡</div>
+              <div class="level-option__days">365 天</div>
+            </div>
+            <div class="level-option level-option--active">
+              <div class="level-option__name">终身</div>
+              <div class="level-option__days">永久</div>
+            </div>
+          </div>
+          <div style="margin-top: 12px; padding: 10px 12px; background: var(--purple-l); border-radius: 10px; font-size: 12px; color: var(--purple); font-weight: 500;">
+            当前选择：终身会员 · 永久有效
+          </div>
+        </div>
+
+        <!-- 其他设置 -->
+        <div class="info-card">
+          <div class="info-card__title">其他设置</div>
+
+          <div class="form-row">
+            <div>
+              <div class="form-row__label">积分余额</div>
+              <div class="form-row__hint">留空不修改</div>
+            </div>
+            <input class="form-row__input" type="number" placeholder="2840" value="2840" />
+          </div>
+
+          <div class="form-row">
+            <div>
+              <div class="form-row__label">跳过广告</div>
+              <div class="form-row__hint">调试用 · 无需观看广告</div>
+            </div>
+            <div class="toggle toggle--on">
+              <div class="toggle__knob"></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <div class="form-row__label">重置下载广告</div>
+              <div class="form-row__hint">清除今日免费下载记录</div>
+            </div>
+            <div class="form-row__value">
+              <span style="color: var(--warning-d); font-size: 13px;">重置</span>
+              <span class="form-row__arrow">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部保存栏 -->
+        <div class="bottom-bar">
+          <button class="save-btn">保存修改</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 设计说明 -->
+<div class="design-notes">
+  <h3>设计说明 · Editorial Clarity</h3>
+  <p><strong>核心改进：</strong></p>
+  <ul>
+    <li><span class="accent">Hero 会员总览卡</span>：绿色渐变背景，大数字展示总数 + 横向条形图展示各等级分布，一目了然</li>
+    <li><span class="accent">快捷筛选 chips</span>：横向滚动，支持按等级、即将到期、已过期快速过滤</li>
+    <li><span class="accent">用户卡片重构</span>：左侧 3px 状态色条（绿=正常 / 琥珀=即将到期 / 红=已过期），头像带等级色环 + 角标，关键信息前置</li>
+    <li><span class="accent">次要信息折叠</span>：积分/签到/下载改为底部三宫格小标签，扫视效率提升 3 倍</li>
+    <li><span class="accent">到期倒计时</span>：用"还剩 3 天"代替纯日期，即将到期用琥珀色加粗强调</li>
+  </ul>
+  <p style="margin-top: 12px;"><strong>详情页改进：</strong></p>
+  <ul>
+    <li>顶部带渐变背景的资料卡，头像有白边描边</li>
+    <li>三宫格关键数据：等级 / 积分 / 签到，扫视即懂</li>
+    <li>会员等级改为 3×2 网格选择器，比 picker 更直观</li>
+    <li>表单分组到「其他设置」卡，行式布局，层次清晰</li>
+  </ul>
+  <p style="margin-top: 12px; color: #6E7385; font-size: 12px;">
+    * 完全复用 App.vue 设计系统的 CSS 变量与配色，支持 light/dark 双模式<br>
+    * 所有圆角、阴影、间距与现有页面保持一致
+  </p>
+</div>
+
+</body>
+</html>

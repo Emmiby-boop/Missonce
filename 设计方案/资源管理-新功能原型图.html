@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Missonce Admin — 资源管理新功能 UI 原型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --pri:#07C160;--pri-l:#E8F8EE;--pri-d:#06AD56;
+  --red:#FA5151;--red-l:#FFE8E8;
+  --org:#FF9500;--org-l:#FFF3E0;
+  --blu:#10AEFF;--blu-l:#E8F4FF;
+  --pur:#7C5CFC;--pur-l:#F0E8FF;
+  --bg:#F5F6F8;--card:#FFF;--tx:#1A1A2E;--tx2:#8C8CA1;--tx3:#B8B8C8;--bd:#EBEBF0;--dv:#F0F0F5;
+  --r:14px;--rs:10px;--sk:#EDEDF2;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Noto Sans CJK SC',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+
+.header{background:var(--card);padding:28px 40px;border-bottom:1px solid var(--bd);}
+.header h1{font-size:22px;font-weight:700;color:var(--tx);}
+.header p{font-size:14px;color:var(--tx2);margin-top:6px;line-height:1.6;}
+.header .tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.header .tag{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;background:var(--pri-l);color:var(--pri-d);}
+
+.wrap{display:flex;gap:28px;padding:28px 40px;overflow-x:auto;align-items:flex-start;flex-wrap:wrap;}
+.phone{flex-shrink:0;width:326px;height:660px;background:#111;border-radius:40px;padding:8px;position:relative;margin-bottom:40px;}
+.phone-label{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:var(--tx2);white-space:nowrap;}
+.screen{width:100%;height:100%;background:var(--bg);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.statusbar{height:40px;background:var(--card);display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 6px;font-size:11px;font-weight:600;color:var(--tx);flex-shrink:0;}
+.statusbar .time{font-size:13px;font-weight:700;}
+.statusbar .icons{display:flex;gap:4px;align-items:center;}
+.statusbar .icons svg{width:14px;height:14px;}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:#111;border-radius:11px;z-index:20;}
+
+.navbar{height:44px;background:var(--card);display:flex;align-items:center;padding:0 8px;border-bottom:0.5px solid var(--bd);flex-shrink:0;position:relative;}
+.navbar .nav-back{width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-back svg{width:22px;height:22px;color:var(--tx);}
+.navbar .nav-title{position:absolute;left:50%;transform:translateX(-50%);font-size:16px;font-weight:600;color:var(--tx);}
+.navbar .nav-action{position:absolute;right:8px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-action svg{width:20px;height:20px;color:var(--tx2);}
+
+.pg{flex:1;overflow-y:auto;background:var(--bg);padding:12px 14px 80px;}
+.pg::-webkit-scrollbar{display:none;}
+
+/* Filter bars */
+.fbar{display:flex;gap:8px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;}
+.fbar::-webkit-scrollbar{display:none;}
+.fchip{padding:6px 14px;border-radius:100px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--card);color:var(--tx2);border:1px solid var(--dv);cursor:pointer;transition:.2s;flex-shrink:0;display:flex;align-items:center;gap:4px;}
+.fchip.on{background:var(--pri-l);color:var(--pri);border-color:var(--pri);}
+.fchip .cnt{font-size:10px;opacity:.7;}
+
+/* Resource grid card */
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.rcard{background:var(--card);border-radius:var(--r);overflow:hidden;position:relative;cursor:pointer;transition:.2s;}
+.rcard:active{background:#f2f3f5;}
+.rcard.selected{box-shadow:0 0 0 2px var(--pri);}
+.rcard .cover{position:relative;width:100%;padding-bottom:125%;overflow:hidden;}
+.rcard .cover-grad{position:absolute;inset:0;}
+.rcard .cov-b{position:absolute;bottom:0;left:0;right:0;padding:24px 8px 7px;background:linear-gradient(to top,rgba(0,0,0,.62),transparent);}
+.cov-tl{position:absolute;top:6px;left:6px;z-index:3;}
+.cov-tr{position:absolute;top:6px;right:6px;z-index:3;}
+.spill{padding:2px 8px;border-radius:100px;font-size:9px;font-weight:600;backdrop-filter:blur(8px);}
+.spill.pub{background:rgba(7,193,96,.85);color:#fff;}
+.spill.rev{background:rgba(255,149,0,.9);color:#fff;}
+.spill.off{background:rgba(148,163,184,.85);color:#fff;}
+.spill.draft{background:rgba(148,163,184,.7);color:#fff;}
+.aibadge{padding:2px 6px;border-radius:100px;font-size:8px;font-weight:700;display:flex;align-items:center;gap:2px;backdrop-filter:blur(8px);}
+.aibadge.ok{background:rgba(7,193,96,.9);color:#fff;}
+.aibadge.pro{background:rgba(16,174,255,.92);color:#fff;}
+.aibadge.fail{background:rgba(250,81,81,.92);color:#fff;}
+.aibadge svg{width:9px;height:9px;}
+.rtitle{font-size:12px;font-weight:600;color:#fff;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rstat{font-size:9px;color:rgba(255,255,255,.82);margin-top:2px;display:flex;gap:8px;align-items:center;}
+.rstat svg{width:10px;height:10px;vertical-align:-1px;}
+.check-btn{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.35);border:1.5px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;z-index:4;cursor:pointer;}
+.check-btn.on{background:var(--pri);border-color:var(--pri);}
+.check-btn svg{width:12px;height:12px;color:#fff;display:none;}
+.check-btn.on svg{display:block;}
+
+/* FAB */
+.fab{position:absolute;bottom:74px;right:14px;width:48px;height:48px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(7,193,96,.35);cursor:pointer;z-index:10;}
+.fab svg{width:22px;height:22px;color:#fff;}
+
+/* Modal */
+.modal-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:50;}
+.modal-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;padding:0 0 20px;max-height:90%;display:flex;flex-direction:column;z-index:51;animation:slideUp .25s ease-out;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:0.5px solid var(--dv);flex-shrink:0;}
+.modal-head .m-title{font-size:16px;font-weight:600;color:var(--tx);}
+.modal-head .m-close{width:32px;height:32px;border-radius:50%;background:var(--dv);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.modal-head .m-close svg{width:16px;height:16px;color:var(--tx2);}
+.modal-body{flex:1;overflow-y:auto;padding:14px 18px;}
+.modal-body::-webkit-scrollbar{display:none;}
+.modal-foot{flex-shrink:0;padding:12px 18px 0;border-top:0.5px solid var(--dv);display:flex;gap:10px;}
+
+.tip{font-size:11px;color:var(--tx2);background:var(--pri-l);padding:8px 12px;border-radius:8px;line-height:1.5;margin-bottom:14px;}
+.tip b{color:var(--pri-d);}
+.fgrp{margin-bottom:14px;}
+.fgrp .f-lbl{font-size:12px;font-weight:600;color:var(--tx);margin-bottom:7px;display:flex;align-items:center;gap:4px;}
+.fgrp .f-lbl .req{color:var(--red);}
+.fgrp .f-lbl .f-hint{font-size:10px;color:var(--tx3);font-weight:400;margin-left:auto;}
+.f-input{width:100%;height:40px;border-radius:10px;border:1px solid var(--bd);padding:0 12px;font-size:13px;color:var(--tx);background:var(--card);outline:none;display:flex;align-items:center;}
+.cover-preview{width:100%;height:120px;border-radius:10px;position:relative;overflow:hidden;margin-bottom:4px;}
+.cover-preview .cp-bg{position:absolute;inset:0;}
+.cover-preview .cp-tag{position:absolute;bottom:6px;left:6px;font-size:9px;color:#fff;background:rgba(0,0,0,.4);padding:2px 7px;border-radius:4px;backdrop-filter:blur(4px);}
+.chipg{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{padding:7px 13px;border-radius:100px;font-size:12px;font-weight:500;background:var(--card);color:var(--tx2);border:1px solid var(--dv);cursor:pointer;transition:.15s;}
+.chip.on{background:var(--pri-l);color:var(--pri);border-color:var(--pri);}
+.frow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--dv);}
+.frow:last-child{border-bottom:none;}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--dv);position:relative;cursor:pointer;transition:.2s;flex-shrink:0;}
+.toggle.on{background:var(--pri);}
+.toggle .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.toggle.on .knob{left:20px;}
+.btn{flex:1;height:42px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;border:none;}
+.btn-default{background:var(--dv);color:var(--tx);}
+.btn-primary{background:var(--pri);color:#fff;}
+.btn svg{width:16px;height:16px;}
+.del-btn{margin-top:4px;padding:13px;text-align:center;border-radius:10px;background:var(--red-l);color:var(--red);font-size:14px;font-weight:500;cursor:pointer;border:1px solid rgba(250,81,81,.2);}
+
+/* ===== 新增：AI 智能识别 ===== */
+.ai-recog{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border-radius:11px;background:linear-gradient(135deg,var(--blu),#0C8FD6);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:16px;box-shadow:0 4px 14px rgba(16,174,255,.3);}
+.ai-recog svg{width:18px;height:18px;}
+.ai-recog.full{width:100%;}
+
+/* AI 识别结果提示（后台自动识别并入库，前端自动获取，无扫描动画） */
+.ai-done{display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:10px;background:var(--pri-l);color:var(--pri-d);font-size:12px;font-weight:600;margin-bottom:14px;line-height:1.4;}
+.ai-done svg{width:16px;height:16px;flex-shrink:0;}
+.ai-tag{display:inline-flex;align-items:center;font-size:9px;font-weight:700;color:#fff;background:var(--blu);padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+
+/* ===== 新增：批量管理（样式修改） ===== */
+.batch-top{height:44px;background:var(--card);display:flex;align-items:center;padding:0 14px;border-bottom:0.5px solid var(--bd);flex-shrink:0;position:relative;}
+.batch-top .bt-title{position:absolute;left:50%;transform:translateX(-50%);font-size:15px;font-weight:600;color:var(--tx);}
+.batch-top .bt-cancel{font-size:13px;color:var(--pri);font-weight:500;cursor:pointer;}
+.batch-bar{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-top:0.5px solid var(--bd);padding:10px 14px calc(10px + 8px);display:flex;align-items:center;gap:10px;z-index:15;box-shadow:0 -2px 12px rgba(0,0,0,.06);}
+.batch-bar .b-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.batch-bar .b-check.on{background:var(--pri);border-color:var(--pri);}
+.batch-bar .b-check svg{width:13px;height:13px;color:#fff;display:none;}
+.batch-bar .b-check.on svg{display:block;}
+.batch-bar .b-cnt{font-size:13px;font-weight:500;color:var(--tx);flex-shrink:0;}
+.batch-bar .b-act-main{margin-left:auto;height:38px;padding:0 20px;border-radius:10px;background:var(--pri);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;}
+.batch-bar .b-act-main:disabled{background:var(--dv);color:var(--tx3);}
+.batch-bar .b-act-main svg{width:15px;height:15px;}
+
+/* Action Sheet（批量操作面板） */
+.as-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:55;}
+.as-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:56;animation:slideUp .25s ease-out;}
+.as-head{padding:14px 18px 10px;text-align:center;border-bottom:0.5px solid var(--dv);}
+.as-head .as-title{font-size:14px;font-weight:600;color:var(--tx);}
+.as-head .as-sub{font-size:11px;color:var(--tx2);margin-top:2px;}
+.as-item{display:flex;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;border-bottom:0.5px solid var(--dv);}
+.as-item:active{background:#f2f3f5;}
+.as-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.as-ico svg{width:20px;height:20px;color:#fff;}
+.as-ico.ai{background:var(--blu);}
+.as-ico.status{background:var(--pri);}
+.as-ico.cat{background:var(--org);}
+.as-ico.tag{background:var(--pur);}
+.as-ico.del{background:var(--red);}
+.as-tx .as-t{font-size:14px;font-weight:500;color:var(--tx);}
+.as-tx .as-d{font-size:11px;color:var(--tx2);margin-top:1px;}
+.as-cancel{padding:14px 18px;text-align:center;font-size:15px;font-weight:600;color:var(--tx2);cursor:pointer;}
+
+/* 空/错误 */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center;}
+.empty .e-ico{width:72px;height:72px;border-radius:50%;background:var(--pri-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.empty .e-ico svg{width:34px;height:34px;color:var(--pri);}
+.empty .e-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.empty .e-btn{padding:10px 28px;border-radius:100px;background:var(--pri);color:#fff;font-size:13px;font-weight:500;cursor:pointer;}
+
+/* Spec */
+.spec-section{padding:28px 40px 40px;border-top:1px solid var(--bd);background:var(--card);margin-top:20px;}
+.spec-section h2{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--tx);}
+.spec-section h3{font-size:15px;font-weight:600;margin:20px 0 10px;color:var(--tx);}
+.spec-section p{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:14px;}
+.stbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;}
+.stbl th{text-align:left;padding:10px 12px;background:#fafbfc;color:var(--tx2);font-weight:500;border-bottom:2px solid var(--pri);}
+.stbl td{padding:10px 12px;border-bottom:0.5px solid var(--dv);color:var(--tx);vertical-align:top;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl code{background:var(--dv);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--pri-d);}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;}
+.note{padding:16px;background:var(--pri-l);border-radius:12px;font-size:13px;color:var(--pri-d);line-height:1.7;margin-top:20px;}
+@media (max-width:1200px){.spec-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Missonce Admin — 资源管理新功能 UI 原型</h1>
+  <p>在现有资源管理原型基础上新增：⑤ 编辑弹窗 AI 智能识别（三态） · 批量管理样式修改（操作面板 Action Sheet + 批量改状态/分类/标签）</p>
+  <div class="tags">
+    <span class="tag">编辑弹窗 AI 识别</span>
+    <span class="tag">识别前/中/完成</span>
+    <span class="tag">批量操作面板</span>
+    <span class="tag">批量改状态</span>
+    <span class="tag">批量识别/删除</span>
+    <span class="tag">scroll-view 弹窗</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ===== PHONE 1: 编辑弹窗（AI 识别前） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">资源管理</span>
+</div>
+<div class="pg" style="padding-top:0;filter:brightness(.7);">
+  <div class="rgrid"><div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="cov-b"><div class="rtitle">少女感头像</div></div></div></div><div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#A8EDEA,#FED6E3);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="cov-b"><div class="rtitle">清新壁纸</div></div></div></div></div>
+</div>
+
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">编辑资源</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+
+    <div class="cover-preview">
+      <div class="cp-bg" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div>
+      <div class="cp-tag">头像 · 未识别</div>
+    </div>
+
+    <!-- 新增：AI 智能识别入口（识别前） -->
+    <div class="ai-recog full">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 00-4 4c0 1.5.5 2.5 1 3.5l-2 3h10l-2-3c.5-1 1-2 1-3.5a4 4 0 00-4-4z"/><path d="M9 17v2M15 17v2M7 21h10"/></svg>
+      AI 智能识别
+    </div>
+    <div class="tip">点击「AI 智能识别」后，后台视觉模型自动识别<b>标题 / 类型 / 分类 / 标签</b>并<b>直接写入数据库</b>，小程序自动同步获取，无需手动应用。</div>
+
+    <div class="fgrp">
+      <div class="f-lbl">标题</div>
+      <div class="f-input">少女感头像</div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">资源类型</div>
+      <div class="chipg"><div class="chip on">头像</div><div class="chip">壁纸</div></div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">状态</div>
+      <div class="chipg"><div class="chip">草稿</div><div class="chip">待审</div><div class="chip on">已发布</div><div class="chip">已下线</div></div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">分类 <span class="f-hint">逗号分隔</span></div>
+      <div class="f-input" style="height:auto;min-height:40px;padding:9px 12px;line-height:1.4;">少女, 可爱</div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">标签 <span class="f-hint">逗号分隔</span></div>
+      <div class="f-input" style="height:auto;min-height:40px;padding:9px 12px;line-height:1.4;">少女感, 粉色, 软萌</div>
+    </div>
+
+    <div class="del-btn">删除此资源</div>
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary">保存</div>
+  </div>
+</div>
+</div>
+<div class="phone-label">① 编辑弹窗（识别前）— AI 智能识别入口</div>
+</div>
+
+<!-- ===== PHONE 2: 编辑弹窗（AI 识别中） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">资源管理</span>
+</div>
+<div class="pg" style="padding-top:0;filter:brightness(.7);">
+  <div class="rgrid"><div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="cov-b"><div class="rtitle">少女感头像</div></div></div></div><div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#A8EDEA,#FED6E3);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="cov-b"><div class="rtitle">清新壁纸</div></div></div></div></div>
+</div>
+
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">编辑资源</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+    <div class="cover-preview">
+      <div class="cp-bg" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div>
+      <div class="cp-tag" style="background:var(--blu);">头像 · 识别中</div>
+    </div>
+
+    <div class="ai-recog full" style="opacity:.55;pointer-events:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 00-4 4c0 1.5.5 2.5 1 3.5l-2 3h10l-2-3c.5-1 1-2 1-3.5a4 4 0 00-4-4z"/><path d="M9 17v2M15 17v2M7 21h10"/></svg>
+      识别中…
+    </div>
+    <div class="tip">后台视觉模型识别中，识别完成将<b>自动写入数据库</b>并回显到表单，请稍候（无扫描动画）。</div>
+
+    <div class="fgrp"><div class="f-lbl">标题</div><div class="f-input">少女感头像</div></div>
+    <div class="fgrp"><div class="f-lbl">资源类型</div><div class="chipg"><div class="chip on">头像</div><div class="chip">壁纸</div></div></div>
+    <div class="fgrp"><div class="f-lbl">分类</div><div class="f-input" style="height:auto;min-height:40px;padding:9px 12px;line-height:1.4;">少女, 可爱</div></div>
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary" style="opacity:.6;">保存</div>
+  </div>
+</div>
+</div>
+<div class="phone-label">② 编辑弹窗（识别中）— 后台处理 · 无动画</div>
+</div>
+
+<!-- ===== PHONE 3: 编辑弹窗（AI 识别完成） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">资源管理</span>
+</div>
+<div class="pg" style="padding-top:0;filter:brightness(.7);">
+  <div class="rgrid"><div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="cov-b"><div class="rtitle">少女感头像</div></div></div></div><div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#A8EDEA,#FED6E3);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="cov-b"><div class="rtitle">清新壁纸</div></div></div></div></div>
+</div>
+
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">编辑资源</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+    <div class="cover-preview">
+      <div class="cp-bg" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div>
+      <div class="cp-tag" style="background:var(--blu);">头像 · AI 已识别</div>
+    </div>
+
+    <!-- 识别完成提示：后台已入库，前端自动获取 -->
+    <div class="ai-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>AI 识别完成 · 已自动保存到数据库，表单已同步</div>
+
+    <div class="fgrp">
+      <div class="f-lbl">标题<span class="ai-tag">AI</span></div>
+      <div class="f-input">甜系少女头像·粉调</div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">资源类型<span class="ai-tag">AI</span></div>
+      <div class="chipg"><div class="chip on">头像</div><div class="chip">壁纸</div></div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">状态</div>
+      <div class="chipg"><div class="chip">草稿</div><div class="chip">待审</div><div class="chip on">已发布</div><div class="chip">已下线</div></div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">分类<span class="ai-tag">AI</span></div>
+      <div class="f-input" style="height:auto;min-height:40px;padding:9px 12px;line-height:1.4;">少女, 可爱, 粉色系</div>
+    </div>
+    <div class="fgrp">
+      <div class="f-lbl">标签<span class="ai-tag">AI</span></div>
+      <div class="f-input" style="height:auto;min-height:40px;padding:9px 12px;line-height:1.4;">少女感, 软萌, 甜美, 粉色, 日常</div>
+    </div>
+
+    <div class="del-btn">删除此资源</div>
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary">保存</div>
+  </div>
+</div>
+</div>
+<div class="phone-label">③ 编辑弹窗（识别完成）— 自动获取 · 无动画</div>
+</div>
+
+<!-- ===== PHONE 4: 批量管理（选中态 + 新样式底部栏） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="batch-top">
+  <span class="bt-cancel">取消</span>
+  <span class="bt-title">资源管理</span>
+</div>
+<div class="pg" style="padding-bottom:70px;">
+  <div class="fbar"><div class="fchip on">全部 <span class="cnt">2,847</span></div><div class="fchip">已发布</div><div class="fchip">待审</div><div class="fchip">已下线</div><div class="fchip">草稿</div></div>
+
+  <div class="rgrid">
+    <div class="rcard selected"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="cov-b"><div class="rtitle">少女感头像</div></div></div></div>
+    <div class="rcard selected"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#A8EDEA,#FED6E3);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="cov-b"><div class="rtitle">清新壁纸</div></div></div></div>
+    <div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FFB347,#FFCC33);"></div><div class="cov-tl"><span class="spill rev">待审</span></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="cov-b"><div class="rtitle">治愈系猫咪</div></div></div></div>
+    <div class="rcard selected"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#84FAB0,#8FD3F4);"></div><div class="cov-tl"><span class="spill pub">已发布</span></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="cov-b"><div class="rtitle">治愈系头像</div></div></div></div>
+    <div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#667eea,#764ba2);"></div><div class="cov-tl"><span class="spill off">已下线</span></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="cov-b"><div class="rtitle">国潮壁纸</div></div></div></div>
+    <div class="rcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FBAB7E,#F7CE68);"></div><div class="cov-tl"><span class="spill draft">草稿</span></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div><div class="cov-b"><div class="rtitle">动漫壁纸</div></div></div></div>
+  </div>
+
+  <!-- 新样式：底部批量栏（聚合为「批量操作」主按钮） -->
+  <div class="batch-bar">
+    <div class="b-check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div>
+    <span class="b-cnt">已选 3 项</span>
+    <div class="b-act-main">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+      批量操作
+    </div>
+  </div>
+</div>
+</div>
+<div class="phone-label">④ 批量管理（新样式）— 选中态 + 聚合主按钮</div>
+</div>
+
+<!-- ===== PHONE 5: 批量操作面板（Action Sheet） ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">资源管理</span>
+</div>
+<div class="pg" style="padding-bottom:0;filter:brightness(.7);">
+  <div class="fbar"><div class="fchip on">全部 <span class="cnt">2,847</span></div></div>
+  <div class="rgrid"><div class="rcard selected"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div></div><div class="rcard selected"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#A8EDEA,#FED6E3);"></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div></div></div>
+</div>
+
+<div class="as-mask"></div>
+<div class="as-sheet">
+  <div class="as-head">
+    <div class="as-title">批量操作</div>
+    <div class="as-sub">已选 3 项资源</div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 00-4 4c0 1.5.5 2.5 1 3.5l-2 3h10l-2-3c.5-1 1-2 1-3.5a4 4 0 00-4-4z"/><path d="M9 17v2M15 17v2M7 21h10"/></svg></div>
+    <div class="as-tx"><div class="as-t">批量 AI 识别</div><div class="as-d">对选中封面批量调用视觉模型</div></div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg></div>
+    <div class="as-tx"><div class="as-t">批量改状态</div><div class="as-d">发布 / 下架 / 待审 一键切换</div></div>
+  </div>
+  <div class="as-item">
+    <div class="as-ico del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div>
+    <div class="as-tx"><div class="as-t">批量删除</div><div class="as-d">删除前需二次确认</div></div>
+  </div>
+  <div class="as-cancel">取消</div>
+</div>
+</div>
+<div class="phone-label">⑤ 批量操作面板 — Action Sheet 聚合入口</div>
+</div>
+
+<!-- ===== PHONE 6: 批量改状态弹窗 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">资源管理</span>
+</div>
+<div class="pg" style="padding-top:0;filter:brightness(.6);">
+  <div class="rgrid"><div class="rcard selected"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF9A9E,#FECFEF);"></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div></div></div>
+</div>
+
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">批量改状态</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+    <div class="tip">将为 <b>3 项</b> 资源统一设置状态</div>
+    <div class="fgrp">
+      <div class="chipg" style="display:flex;flex-direction:column;gap:10px;align-items:stretch;">
+        <div class="chip on" style="text-align:center;padding:14px;">已发布</div>
+        <div class="chip" style="text-align:center;padding:14px;">待审核</div>
+        <div class="chip" style="text-align:center;padding:14px;">已下线</div>
+        <div class="chip" style="text-align:center;padding:14px;">草稿</div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary">应用到 3 项</div>
+  </div>
+</div>
+</div>
+<div class="phone-label">⑥ 批量改状态弹窗 — 统一设置 + 应用</div>
+</div>
+
+</div>
+
+<!-- ===== SPEC SECTION ===== -->
+<div class="spec-section">
+<h2>资源管理新功能 — 设计规范说明</h2>
+
+<div class="spec-grid">
+<div>
+<h3>⑤ 编辑弹窗 — AI 智能识别（新增）</h3>
+<table class="stbl">
+<tr><th>状态</th><th>交互</th></tr>
+<tr><td>识别前</td><td>封面下方「AI 智能识别」主按钮（蓝）+ 说明 tip</td></tr>
+<tr><td>识别中</td><td>按钮置灰「识别中…」，后台视觉模型识别（<b>无扫描动画</b>），无需独立动画屏</td></tr>
+<tr><td>识别完成</td><td>表单字段（标题/类型/分类/标签）由前端<b>自动获取并回显</b>，绿色完成提示；后台已写入数据库，无需手动应用</td></tr>
+</table>
+<p>识别流程由后台自动完成并入库，对应 <code>analyzeResource</code> 云函数；小程序端自动拉取最新标签，用户无需二次操作。</p>
+
+<h3>批量管理（样式修改）</h3>
+<table class="stbl">
+<tr><th>原样式</th><th>新样式</th></tr>
+<tr><td>底部 3 个并列小按钮（AI/状态/删除）</td><td>底部聚合为「批量操作」主按钮 → 唤起 Action Sheet</td></tr>
+<tr><td>操作入口分散</td><td>操作面板仅 3 项：批量 AI 识别 / 改状态 / 删除</td></tr>
+<tr><td>删除直接触发</td><td>删除/改状态均进入确认弹窗，危险操作二次确认</td></tr>
+</table>
+</div>
+
+<div>
+<h3>批量操作面板 / 改状态弹窗</h3>
+<table class="stbl">
+<tr><th>操作</th><th>内容</th></tr>
+<tr><td>批量 AI 识别</td><td>对选中封面批量调用视觉模型，后台识别并入库，前端自动刷新（无动画）</td></tr>
+<tr><td>批量改状态</td><td>状态单选（发布/待审/下线/草稿）+ 「应用到 N 项」</td></tr>
+<tr><td>批量删除</td><td>二次确认弹窗后删除</td></tr>
+</table>
+
+<h3>设计规范遵循</h3>
+<table class="stbl">
+<tr><th>规范</th><th>实现</th></tr>
+<tr><td>主色</td><td><code>#07C160</code>（AI 识别用蓝 <code>#10AEFF</code> 呼应 AI 状态）</td></tr>
+<tr><td>图标</td><td>Feather 线性 SVG，stroke-width 2</td></tr>
+<tr><td>弹窗</td><td>底部 Sheet + scroll-view + 聚合操作面板</td></tr>
+<tr><td>触控</td><td>主按钮 / 操作项 ≥44pt</td></tr>
+<tr><td>四态</td><td>识别中沿用常规 loading 态（无扫描动画）</td></tr>
+</table>
+</div>
+</div>
+
+<div class="note">
+  <strong>资源管理新功能原型图</strong><br>
+  6 屏覆盖：编辑弹窗(识别前) / 编辑弹窗(识别中·无动画) / 编辑弹窗(识别完成·自动获取) / 批量管理新样式 / 批量操作面板 / 批量改状态弹窗<br>
+  AI 智能识别：点击 → 后台自动识别标签并入库 → 小程序自动获取（无扫描动画、无一键应用）<br>
+  批量操作仅 3 项：批量 AI 识别 / 改状态 / 删除（去除改分类、改标签）<br>
+  严格遵循 mini-admin-design.md：#07C160 主色 · Feather 线性图标 · 四态完备
+</div>
+</div>
+
+</body>
+</html>

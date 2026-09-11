@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Missonce Admin — 专题管理 UI 原型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --pri:#07C160;--pri-l:#E8F8EE;--pri-d:#06AD56;
+  --red:#FA5151;--red-l:#FFE8E8;
+  --org:#FF9500;--org-l:#FFF3E0;--org-d:#C77700;
+  --blu:#10AEFF;--blu-l:#E8F4FF;
+  --pur:#7C5CFC;--pur-l:#F0E8FF;
+  --gold:#FFC107;
+  --bg:#F5F6F8;--card:#FFF;--tx:#1A1A2E;--tx2:#8C8CA1;--tx3:#B8B8C8;--bd:#EBEBF0;--dv:#F0F0F5;
+  --r:14px;--rs:10px;
+  --sk:#EDEDF2;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Noto Sans CJK SC',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+
+/* Header */
+.header{background:var(--card);padding:28px 40px;border-bottom:1px solid var(--bd);}
+.header h1{font-size:22px;font-weight:700;color:var(--tx);}
+.header p{font-size:14px;color:var(--tx2);margin-top:6px;line-height:1.6;}
+.header .tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.header .tag{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;background:var(--pri-l);color:var(--pri-d);}
+
+.wrap{display:flex;gap:28px;padding:28px 40px;overflow-x:auto;align-items:flex-start;}
+.phone{flex-shrink:0;width:326px;height:660px;background:#111;border-radius:40px;padding:8px;position:relative;margin-bottom:40px;}
+.phone-label{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:var(--tx2);white-space:nowrap;}
+.screen{width:100%;height:100%;background:var(--bg);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.statusbar{height:40px;background:var(--card);display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 6px;font-size:11px;font-weight:600;color:var(--tx);flex-shrink:0;}
+.statusbar .time{font-size:13px;font-weight:700;}
+.statusbar .icons{display:flex;gap:4px;align-items:center;}
+.statusbar .icons svg{width:14px;height:14px;}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:#111;border-radius:11px;z-index:20;}
+
+/* Navbar with back */
+.navbar{height:44px;background:var(--card);display:flex;align-items:center;padding:0 8px;border-bottom:0.5px solid var(--bd);flex-shrink:0;position:relative;}
+.navbar .nav-back{width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-back svg{width:22px;height:22px;color:var(--tx);}
+.navbar .nav-title{position:absolute;left:50%;transform:translateX(-50%);font-size:16px;font-weight:600;color:var(--tx);}
+.navbar .nav-action{position:absolute;right:8px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-action svg{width:20px;height:20px;color:var(--tx2);}
+
+.pg{flex:1;overflow-y:auto;background:var(--bg);padding:12px 14px 80px;}
+.pg::-webkit-scrollbar{display:none;}
+
+/* TabBar (sub page - dimmed) */
+.tabbar{height:58px;background:var(--card);border-top:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-around;flex-shrink:0;padding-bottom:6px;}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;opacity:.42;transition:.2s;}
+.tab.on{opacity:1;}
+.tab svg{width:22px;height:22px;color:var(--tx2);}
+.tab.on svg{color:var(--pri);}
+.tab span{font-size:10px;font-weight:500;color:var(--tx2);}
+.tab.on span{color:var(--pri);}
+
+/* Filter bar */
+.fbar{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;}
+.fbar::-webkit-scrollbar{display:none;}
+.fchip{padding:6px 14px;border-radius:100px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--card);color:var(--tx2);border:1px solid var(--dv);cursor:pointer;transition:.2s;flex-shrink:0;display:flex;align-items:center;gap:4px;}
+.fchip.on{background:var(--pri-l);color:var(--pri);border-color:var(--pri);}
+.fchip .cnt{font-size:10px;opacity:.7;}
+
+/* Topic grid */
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.tgrid.nomulti .check-btn{display:none;}
+.tcard{background:var(--card);border-radius:var(--r);overflow:hidden;position:relative;transition:.2s;cursor:pointer;}
+.tcard:active{background:#f2f3f5;}
+.tcard.selected{box-shadow:0 0 0 2px var(--pri);}
+.tcard.dim{opacity:.55;}
+
+/* Cover */
+.cover{position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;}
+.cover-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.cover-bg svg{width:32px;height:32px;color:rgba(255,255,255,.35);}
+.cover-grad{position:absolute;inset:0;}
+
+/* Cover overlays - four corners */
+.cov-tl{position:absolute;top:6px;left:6px;display:flex;gap:4px;z-index:3;}
+.cov-tc{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:3;}
+.cov-tr{position:absolute;top:6px;right:6px;display:flex;gap:4px;z-index:3;}
+.cov-bl{position:absolute;bottom:0;left:0;right:0;padding:24px 8px 6px;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);z-index:2;}
+
+/* Status pill */
+.spill{padding:2px 8px;border-radius:100px;font-size:9px;font-weight:600;backdrop-filter:blur(8px);display:flex;align-items:center;gap:3px;}
+.spill.on{background:rgba(7,193,96,.85);color:#fff;}
+.spill.off{background:rgba(148,163,184,.85);color:#fff;}
+.spill .dot{width:5px;height:5px;border-radius:50%;background:#fff;}
+
+/* Badge */
+.tbadge{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:600;color:#fff;}
+.tbadge.hot{background:rgba(239,68,68,.92);}
+.tbadge.new{background:rgba(59,130,246,.92);}
+.tbadge.limited{background:rgba(245,158,11,.92);}
+
+/* Star + check */
+.star-btn,.check-btn{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);cursor:pointer;}
+.star-btn{background:rgba(0,0,0,.3);}
+.star-btn.on{background:rgba(255,193,7,.92);}
+.star-btn svg{width:13px;height:13px;color:rgba(255,255,255,.7);}
+.star-btn.on svg{color:#fff;}
+.check-btn{background:rgba(255,255,255,.3);border:1.5px solid rgba(255,255,255,.6);}
+.check-btn.on{background:var(--pri);border-color:var(--pri);}
+.check-btn svg{width:13px;height:13px;color:#fff;display:none;}
+.check-btn.on svg{display:block;}
+
+/* Cover bottom text */
+.cov-title{font-size:12px;font-weight:600;color:#fff;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cov-tags{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;}
+.cov-tag{font-size:8px;color:rgba(255,255,255,.85);background:rgba(255,255,255,.18);padding:1px 5px;border-radius:3px;backdrop-filter:blur(4px);}
+
+/* Card body */
+.tbody{padding:8px 10px 8px;}
+.tbody .tdesc{font-size:10px;color:var(--tx2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}
+.tbody .tmeta{display:flex;align-items:center;justify-content:space-between;margin-top:5px;}
+.tbody .sort-no{font-size:9px;color:var(--tx3);font-weight:500;}
+.tbody .actions{display:flex;gap:2px;}
+.tbody .act{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.tbody .act svg{width:13px;height:13px;color:var(--tx2);}
+.tbody .act:active{background:var(--dv);}
+.tbody .act.del svg{color:var(--red);}
+.tbody .act.del:active{background:var(--red-l);}
+
+/* FAB */
+.fab{position:absolute;bottom:74px;right:14px;width:48px;height:48px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(7,193,96,.35);cursor:pointer;z-index:10;}
+.fab svg{width:22px;height:22px;color:#fff;}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center;}
+.empty .e-ico{width:72px;height:72px;border-radius:50%;background:var(--pri-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.empty .e-ico svg{width:34px;height:34px;color:var(--pri);}
+.empty .e-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.empty .e-d{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:20px;}
+.empty .e-btn{padding:10px 28px;border-radius:100px;background:var(--pri);color:#fff;font-size:13px;font-weight:500;cursor:pointer;box-shadow:0 3px 10px rgba(7,193,96,.3);}
+
+/* Skeleton */
+.sk-card{background:var(--card);border-radius:var(--r);overflow:hidden;}
+.sk-cover{width:100%;padding-bottom:56.25%;background:var(--sk);position:relative;overflow:hidden;}
+.sk-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shimmer 1.5s infinite;}
+.sk-body{padding:8px 10px;}
+.sk-line{height:8px;border-radius:4px;background:var(--sk);margin-bottom:5px;}
+.sk-line.w70{width:70%;}
+.sk-line.w40{width:40%;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+/* Error state */
+.error{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;text-align:center;}
+.error .er-ico{width:64px;height:64px;border-radius:50%;background:var(--red-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.error .er-ico svg{width:30px;height:30px;color:var(--red);}
+.error .er-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.error .er-d{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:18px;}
+.error .er-btn{padding:9px 24px;border-radius:100px;background:var(--card);color:var(--pri);font-size:13px;font-weight:500;border:1px solid var(--pri);cursor:pointer;}
+
+/* Modal Sheet */
+.modal-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:50;}
+.modal-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;padding:0 0 20px;max-height:88%;display:flex;flex-direction:column;z-index:51;animation:slideUp .25s ease-out;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:0.5px solid var(--dv);flex-shrink:0;}
+.modal-head .m-title{font-size:16px;font-weight:600;color:var(--tx);}
+.modal-head .m-close{width:32px;height:32px;border-radius:50%;background:var(--dv);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.modal-head .m-close svg{width:16px;height:16px;color:var(--tx2);}
+.modal-body{flex:1;overflow-y:auto;padding:14px 18px;}
+.modal-body::-webkit-scrollbar{display:none;}
+.modal-foot{flex-shrink:0;padding:12px 18px 0;border-top:0.5px solid var(--dv);display:flex;gap:10px;}
+
+/* Form */
+.fgrp{margin-bottom:18px;}
+.fgrp .f-lbl{font-size:12px;font-weight:600;color:var(--tx);margin-bottom:7px;display:flex;align-items:center;gap:4px;}
+.fgrp .f-lbl .req{color:var(--red);}
+.fgrp .f-lbl .f-hint{font-size:10px;color:var(--tx3);font-weight:400;margin-left:auto;}
+.f-input{width:100%;height:40px;border-radius:10px;border:1px solid var(--bd);padding:0 12px;font-size:13px;color:var(--tx);background:var(--card);outline:none;}
+.f-input.ph{color:var(--tx3);}
+.f-area{width:100%;min-height:60px;border-radius:10px;border:1px solid var(--bd);padding:10px 12px;font-size:13px;color:var(--tx);background:var(--card);outline:none;resize:none;line-height:1.5;}
+
+/* Cover picker */
+.cover-pick{width:100%;height:90px;border-radius:10px;border:1.5px dashed var(--bd);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:#FAFBFC;}
+.cover-pick svg{width:24px;height:24px;color:var(--tx3);margin-bottom:4px;}
+.cover-pick .cp-t{font-size:12px;color:var(--tx2);}
+.cover-pick .cp-d{font-size:10px;color:var(--tx3);margin-top:2px;}
+.cover-preview{width:100%;height:90px;border-radius:10px;position:relative;overflow:hidden;}
+.cover-preview .cp-bg{position:absolute;inset:0;}
+.cover-preview .cp-del{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.cover-preview .cp-del svg{width:13px;height:13px;color:#fff;}
+
+/* Chip group */
+.chipg{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{padding:7px 14px;border-radius:100px;font-size:12px;font-weight:500;background:var(--card);color:var(--tx2);border:1px solid var(--dv);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:5px;}
+.chip.on{background:var(--pri-l);color:var(--pri);border-color:var(--pri);}
+.chip svg{width:13px;height:13px;}
+
+/* Picker (select) */
+.picker{width:100%;height:40px;border-radius:10px;border:1px solid var(--bd);padding:0 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--card);}
+.picker .p-val{font-size:13px;color:var(--tx);}
+.picker .p-val.ph{color:var(--tx3);}
+.picker svg{width:16px;height:16px;color:var(--tx3);}
+
+/* Toggle */
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--dv);position:relative;cursor:pointer;transition:.2s;flex-shrink:0;}
+.toggle.on{background:var(--pri);}
+.toggle .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.toggle.on .knob{left:20px;}
+
+/* Form row with toggle */
+.frow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--dv);}
+.frow:last-child{border-bottom:none;}
+.frow .fr-tx .fr-t{font-size:13px;font-weight:500;color:var(--tx);}
+.frow .fr-tx .fr-d{font-size:10px;color:var(--tx2);margin-top:2px;}
+
+/* Page presets */
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+.preset{padding:8px 10px;border-radius:8px;border:1px solid var(--dv);font-size:11px;color:var(--tx);cursor:pointer;display:flex;align-items:center;gap:6px;}
+.preset svg{width:13px;height:13px;color:var(--tx2);}
+.preset.on{background:var(--pri-l);color:var(--pri);border-color:var(--pri);}
+.preset.on svg{color:var(--pri);}
+
+/* Buttons */
+.btn{flex:1;height:42px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;border:none;}
+.btn-default{background:var(--dv);color:var(--tx);}
+.btn-primary{background:var(--pri);color:#fff;}
+.btn-danger{background:var(--red);color:#fff;}
+.btn svg{width:16px;height:16px;}
+.del-btn{margin-top:4px;padding:13px;text-align:center;border-radius:10px;background:var(--red-l);color:var(--red);font-size:14px;font-weight:500;cursor:pointer;border:1px solid rgba(250,81,81,.2);}
+.del-btn:active{background:#ffd6d6;}
+
+/* Batch bar */
+.batch-bar{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-top:0.5px solid var(--bd);padding:10px 14px calc(10px + 8px);display:flex;align-items:center;gap:10px;z-index:15;box-shadow:0 -2px 12px rgba(0,0,0,.06);}
+.batch-bar .b-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.batch-bar .b-check.on{background:var(--pri);border-color:var(--pri);}
+.batch-bar .b-check svg{width:13px;height:13px;color:#fff;display:none;}
+.batch-bar .b-check.on svg{display:block;}
+.batch-bar .b-cnt{font-size:13px;font-weight:500;color:var(--tx);flex-shrink:0;}
+.batch-bar .b-actions{display:flex;gap:8px;margin-left:auto;}
+.batch-bar .b-act{height:34px;padding:0 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:4px;border:none;}
+.batch-bar .b-act svg{width:14px;height:14px;}
+.b-act.enable{background:var(--pri-l);color:var(--pri);}
+.b-act.disable{background:var(--dv);color:var(--tx2);}
+.b-act.del{background:var(--red-l);color:var(--red);}
+
+/* Spec section */
+.spec-section{padding:28px 40px 40px;border-top:1px solid var(--bd);background:var(--card);margin-top:20px;}
+.spec-section h2{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--tx);}
+.spec-section h3{font-size:15px;font-weight:600;margin:20px 0 10px;color:var(--tx);}
+.spec-section p{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:14px;}
+.stbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;}
+.stbl th{text-align:left;padding:10px 12px;background:#fafbfc;color:var(--tx2);font-weight:500;border-bottom:2px solid var(--pri);}
+.stbl td{padding:10px 12px;border-bottom:0.5px solid var(--dv);color:var(--tx);vertical-align:top;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl code{background:var(--dv);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--pri-d);}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;}
+.note{padding:16px;background:var(--pri-l);border-radius:12px;font-size:13px;color:var(--pri-d);line-height:1.7;margin-top:20px;}
+
+@media (max-width:1200px){.spec-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Missonce Admin — 专题管理 UI 原型</h1>
+  <p>专题管理完整功能页面 · 6 屏覆盖全部状态与交互 · 严格遵循设计方案（#07C160 主色 / Feather 图标 / 触控≥44pt / 四态完备）</p>
+  <div class="tags">
+    <span class="tag">列表 · 2列网格</span>
+    <span class="tag">CRUD · 创建/编辑/删除</span>
+    <span class="tag">排序 · 上移下移</span>
+    <span class="tag">状态 · 启用/停用</span>
+    <span class="tag">精选 · 星标置顶</span>
+    <span class="tag">角标 · 热门/新品/限时</span>
+    <span class="tag">跳转 · 资源/页面/网页</span>
+    <span class="tag">批量操作</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ===== PHONE 1: 列表正常态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">专题管理</span>
+  <div class="nav-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+</div>
+<div class="pg">
+
+<div class="fbar">
+  <div class="fchip on">全部 <span class="cnt">8</span></div>
+  <div class="fchip">已启用 <span class="cnt">6</span></div>
+  <div class="fchip">已停用 <span class="cnt">2</span></div>
+  <div class="fchip">精选 <span class="cnt">3</span></div>
+</div>
+
+<div class="tgrid nomulti">
+
+<!-- Card 1: 精选+热门+启用 -->
+<div class="tcard">
+  <div class="cover">
+    <div class="cover-grad" style="background:linear-gradient(135deg,#FF6B9D,#C44FE8);"></div>
+    <div class="cover-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg></div>
+    <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+    <div class="cov-tc"><span class="tbadge hot">热门</span></div>
+    <div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+    <div class="cov-bl">
+      <div class="cov-title">二次元专场</div>
+      <div class="cov-tags"><span class="cov-tag">资源筛选</span><span class="cov-tag">标签:二次元</span></div>
+    </div>
+  </div>
+  <div class="tbody">
+    <div class="tdesc">精选动漫风壁纸合集</div>
+    <div class="tmeta">
+      <span class="sort-no">#1</span>
+      <div class="actions">
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Card 2: 精选+新品+启用 -->
+<div class="tcard">
+  <div class="cover">
+    <div class="cover-grad" style="background:linear-gradient(135deg,#10AEFF,#7C5CFC);"></div>
+    <div class="cover-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+    <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+    <div class="cov-tc"><span class="tbadge new">新品</span></div>
+    <div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+    <div class="cov-bl">
+      <div class="cov-title">夏日清凉壁纸</div>
+      <div class="cov-tags"><span class="cov-tag">资源筛选</span><span class="cov-tag">分类:风景</span></div>
+    </div>
+  </div>
+  <div class="tbody">
+    <div class="tdesc">海岛 · 冰淇淋 · 清凉一夏</div>
+    <div class="tmeta">
+      <span class="sort-no">#2</span>
+      <div class="actions">
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Card 3: 启用+无角标 -->
+<div class="tcard">
+  <div class="cover">
+    <div class="cover-grad" style="background:linear-gradient(135deg,#FF9500,#FF6B6B);"></div>
+    <div class="cover-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></div>
+    <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+    <div class="cov-tr"><div class="star-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+    <div class="cov-bl">
+      <div class="cov-title">可爱萌宠头像</div>
+      <div class="cov-tags"><span class="cov-tag">资源筛选</span><span class="cov-tag">标签:萌宠</span></div>
+    </div>
+  </div>
+  <div class="tbody">
+    <div class="tdesc">猫猫狗狗治愈系头像</div>
+    <div class="tmeta">
+      <span class="sort-no">#3</span>
+      <div class="actions">
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Card 4: 精选+限时+停用 -->
+<div class="tcard">
+  <div class="cover">
+    <div class="cover-grad" style="background:linear-gradient(135deg,#7C5CFC,#3B82F6);"></div>
+    <div class="cover-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div>
+    <div class="cov-tl"><span class="spill off"><span class="dot"></span>已停用</span></div>
+    <div class="cov-tc"><span class="tbadge limited">限时</span></div>
+    <div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+    <div class="cov-bl">
+      <div class="cov-title">每日推荐</div>
+      <div class="cov-tags"><span class="cov-tag">内部页面</span><span class="cov-tag">/daily-picks</span></div>
+    </div>
+  </div>
+  <div class="tbody">
+    <div class="tdesc">每天精选好图推荐</div>
+    <div class="tmeta">
+      <span class="sort-no">#4</span>
+      <div class="actions">
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Card 5: 启用+网页跳转 -->
+<div class="tcard">
+  <div class="cover">
+    <div class="cover-grad" style="background:linear-gradient(135deg,#22C55E,#10B981);"></div>
+    <div class="cover-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+    <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+    <div class="cov-tr"><div class="star-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+    <div class="cov-bl">
+      <div class="cov-title">小辣椒小店</div>
+      <div class="cov-tags"><span class="cov-tag">外部网页</span><span class="cov-tag">webview</span></div>
+    </div>
+  </div>
+  <div class="tbody">
+    <div class="tdesc">精选周边好物直达</div>
+    <div class="tmeta">
+      <span class="sort-no">#5</span>
+      <div class="actions">
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Card 6: 停用 -->
+<div class="tcard dim">
+  <div class="cover">
+    <div class="cover-grad" style="background:linear-gradient(135deg,#94A3B8,#64748B);"></div>
+    <div class="cover-bg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg></div>
+    <div class="cov-tl"><span class="spill off"><span class="dot"></span>已停用</span></div>
+    <div class="cov-tr"><div class="star-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+    <div class="cov-bl">
+      <div class="cov-title">古风国韵</div>
+      <div class="cov-tags"><span class="cov-tag">资源筛选</span><span class="cov-tag">分类:古风</span></div>
+    </div>
+  </div>
+  <div class="tbody">
+    <div class="tdesc">水墨 · 汉服 · 国潮</div>
+    <div class="tmeta">
+      <span class="sort-no">#6</span>
+      <div class="actions">
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+        <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+<div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">① 列表正常态 — 点击卡片进编辑 · ↑↓排序 · 四角浮层</div>
+</div>
+
+<!-- ===== PHONE 2: 空状态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">专题管理</span>
+</div>
+<div class="pg">
+<div class="empty">
+  <div class="e-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 7h6M9 11h4"/></svg></div>
+  <div class="e-t">暂无专题</div>
+  <div class="e-d">点击下方按钮<br>创建你的第一个专题</div>
+  <div class="e-btn">立即创建</div>
+</div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">② 空状态 — 引导创建</div>
+</div>
+
+<!-- ===== PHONE 3: 加载骨架屏 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">专题管理</span>
+</div>
+<div class="pg">
+<div class="fbar">
+  <div class="sk-line" style="width:50px;height:26px;border-radius:100px;"></div>
+  <div class="sk-line" style="width:60px;height:26px;border-radius:100px;"></div>
+  <div class="sk-line" style="width:60px;height:26px;border-radius:100px;"></div>
+</div>
+<div class="tgrid">
+  <div class="sk-card"><div class="sk-cover"></div><div class="sk-body"><div class="sk-line w70"></div><div class="sk-line w40"></div></div></div>
+  <div class="sk-card"><div class="sk-cover"></div><div class="sk-body"><div class="sk-line w70"></div><div class="sk-line w40"></div></div></div>
+  <div class="sk-card"><div class="sk-cover"></div><div class="sk-body"><div class="sk-line w70"></div><div class="sk-line w40"></div></div></div>
+  <div class="sk-card"><div class="sk-cover"></div><div class="sk-body"><div class="sk-line w70"></div><div class="sk-line w40"></div></div></div>
+</div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">③ 加载态 — 骨架屏 shimmer 动画</div>
+</div>
+
+<!-- ===== PHONE 4: 错误状态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">专题管理</span>
+</div>
+<div class="pg">
+<div class="error">
+  <div class="er-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+  <div class="er-t">加载失败</div>
+  <div class="er-d">网络连接超时<br>请检查网络后重试</div>
+  <div class="er-btn">重试</div>
+</div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">④ 错误态 — 重试引导</div>
+</div>
+
+<!-- ===== PHONE 5: 创建/编辑弹窗 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">专题管理</span>
+</div>
+
+<!-- Dimmed background list -->
+<div class="pg" style="padding-top:0;filter:brightness(.7);">
+<div class="tgrid">
+  <div class="tcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#FF6B9D,#C44FE8);"></div><div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div><div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div></div><div class="cov-bl"><div class="cov-title">二次元专场</div></div></div></div>
+  <div class="tcard"><div class="cover"><div class="cover-grad" style="background:linear-gradient(135deg,#10AEFF,#7C5CFC);"></div><div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div><div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div></div><div class="cov-bl"><div class="cov-title">夏日清凉壁纸</div></div></div></div>
+</div>
+</div>
+
+<!-- Modal overlay -->
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">编辑专题</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+
+    <div class="fgrp">
+      <div class="f-lbl">专题标题 <span class="req">*</span></div>
+      <div class="f-input">二次元专场</div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">一句话描述 <span class="f-hint">选填</span></div>
+      <div class="f-area">精选动漫风壁纸合集</div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">封面图 <span class="f-hint">建议 16:9 横图</span></div>
+      <div class="cover-preview">
+        <div class="cp-bg" style="background:linear-gradient(135deg,#FF6B9D,#C44FE8);"></div>
+        <div class="cp-del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+      </div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">跳转类型 <span class="req">*</span></div>
+      <div class="chipg">
+        <div class="chip on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>资源筛选</div>
+        <div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>内部页面</div>
+        <div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>外部网页</div>
+      </div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">筛选类型 <span class="req">*</span></div>
+      <div class="chipg">
+        <div class="chip on">按标签</div>
+        <div class="chip">按分类</div>
+      </div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">筛选值 <span class="req">*</span></div>
+      <div class="picker">
+        <span class="p-val">二次元</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+      </div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">角标 <span class="f-hint">选填</span></div>
+      <div class="chipg">
+        <div class="chip">无角标</div>
+        <div class="chip on"><span class="tbadge hot" style="padding:1px 5px;font-size:8px;">HOT</span>热门</div>
+        <div class="chip"><span class="tbadge new" style="padding:1px 5px;font-size:8px;">NEW</span>新品</div>
+        <div class="chip"><span class="tbadge limited" style="padding:1px 5px;font-size:8px;">限时</span>限时</div>
+      </div>
+    </div>
+
+    <div class="fgrp" style="background:var(--bg);border-radius:10px;padding:0 12px;margin-bottom:12px;">
+      <div class="frow">
+        <div class="fr-tx"><div class="fr-t">启用状态</div><div class="fr-d">关闭后小程序端不展示该专题</div></div>
+        <div class="toggle on"><div class="knob"></div></div>
+      </div>
+    </div>
+
+    <div class="fgrp" style="background:var(--bg);border-radius:10px;padding:0 12px;margin-bottom:12px;">
+      <div class="frow">
+        <div class="fr-tx"><div class="fr-t">精选推荐</div><div class="fr-d">置顶显示在小程序专题页顶部</div></div>
+        <div class="toggle on"><div class="knob"></div></div>
+      </div>
+    </div>
+
+    <div class="del-btn">删除此专题</div>
+
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary">保存</div>
+  </div>
+</div>
+
+</div>
+<div class="phone-label">⑤ 编辑弹窗 — 点击卡片进入 · 含启用/删除</div>
+</div>
+
+<!-- ===== PHONE 6: 批量操作 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">专题管理</span>
+  <div class="nav-action"><span style="font-size:13px;color:var(--pri);font-weight:500;">取消</span></div>
+</div>
+<div class="pg" style="padding-bottom:70px;">
+
+<div class="tgrid">
+  <!-- Selected -->
+  <div class="tcard selected">
+    <div class="cover">
+      <div class="cover-grad" style="background:linear-gradient(135deg,#FF6B9D,#C44FE8);"></div>
+      <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+      <div class="cov-tc"><span class="tbadge hot">热门</span></div>
+      <div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+      <div class="cov-bl"><div class="cov-title">二次元专场</div></div>
+    </div>
+    <div class="tbody"><div class="tdesc">精选动漫风壁纸合集</div></div>
+  </div>
+
+  <div class="tcard selected">
+    <div class="cover">
+      <div class="cover-grad" style="background:linear-gradient(135deg,#10AEFF,#7C5CFC);"></div>
+      <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+      <div class="cov-tc"><span class="tbadge new">新品</span></div>
+      <div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+      <div class="cov-bl"><div class="cov-title">夏日清凉壁纸</div></div>
+    </div>
+    <div class="tbody"><div class="tdesc">海岛 · 冰淇淋 · 清凉一夏</div></div>
+  </div>
+
+  <!-- Not selected -->
+  <div class="tcard">
+    <div class="cover">
+      <div class="cover-grad" style="background:linear-gradient(135deg,#FF9500,#FF6B6B);"></div>
+      <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+      <div class="cov-tr"><div class="star-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+      <div class="cov-bl"><div class="cov-title">可爱萌宠头像</div></div>
+    </div>
+    <div class="tbody"><div class="tdesc">猫猫狗狗治愈系头像</div></div>
+  </div>
+
+  <div class="tcard selected">
+    <div class="cover">
+      <div class="cover-grad" style="background:linear-gradient(135deg,#7C5CFC,#3B82F6);"></div>
+      <div class="cov-tl"><span class="spill off"><span class="dot"></span>已停用</span></div>
+      <div class="cov-tc"><span class="tbadge limited">限时</span></div>
+      <div class="cov-tr"><div class="star-btn on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+      <div class="cov-bl"><div class="cov-title">每日推荐</div></div>
+    </div>
+    <div class="tbody"><div class="tdesc">每天精选好图推荐</div></div>
+  </div>
+
+  <div class="tcard">
+    <div class="cover">
+      <div class="cover-grad" style="background:linear-gradient(135deg,#22C55E,#10B981);"></div>
+      <div class="cov-tl"><span class="spill on"><span class="dot"></span>已启用</span></div>
+      <div class="cov-tr"><div class="star-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+      <div class="cov-bl"><div class="cov-title">小辣椒小店</div></div>
+    </div>
+    <div class="tbody"><div class="tdesc">精选周边好物直达</div></div>
+  </div>
+
+  <div class="tcard">
+    <div class="cover">
+      <div class="cover-grad" style="background:linear-gradient(135deg,#94A3B8,#64748B);"></div>
+      <div class="cov-tl"><span class="spill off"><span class="dot"></span>已停用</span></div>
+      <div class="cov-tr"><div class="star-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div><div class="check-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div></div>
+      <div class="cov-bl"><div class="cov-title">古风国韵</div></div>
+    </div>
+    <div class="tbody"><div class="tdesc">水墨 · 汉服 · 国潮</div></div>
+  </div>
+</div>
+
+<!-- Batch action bar -->
+<div class="batch-bar">
+  <div class="b-check on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg></div>
+  <span class="b-cnt">已选 3 项</span>
+  <div class="b-actions">
+    <div class="b-act enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>启用</div>
+    <div class="b-act disable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>停用</div>
+    <div class="b-act del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>删除</div>
+  </div>
+</div>
+
+</div>
+</div>
+<div class="phone-label">⑥ 批量操作 — 选中态 · 底部操作栏</div>
+</div>
+
+</div>
+
+<!-- ===== SPEC SECTION ===== -->
+<div class="spec-section">
+<h2>专题管理 — 设计规范说明</h2>
+
+<div class="spec-grid">
+<div>
+<h3>功能完整复刻清单</h3>
+<table class="stbl">
+<tr><th>分类</th><th>功能</th><th>原型位置</th></tr>
+<tr><td rowspan="5">单条操作</td><td>创建（FAB）</td><td>⑤ 弹窗 Sheet</td></tr>
+<tr><td>编辑（点卡片）</td><td>① 点击卡片 → ⑤</td></tr>
+<tr><td>删除（二次确认）</td><td>⑤ 编辑弹窗内</td></tr>
+<tr><td>启用 / 停用</td><td>⑤ 编辑弹窗 toggle</td></tr>
+<tr><td>切换精选（置顶）</td><td>⑤ 编辑弹窗 toggle</td></tr>
+<tr><td rowspan="2">排序</td><td>上移 / 下移</td><td>① 卡片底部 ↑↓</td></tr>
+<tr><td>排序序号显示</td><td>① 卡片底部 #N</td></tr>
+<tr><td>角标</td><td>热门 / 新品 / 限时 / 无</td><td>① 封面顶部居中</td></tr>
+<tr><td>跳转类型</td><td>资源 / 页面 / 网页</td><td>⑤ 弹窗 chip 三选一</td></tr>
+<tr><td rowspan="3">批量操作</td><td>多选 / 全选</td><td>⑥ 卡片右上角 ✓</td></tr>
+<tr><td>批量启用 / 停用</td><td>⑥ 底部操作栏</td></tr>
+<tr><td>批量删除</td><td>⑥ 底部操作栏</td></tr>
+<tr><td rowspan="4">页面状态</td><td>正常列表</td><td>①</td></tr>
+<tr><td>空状态</td><td>②</td></tr>
+<tr><td>加载骨架屏</td><td>③</td></tr>
+<tr><td>错误重试</td><td>④</td></tr>
+</table>
+
+<h3>表单字段（创建/编辑）</h3>
+<table class="stbl">
+<tr><th>字段</th><th>控件</th><th>必填</th></tr>
+<tr><td>标题 <code>title</code></td><td>input</td><td>是</td></tr>
+<tr><td>描述 <code>description</code></td><td>textarea</td><td>否</td></tr>
+<tr><td>封面图 <code>cover</code></td><td>选图 + 预览</td><td>否</td></tr>
+<tr><td>跳转类型 <code>linkType</code></td><td>chip 三选一</td><td>是</td></tr>
+<tr><td>筛选类型 <code>filterType</code></td><td>chip 二选一</td><td>resource 时</td></tr>
+<tr><td>筛选值 <code>filterValue</code></td><td>picker</td><td>resource 时</td></tr>
+<tr><td>角标 <code>badge</code></td><td>chip 四选一</td><td>否</td></tr>
+<tr><td>精选 <code>isFeatured</code></td><td>toggle</td><td>否</td></tr>
+</table>
+</div>
+
+<div>
+<h3>卡片四角浮层结构</h3>
+<table class="stbl">
+<tr><th>位置</th><th>元素</th></tr>
+<tr><td>左上</td><td>状态胶囊（显示态 · 编辑内修改）</td></tr>
+<tr><td>顶部居中</td><td>角标（热门 / 新品 / 限时 / 无）</td></tr>
+<tr><td>右上</td><td>★ 精选星标（显示态）+ ✓ 勾选框（批量用）</td></tr>
+<tr><td>底部覆盖</td><td>标题 + 跳转类型标签（渐变遮罩上）</td></tr>
+<tr><td>卡片底部</td><td>排序号 #N + 描述 + ↑↓ 排序（卡片上操作）</td></tr>
+<tr><td>整卡点击</td><td>进入编辑弹窗 ⑤（删除/启用/精选均在此操作）</td></tr>
+</table>
+
+<h3>设计规范遵循</h3>
+<table class="stbl">
+<tr><th>规范项</th><th>原型实现</th></tr>
+<tr><td>主色</td><td><code>#07C160</code> 微信绿</td></tr>
+<tr><td>封面比例</td><td>16:9（padding-bottom 56.25%）</td></tr>
+<tr><td>网格</td><td>2 列，间距 10px（≈20rpx）</td></tr>
+<tr><td>触控目标</td><td>操作图标 26px 视觉 + 扩展热区≥44pt</td></tr>
+<tr><td>弹窗</td><td>底部 Sheet，顶部圆角 20px，max-height 88%</td></tr>
+<tr><td>角标色</td><td>热门红 / 新品蓝 / 限时橙（带透明度）</td></tr>
+<tr><td>状态胶囊</td><td>毛玻璃 + 语义色（绿/灰）</td></tr>
+<tr><td>骨架屏</td><td>shimmer 动画占位</td></tr>
+<tr><td>图标</td><td>Feather Icons 线性 SVG，stroke-width 2</td></tr>
+<tr><td>停用卡片</td><td>opacity 0.55 视觉降级</td></tr>
+<tr><td>卡片点击</td><td>整卡进入编辑弹窗（删除/启用/精选在弹窗内操作）</td></tr>
+</table>
+
+<h3>8 个常用页面预设（page 类型）</h3>
+<table class="stbl">
+<tr><th>名称</th><th>路径</th></tr>
+<tr><td>每日推荐</td><td><code>/subpackages/daily-picks/...</code></td></tr>
+<tr><td>灵感文案</td><td><code>/subpackages/inspiration-writer/...</code></td></tr>
+<tr><td>小辣椒小店</td><td><code>/pages/store/store</code></td></tr>
+<tr><td>搜索</td><td><code>/subpackages/search/search</code></td></tr>
+<tr><td>我的收藏</td><td><code>/subpackages/favorites/...</code></td></tr>
+<tr><td>积分中心</td><td><code>/subpackages/points/points</code></td></tr>
+<tr><td>头像DIY</td><td><code>/subpackages/avatar-diy/...</code></td></tr>
+<tr><td>通知中心</td><td><code>/subpackages/notifications/...</code></td></tr>
+</table>
+</div>
+</div>
+
+<div class="note">
+  <strong>专题管理原型图</strong> — 完整复刻 topic-list 小程序实现<br>
+  6 屏覆盖：列表正常态 / 空状态 / 加载骨架屏 / 错误重试 / 创建编辑弹窗 / 批量操作<br>
+  严格遵循 mini-admin-design.md 设计方案：#07C160 主色 · Feather 线性图标 · 触控≥44pt · 四态完备 · 2列网格 16:9 封面
+</div>
+</div>
+
+</body>
+</html>

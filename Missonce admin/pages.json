@@ -1,0 +1,208 @@
+{
+  "pages": [
+    {
+      "path": "pages/dashboard/dashboard",
+      "style": {
+        "navigationBarTitleText": "概览",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/content/content",
+      "style": {
+        "navigationBarTitleText": "内容"
+      }
+    },
+    {
+      "path": "pages/ops/ops",
+      "style": {
+        "navigationBarTitleText": "运营",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/settings/settings",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    },
+    {
+      "path": "pages/points-config/points-config",
+      "style": {
+        "navigationBarTitleText": "积分配置"
+      }
+    },
+    {
+      "path": "pages/daily-picks/daily-picks",
+      "style": {
+        "navigationBarTitleText": "每日精选"
+      }
+    },
+    {
+      "path": "pages/app-config/app-config",
+      "style": {
+        "navigationBarTitleText": "应用配置"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/resource-list/resource-list",
+      "style": {
+        "navigationBarTitleText": "资源管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/resource-detail/resource-detail",
+      "style": {
+        "navigationBarTitleText": "资源详情"
+      }
+    },
+    {
+      "path": "pages/resource-upload/resource-upload",
+      "style": {
+        "navigationBarTitleText": "上传资源"
+      }
+    },
+    {
+      "path": "pages/topic-list/topic-list",
+      "style": {
+        "navigationBarTitleText": "专题管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/category-tags/category-tags",
+      "style": {
+        "navigationBarTitleText": "分类标签"
+      }
+    },
+    {
+      "path": "pages/home-tabs/home-tabs",
+      "style": {
+        "navigationBarTitleText": "首页 Tab",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/ad-config/ad-config",
+      "style": {
+        "navigationBarTitleText": "广告配置",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/user-list/user-list",
+      "style": {
+        "navigationBarTitleText": "用户管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/user-detail/user-detail",
+      "style": {
+        "navigationBarTitleText": "用户详情"
+      }
+    },
+    {
+      "path": "pages/notification-list/notification-list",
+      "style": {
+        "navigationBarTitleText": "通知管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/notification-edit/notification-edit",
+      "style": {
+        "navigationBarTitleText": "编辑通知"
+      }
+    },
+    {
+      "path": "pages/admin-list/admin-list",
+      "style": {
+        "navigationBarTitleText": "管理员",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/logs/logs",
+      "style": {
+        "navigationBarTitleText": "操作日志",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/ai-config/ai-config",
+      "style": {
+        "navigationBarTitleText": "AI 配置",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/quotes-manage/quotes-manage",
+      "style": {
+        "navigationBarTitleText": "灵感文案",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/poster-quotes/poster-quotes",
+      "style": {
+        "navigationBarTitleText": "海报语录",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    },
+    {
+      "path": "pages/records/records",
+      "style": {
+        "navigationBarTitleText": "下载收藏记录",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/recycle-bin/recycle-bin",
+      "style": {
+        "navigationBarTitleText": "资源回收站",
+        "enablePullDownRefresh": true
+      }
+    }
+  ],
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^mc-(.*)": "@/components/mc-$1/mc-$1.vue"
+    }
+  },
+  "window": {
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "米森后台",
+    "backgroundColor": "#F5F6F8",
+    "backgroundTextStyle": "dark"
+  },
+	"condition" : { //模式配置，仅开发期间生效
+		"current": 0, //当前激活的模式(list 的索引项)
+		"list": [
+			{
+				"name": "", //模式名称
+				"path": "", //启动页面，必选
+				"query": "" //启动参数，在页面的onLoad函数里面得到
+			}
+		]
+	},
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "renderer": "webview"
+}

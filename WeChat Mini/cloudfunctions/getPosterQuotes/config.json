@@ -1,0 +1,13 @@
+{
+  "permissions": {},
+  "envVariables": {},
+  "timeout": 5,
+  "memory": 128,
+  "triggers": [
+    {
+      "name": "keepalive",
+      "type": "timer",
+      "config": "0 */10 * * * * *"
+    }
+  ]
+}

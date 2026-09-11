@@ -1,0 +1,21 @@
+<view class="poster-modal" hidden="{{!visible}}" catchtouchmove="noop">
+  <view class="poster-content" catchtap="noop">
+    <!-- 始终用 canvas 显示，尺寸在 initPoster 中一次性设置，无切换跳变 -->
+    <view class="canvas-box" style="width: {{width}}px; height: {{height}}px;">
+      <canvas type="2d" id="posterCanvas" class="poster-canvas" style="width: {{width}}px; height: {{height}}px;"></canvas>
+      <view wx:if="{{generating}}" class="loading-mask">
+        <view class="loading-spinner"></view>
+      </view>
+    </view>
+
+    <view class="poster-actions">
+      <button class="action-btn share" bindtap="shareToFriend" wx:if="{{canShowShareMenu}}">发送给朋友</button>
+      <button class="action-btn save" bindtap="savePoster" loading="{{saving}}">保存海报</button>
+    </view>
+
+    <!-- 关闭按钮 -->
+    <view class="close-icon-container" bindtap="onClose">
+      <view class="close-icon"></view>
+    </view>
+  </view>
+</view>

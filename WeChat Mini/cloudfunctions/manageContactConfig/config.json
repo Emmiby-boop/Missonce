@@ -1,0 +1,15 @@
+{
+  "name": "manageContactConfig",
+  "version": "1.0.0",
+  "description": "管理联系方式配置",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  },
+  "keywords": [
+    "contact",
+    "config"
+  ],
+  "author": "",
+  "license": "MIT"
+}

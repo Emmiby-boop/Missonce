@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <defs>
+    <linearGradient id="coinBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="coinInner" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+  <!-- 金币外圈 -->
+  <circle cx="12" cy="12" r="9" fill="url(#coinBg)"/>
+  <!-- 金币内圈 -->
+  <circle cx="12" cy="12" r="6.5" fill="url(#coinInner)"/>
+  <!-- 中间星星 -->
+  <path d="M12 7.5l1.6 3.2 3.5.5-2.5 2.5.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.5 3.5-.5z" fill="#fff" opacity="0.95"/>
+  <!-- 右上闪光 -->
+  <path d="M18.5 5.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" fill="#fef3c7"/>
+</svg>

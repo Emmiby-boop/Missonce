@@ -1,0 +1,9 @@
+{
+  "name": "prebuildHomeFeed",
+  "version": "1.0.0",
+  "description": "预构建首页数据缓存（tabs+推荐流+最新流第一页）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

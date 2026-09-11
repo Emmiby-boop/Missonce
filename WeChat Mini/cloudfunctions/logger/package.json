@@ -1,0 +1,9 @@
+{
+  "name": "logger",
+  "version": "1.0.0",
+  "description": "日志云函数（合并事件埋点+错误上报）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

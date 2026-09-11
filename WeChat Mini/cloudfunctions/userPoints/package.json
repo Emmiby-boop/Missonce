@@ -1,0 +1,9 @@
+{
+  "name": "userPoints",
+  "version": "1.0.0",
+  "description": "用户积分与签到管理",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

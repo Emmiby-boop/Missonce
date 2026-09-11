@@ -1,0 +1,102 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/tools/tools",
+    "pages/topics/topics",
+    "pages/profile/profile"
+  ],
+  "subPackages": [
+    {
+      "root": "subpackages",
+      "pages": [
+        "daily-picks/daily-picks",
+        "search/search",
+        "profile-edit/profile-edit",
+        "favorites/favorites",
+        "preview/preview",
+        "wallpaper-preview/wallpaper-preview",
+        "login/login",
+        "webview/webview",
+        "resource-list/resource-list",
+        "inspiration-writer/inspiration-writer",
+        "points/points",
+        "notifications/notifications",
+        "avatar-diy/avatar-diy",
+        "announcement-detail/announcement-detail",
+        "store/store",
+        "group-qr/group-qr"
+      ]
+    }
+  ],
+  "lazyCodeLoading": "requiredComponents",
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "wifi",
+      "packages": ["subpackages"]
+    },
+    "pages/topics/topics": {
+      "network": "wifi",
+      "packages": ["subpackages"]
+    },
+    "pages/tools/tools": {
+      "network": "wifi",
+      "packages": ["subpackages"]
+    },
+    "pages/profile/profile": {
+      "network": "wifi",
+      "packages": ["subpackages"]
+    }
+  },
+  
+  "cloud": true,
+  "darkmode": true,
+  "themeLocation": "config/theme.json",
+
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "@navBgColor",
+    "navigationBarTitleText": "小辣椒动态头像壁纸",
+    "navigationBarTextStyle": "@navTextStyle",
+    "backgroundColorTop": "@navBgColor",
+    "backgroundColorBottom": "@pageBgColor"
+  },
+
+  "tabBar": {
+    "color": "@tabBarColor",
+    "selectedColor": "@tabBarSelectedColor",
+    "backgroundColor": "@tabBarBgColor",
+    "borderStyle": "@tabBarBorderStyle",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home-active.png"
+      },
+      {
+        "pagePath": "pages/topics/topics",
+        "text": "专题",
+        "iconPath": "images/topic.png",
+        "selectedIconPath": "images/topic-active.png"
+      },
+      {
+        "pagePath": "pages/tools/tools",
+        "text": "工具",
+        "iconPath": "images/tools.png",
+        "selectedIconPath": "images/tools-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/profile.png",
+        "selectedIconPath": "images/profile-active.png"
+      }
+    ]
+  },
+
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "navigateToMiniProgramAppIdList": [
+    "wxbd304fe2186156e4"
+  ]
+}

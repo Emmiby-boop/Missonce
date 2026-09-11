@@ -1,0 +1,139 @@
+.waterfall-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 24rpx;
+  gap: 24rpx;
+}
+
+.waterfall-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 🔥 P0-3 虚拟滚动：不可见项的占位符，仅撑开高度保持布局 */
+.waterfall-placeholder {
+  width: 100%;
+  background: transparent;
+}
+
+.waterfall-item {
+  background: #f8fafc;
+  border-radius: 20rpx;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease;
+}
+
+/* 头像：1:1 正方形 */
+.avatar-item {
+  aspect-ratio: 1;
+}
+
+/* 壁纸：9:16 竖屏 */
+.wallpaper-item {
+  aspect-ratio: 9 / 16;
+}
+
+.waterfall-item .waterfall-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.waterfall-item:active {
+  transform: scale(0.98);
+}
+
+.waterfall-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #f1f5f9;
+}
+
+/* 右下角类型标签（静态头像/壁纸） */
+.type-tag {
+  position: absolute;
+  bottom: 8rpx;
+  right: 8rpx;
+  padding: 4rpx 12rpx;
+  background: rgba(255, 105, 180, 0.9);
+  color: #fff;
+  font-size: 20rpx;
+  border-radius: 4rpx;
+  z-index: 1;
+  line-height: 1.4;
+}
+
+/* 右下角「动态头像」标识（绿色背景，和 type-tag 同位置互斥显示） */
+.type-tag-gif {
+  background: rgba(7, 193, 96, 0.9);
+}
+
+/* 广告卡片：宽度撑满列，高度由 <ad-custom> 根据广告模板比例自动计算（官方文档要求） */
+.waterfall-ad-card {
+  position: relative;
+  background: #f8fafc;
+  overflow: hidden;
+  padding: 0;
+  /* 不强制 aspect-ratio，让广告自己撑开高度 */
+}
+
+/* 灵感文案卡片 */
+.waterfall-quote-card {
+  background: #F0FDF4;
+  border-radius: 20rpx;
+  padding: 32rpx 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  transition: transform 0.2s ease;
+}
+
+.waterfall-quote-card:active {
+  transform: scale(0.98);
+}
+
+.waterfall-quote-card .quote-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #166534;
+  line-height: 1.6;
+  margin-bottom: 12rpx;
+}
+
+.waterfall-quote-card .quote-sub {
+  font-size: 22rpx;
+  color: #15803d;
+  opacity: 0.7;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .waterfall-item {
+    background: #1f2937;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  }
+
+  .waterfall-image {
+    background: #374151;
+  }
+
+  .waterfall-quote-card {
+    background: rgba(16, 185, 129, 0.12);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  }
+
+  .waterfall-quote-card .quote-text {
+    color: #6ee7b7;
+  }
+
+  .waterfall-quote-card .quote-sub {
+    color: #34d399;
+  }
+}

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Missonce Admin — 广告配置 UI 原型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --pri:#07C160;--pri-l:#E8F8EE;--pri-d:#06AD56;
+  --red:#FA5151;--red-l:#FFE8E8;
+  --org:#FF9500;--org-l:#FFF3E0;
+  --blu:#10AEFF;--blu-l:#E8F4FF;
+  --pur:#7C5CFC;--pur-l:#F0E8FF;
+  --bg:#F5F6F8;--card:#FFF;--tx:#1A1A2E;--tx2:#8C8CA1;--tx3:#B8B8C8;--bd:#EBEBF0;--dv:#F0F0F5;
+  --r:14px;--rs:10px;
+  --sk:#EDEDF2;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Noto Sans CJK SC',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+
+.header{background:var(--card);padding:28px 40px;border-bottom:1px solid var(--bd);}
+.header h1{font-size:22px;font-weight:700;color:var(--tx);}
+.header p{font-size:14px;color:var(--tx2);margin-top:6px;line-height:1.6;}
+.header .tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.header .tag{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;background:var(--pri-l);color:var(--pri-d);}
+
+.wrap{display:flex;gap:28px;padding:28px 40px;overflow-x:auto;align-items:flex-start;flex-wrap:wrap;}
+.phone{flex-shrink:0;width:326px;height:660px;background:#111;border-radius:40px;padding:8px;position:relative;margin-bottom:40px;}
+.phone-label{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:var(--tx2);white-space:nowrap;}
+.screen{width:100%;height:100%;background:var(--bg);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.statusbar{height:40px;background:var(--card);display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 6px;font-size:11px;font-weight:600;color:var(--tx);flex-shrink:0;}
+.statusbar .time{font-size:13px;font-weight:700;}
+.statusbar .icons{display:flex;gap:4px;align-items:center;}
+.statusbar .icons svg{width:14px;height:14px;}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:#111;border-radius:11px;z-index:20;}
+
+.navbar{height:44px;background:var(--card);display:flex;align-items:center;padding:0 8px;border-bottom:0.5px solid var(--bd);flex-shrink:0;position:relative;}
+.navbar .nav-back{width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .nav-back svg{width:22px;height:22px;color:var(--tx);}
+.navbar .nav-title{position:absolute;left:50%;transform:translateX(-50%);font-size:16px;font-weight:600;color:var(--tx);}
+
+.pg{flex:1;overflow-y:auto;background:var(--bg);padding:12px 14px 80px;}
+.pg::-webkit-scrollbar{display:none;}
+
+.tabbar{height:58px;background:var(--card);border-top:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-around;flex-shrink:0;padding-bottom:6px;}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;opacity:.42;transition:.2s;}
+.tab.on{opacity:1;}
+.tab svg{width:22px;height:22px;color:var(--tx2);}
+.tab.on svg{color:var(--pri);}
+.tab span{font-size:10px;font-weight:500;color:var(--tx2);}
+.tab.on span{color:var(--pri);}
+
+/* Segmented tab control */
+.seg{display:flex;background:var(--card);padding:4px;gap:4px;margin-bottom:12px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.seg-item{flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:13px;font-weight:600;color:var(--tx2);cursor:pointer;transition:.2s;}
+.seg-item.on{background:var(--pri);color:#fff;box-shadow:0 2px 8px rgba(7,193,96,.25);}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.search-box{flex:1;display:flex;align-items:center;gap:6px;background:var(--card);border-radius:10px;padding:0 12px;height:36px;border:1px solid var(--dv);min-width:0;}
+.search-icon{width:15px;height:15px;color:var(--tx3);flex-shrink:0;}
+.search-input{flex:1;border:none;outline:none;font-size:13px;color:var(--tx);background:transparent;min-width:0;}
+.filter-picker{flex-shrink:0;}
+.batch-btns{display:flex;gap:6px;flex-shrink:0;}
+.picker-display{height:36px;display:flex;align-items:center;padding:0 12px;background:var(--card);border-radius:10px;border:1px solid var(--dv);font-size:12px;color:var(--tx);cursor:pointer;white-space:nowrap;}
+.picker-display--page{min-width:84px;justify-content:center;font-weight:500;gap:4px;}
+.filter-picker .picker-display{padding-right:26px;position:relative;}
+.picker-display .chev{width:13px;height:13px;color:var(--tx3);}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;flex-shrink:0;}
+.badge--purple{background:var(--pur-l);color:var(--pur);}
+.badge--blue{background:var(--blu-l);color:var(--blu);}
+.badge--green{background:var(--pri-l);color:var(--pri-d);}
+.badge--grey{background:var(--dv);color:var(--tx2);}
+
+/* Unit card */
+.unit-card{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:.2s;}
+.unit-card:active{background:#f7f8fa;}
+.unit-card__head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.unit-card__name{font-size:14px;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.unit-card__id{font-size:11px;color:var(--tx2);font-family:'SF Mono',Menlo,Consolas,monospace;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.unit-card__notes{font-size:11px;color:var(--tx3);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.unit-card__footer{display:flex;justify-content:flex-end;border-top:0.5px solid var(--dv);padding-top:8px;margin-top:2px;}
+
+/* Position card */
+.pos-card{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:.2s;}
+.pos-card:active{background:#f7f8fa;}
+.pos-card__head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.pos-card__head-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
+.pos-card__adid{font-size:11px;color:var(--tx2);font-family:'SF Mono',Menlo,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pos-card__info{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.pos-info-row{display:flex;align-items:center;gap:8px;}
+.pos-info-label{font-size:11px;color:var(--tx2);width:44px;flex-shrink:0;}
+.pos-info-value{font-size:12px;color:var(--tx);}
+.pos-info-value--mono{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:11px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pos-card__footer{display:flex;justify-content:flex-end;border-top:0.5px solid var(--dv);padding-top:8px;}
+
+/* Card actions (icon buttons) */
+.card-actions{display:flex;gap:6px;}
+.icon-btn{width:34px;height:34px;border-radius:8px;background:var(--dv);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.icon-btn:active{background:#e3e3ea;}
+.icon-btn__img{width:16px;height:16px;}
+
+/* Nice edit button (single primary action on card) */
+.edit-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:32px;padding:0 16px;border-radius:16px;background:var(--pri-l);color:var(--pri-d);font-size:13px;font-weight:600;cursor:pointer;transition:.18s;border:none;flex-shrink:0;box-shadow:0 1px 3px rgba(7,193,96,.12);}
+.edit-btn svg{width:15px;height:15px;stroke-width:2.2;}
+.edit-btn:active{background:var(--pri);color:#fff;transform:scale(.95);box-shadow:0 3px 10px rgba(7,193,96,.3);}
+
+/* Destructive delete row inside edit modal */
+.del-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:18px;padding:13px 0;border-radius:12px;background:var(--red-l);color:var(--red);font-size:14px;font-weight:600;cursor:pointer;transition:.18s;border:none;width:100%;}
+.del-row svg{width:16px;height:16px;}
+.del-row:active{opacity:.7;transform:scale(.98);}
+
+/* FAB */
+.fab{position:absolute;bottom:74px;right:14px;width:48px;height:48px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(7,193,96,.35);cursor:pointer;z-index:10;}
+.fab svg{width:22px;height:22px;color:#fff;}
+
+/* Status buttons (toolbar) */
+.btn--sm{height:32px;padding:0 14px;font-size:12px;border-radius:8px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;border:none;flex:none;white-space:nowrap;}
+.btn--ghost{background:var(--pri-l);color:var(--pri);}
+.btn--default{background:var(--dv);color:var(--tx);}
+
+/* Empty */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center;}
+.empty .e-ico{width:72px;height:72px;border-radius:50%;background:var(--pri-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.empty .e-ico svg{width:34px;height:34px;color:var(--pri);}
+.empty .e-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.empty .e-d{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:20px;}
+.empty .e-btn{padding:10px 28px;border-radius:100px;background:var(--pri);color:#fff;font-size:13px;font-weight:500;cursor:pointer;box-shadow:0 3px 10px rgba(7,193,96,.3);}
+
+/* Skeleton */
+.sk-card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+.sk-line{height:10px;border-radius:4px;background:var(--sk);margin-bottom:8px;position:relative;overflow:hidden;}
+.sk-line::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:shimmer 1.5s infinite;}
+.sk-line.w50{width:50%;}
+.sk-line.w70{width:70%;}
+.sk-line.w40{width:40%;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+/* Error */
+.error{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 20px;text-align:center;}
+.error .er-ico{width:64px;height:64px;border-radius:50%;background:var(--red-l);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.error .er-ico svg{width:30px;height:30px;color:var(--red);}
+.error .er-t{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.error .er-d{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:18px;}
+.error .er-btn{padding:9px 24px;border-radius:100px;background:var(--card);color:var(--pri);font-size:13px;font-weight:500;border:1px solid var(--pri);cursor:pointer;}
+
+/* Modal */
+.modal-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:50;}
+.modal-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;padding:0 0 20px;max-height:90%;display:flex;flex-direction:column;z-index:51;animation:slideUp .25s ease-out;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:0.5px solid var(--dv);flex-shrink:0;}
+.modal-head .m-title{font-size:16px;font-weight:600;color:var(--tx);}
+.modal-head .m-close{width:32px;height:32px;border-radius:50%;background:var(--dv);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.modal-head .m-close svg{width:16px;height:16px;color:var(--tx2);}
+.modal-body{flex:1;overflow-y:auto;padding:14px 18px;}
+.modal-body::-webkit-scrollbar{display:none;}
+.modal-foot{flex-shrink:0;padding:12px 18px 0;border-top:0.5px solid var(--dv);display:flex;gap:10px;}
+
+.tip{font-size:11px;color:var(--tx2);background:var(--pri-l);padding:8px 12px;border-radius:8px;line-height:1.5;margin-bottom:16px;}
+.tip b{color:var(--pri-d);}
+.fgrp{margin-bottom:16px;}
+.fgrp .f-lbl{font-size:12px;font-weight:600;color:var(--tx);margin-bottom:7px;display:flex;align-items:center;gap:4px;}
+.fgrp .f-lbl .req{color:var(--red);}
+.fgrp .f-lbl .f-hint{font-size:10px;color:var(--tx3);font-weight:400;margin-left:auto;}
+.f-input{width:100%;height:40px;border-radius:10px;border:1px solid var(--bd);padding:0 12px;font-size:13px;color:var(--tx);background:var(--card);outline:none;display:flex;align-items:center;}
+.f-input.ph{color:var(--tx3);}
+.f-input--mono{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12px;color:var(--tx2);}
+.form-hint{font-size:10px;color:var(--tx3);margin-top:5px;display:block;}
+.form-hint--ok{color:var(--pri-d);}
+
+.frow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--dv);}
+.frow:last-child{border-bottom:none;}
+.frow .fr-tx .fr-t{font-size:13px;font-weight:500;color:var(--tx);}
+.frow .fr-tx .fr-d{font-size:10px;color:var(--tx2);margin-top:2px;}
+
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--dv);position:relative;cursor:pointer;transition:.2s;flex-shrink:0;}
+.toggle.on{background:var(--pri);}
+.toggle .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.toggle.on .knob{left:20px;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;}
+.toggle-label{font-size:13px;font-weight:600;color:var(--tx);}
+
+.btn{flex:1;height:42px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;border:none;}
+.btn-default{background:var(--dv);color:var(--tx);}
+.btn-primary{background:var(--pri);color:#fff;}
+
+.config-tip{background:var(--pri-l);border-radius:10px;padding:12px;margin-top:4px;}
+.config-tip__title{font-size:12px;font-weight:600;color:var(--pri-d);display:block;margin-bottom:6px;}
+.config-tip__item{font-size:11px;color:var(--pri-d);line-height:1.9;display:block;}
+
+/* Spec */
+.spec-section{padding:28px 40px 40px;border-top:1px solid var(--bd);background:var(--card);margin-top:20px;width:100%;}
+.spec-section h2{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--tx);}
+.spec-section h3{font-size:15px;font-weight:600;margin:20px 0 10px;color:var(--tx);}
+.spec-section p{font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:14px;}
+.stbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;}
+.stbl th{text-align:left;padding:10px 12px;background:#fafbfc;color:var(--tx2);font-weight:500;border-bottom:2px solid var(--pri);}
+.stbl td{padding:10px 12px;border-bottom:0.5px solid var(--dv);color:var(--tx);vertical-align:top;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl code{background:var(--dv);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--pri-d);}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;}
+.note{padding:16px;background:var(--pri-l);border-radius:12px;font-size:13px;color:var(--pri-d);line-height:1.7;margin-top:20px;}
+.warn{padding:16px;background:var(--org-l);border-radius:12px;font-size:13px;color:var(--org-d);line-height:1.7;margin-top:16px;}
+@media (max-width:1200px){.spec-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Missonce Admin — 广告配置 UI 原型</h1>
+  <p>广告配置完整功能页面 · 双 Tab（广告单元 / 广告位）· 6 屏覆盖全部状态与交互 · 严格遵循设计方案（#07C160 主色 / Feather 图标 / 触控≥44pt / 四态完备）</p>
+  <div class="tags">
+    <span class="tag">双 Tab 切换</span>
+    <span class="tag">广告单元库</span>
+    <span class="tag">广告位管理</span>
+    <span class="tag">开关切换</span>
+    <span class="tag">批量开启/关闭</span>
+    <span class="tag">adUnitId 校验</span>
+    <span class="tag">四态完备</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ===== PHONE 1: 广告单元 Tab 列表正常态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">广告配置</span>
+</div>
+<div class="pg">
+
+<div class="seg">
+  <div class="seg-item on">广告单元</div>
+  <div class="seg-item">广告位</div>
+</div>
+
+<div class="toolbar">
+  <div class="search-box">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <div class="search-input">搜索名称</div>
+  </div>
+  <div class="filter-picker">
+    <div class="picker-display">全部类型<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg></div>
+  </div>
+</div>
+
+<div class="unit-card">
+  <div class="unit-card__head">
+    <div class="unit-card__name">首页顶部原生广告</div>
+    <div class="badge badge--purple">原生顶部广告</div>
+  </div>
+  <div class="unit-card__id">adunit-1a2b3c4d5e6f7a8b</div>
+  <div class="unit-card__notes">首页信息流顶部展示位</div>
+  <div class="unit-card__footer">
+    <div class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</div>
+  </div>
+</div>
+
+<div class="unit-card">
+  <div class="unit-card__head">
+    <div class="unit-card__name">壁纸页底部广告</div>
+    <div class="badge badge--purple">原生底部广告</div>
+  </div>
+  <div class="unit-card__id">adunit-9f8e7d6c5b4a3c2d</div>
+  <div class="unit-card__notes">壁纸详情页底部固定位</div>
+  <div class="unit-card__footer">
+    <div class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</div>
+  </div>
+</div>
+
+<div class="unit-card">
+  <div class="unit-card__head">
+    <div class="unit-card__name">激励视频-积分页</div>
+    <div class="badge badge--purple">激励视频广告</div>
+  </div>
+  <div class="unit-card__id">adunit-2c3d4e5f6a7b8c9d</div>
+  <div class="unit-card__notes">观看得积分，每日首次免广告</div>
+  <div class="unit-card__footer">
+    <div class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</div>
+  </div>
+</div>
+
+</div>
+<div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">① 广告单元 Tab — 列表 · 搜索 + 类型筛选</div>
+</div>
+
+<!-- ===== PHONE 2: 广告位 Tab 列表正常态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">广告配置</span>
+</div>
+<div class="pg">
+
+<div class="seg">
+  <div class="seg-item">广告单元</div>
+  <div class="seg-item on">广告位</div>
+</div>
+
+<div class="toolbar">
+  <div class="picker-display picker-display--page">首页<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg></div>
+  <div class="batch-btns">
+    <div class="btn--sm btn--ghost">批量开启</div>
+    <div class="btn--sm btn--default">批量关闭</div>
+  </div>
+</div>
+
+<div class="pos-card">
+  <div class="pos-card__head">
+    <div class="pos-card__head-left">
+      <div class="badge badge--blue">首页</div>
+      <div class="pos-card__adid">home_top_native</div>
+    </div>
+    <div class="toggle on"><div class="knob"></div></div>
+  </div>
+  <div class="pos-card__info">
+    <div class="pos-info-row"><span class="pos-info-label">类型</span><div class="badge badge--purple">原生顶部广告</div></div>
+    <div class="pos-info-row"><span class="pos-info-label">位置</span><span class="pos-info-value">顶部</span></div>
+    <div class="pos-info-row"><span class="pos-info-label">单元ID</span><span class="pos-info-value--mono">adunit-1a2b3c4d5e6f7a8b</span></div>
+  </div>
+  <div class="pos-card__footer">
+    <div class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</div>
+  </div>
+</div>
+
+<div class="pos-card">
+  <div class="pos-card__head">
+    <div class="pos-card__head-left">
+      <div class="badge badge--blue">首页</div>
+      <div class="pos-card__adid">home_feed_video</div>
+    </div>
+    <div class="toggle on"><div class="knob"></div></div>
+  </div>
+  <div class="pos-card__info">
+    <div class="pos-info-row"><span class="pos-info-label">类型</span><div class="badge badge--purple">原生视频广告</div></div>
+    <div class="pos-info-row"><span class="pos-info-label">位置</span><span class="pos-info-value">中部</span></div>
+    <div class="pos-info-row"><span class="pos-info-label">单元ID</span><span class="pos-info-value--mono">adunit-5e6f7a8b9c0d1e2f</span></div>
+  </div>
+  <div class="pos-card__footer">
+    <div class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</div>
+  </div>
+</div>
+
+<div class="pos-card">
+  <div class="pos-card__head">
+    <div class="pos-card__head-left">
+      <div class="badge badge--blue">首页</div>
+      <div class="pos-card__adid">home_bottom_native</div>
+    </div>
+    <div class="toggle"><div class="knob"></div></div>
+  </div>
+  <div class="pos-card__info">
+    <div class="pos-info-row"><span class="pos-info-label">类型</span><div class="badge badge--purple">原生底部广告</div></div>
+    <div class="pos-info-row"><span class="pos-info-label">位置</span><span class="pos-info-value">底部</span></div>
+    <div class="pos-info-row"><span class="pos-info-label">单元ID</span><span class="pos-info-value--mono">adunit-9f8e7d6c5b4a3c2d</span></div>
+  </div>
+  <div class="pos-card__footer">
+    <div class="edit-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>编辑</div>
+  </div>
+</div>
+
+</div>
+<div class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">② 广告位 Tab — 页面筛选 · 开关 · 批量</div>
+</div>
+
+<!-- ===== PHONE 3: 广告单元 编辑弹窗 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">广告配置</span>
+</div>
+
+<div class="pg" style="filter:brightness(.65);">
+<div class="seg">
+  <div class="seg-item on">广告单元</div>
+  <div class="seg-item">广告位</div>
+</div>
+<div class="unit-card">
+  <div class="unit-card__head"><div class="unit-card__name">首页顶部原生广告</div><div class="badge badge--purple">原生顶部广告</div></div>
+  <div class="unit-card__id">adunit-1a2b3c4d5e6f7a8b</div>
+  <div class="unit-card__notes">首页信息流顶部展示位</div>
+</div>
+</div>
+
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">编辑广告单元</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+
+    <div class="fgrp">
+      <div class="f-lbl">名称 <span class="req">*</span></div>
+      <div class="f-input">首页顶部原生广告</div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">adUnitId <span class="req">*</span></div>
+      <div class="f-input f-input--mono">adunit-1a2b3c4d5e6f7a8b</div>
+      <span class="form-hint form-hint--ok">✓ 格式正确</span>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">类型</div>
+      <div class="picker-display">原生顶部广告<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:6px;color:var(--tx3);"><polyline points="6,9 12,15 18,9"/></svg></div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">备注</div>
+      <div class="f-input" style="height:auto;min-height:64px;padding:10px 12px;line-height:1.5;align-items:flex-start;">首页信息流顶部展示位</div>
+    </div>
+
+    <button class="del-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>删除此广告单元</button>
+
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary">保存</div>
+  </div>
+</div>
+
+</div>
+<div class="phone-label">③ 广告单元 编辑弹窗 — 名称/adUnitId/类型/备注</div>
+</div>
+
+<!-- ===== PHONE 4: 广告位 编辑弹窗 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">广告配置</span>
+</div>
+
+<div class="pg" style="filter:brightness(.65);">
+<div class="seg">
+  <div class="seg-item">广告单元</div>
+  <div class="seg-item on">广告位</div>
+</div>
+<div class="pos-card">
+  <div class="pos-card__head"><div class="pos-card__head-left"><div class="badge badge--blue">首页</div><div class="pos-card__adid">home_top_native</div></div><div class="toggle on"><div class="knob"></div></div></div>
+  <div class="pos-card__info"><div class="pos-info-row"><span class="pos-info-label">类型</span><div class="badge badge--purple">原生顶部广告</div></div><div class="pos-info-row"><span class="pos-info-label">位置</span><span class="pos-info-value">顶部</span></div></div>
+</div>
+</div>
+
+<div class="modal-mask"></div>
+<div class="modal-sheet">
+  <div class="modal-head">
+    <span class="m-title">编辑广告位</span>
+    <div class="m-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+  </div>
+  <div class="modal-body">
+
+    <div class="fgrp">
+      <div class="f-lbl">页面路径 <span class="req">*</span></div>
+      <div class="picker-display">首页<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:6px;color:var(--tx3);"><polyline points="6,9 12,15 18,9"/></svg></div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">广告位ID <span class="req">*</span></div>
+      <div class="f-input f-input--mono" style="color:var(--tx3);">home_top_native</div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">广告类型 <span class="req">*</span></div>
+      <div class="picker-display">原生顶部广告<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:6px;color:var(--tx3);"><polyline points="6,9 12,15 18,9"/></svg></div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">位置</div>
+      <div class="picker-display">顶部<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:6px;color:var(--tx3);"><polyline points="6,9 12,15 18,9"/></svg></div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">滚动阈值 <span class="f-hint">仅 native_top</span></div>
+      <div class="f-input f-input--mono">200</div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">广告单元ID <span class="req">*</span></div>
+      <div class="picker-display" style="margin-bottom:8px;">首页顶部原生广告<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-left:6px;color:var(--tx3);"><polyline points="6,9 12,15 18,9"/></svg></div>
+      <div class="f-input f-input--mono">adunit-1a2b3c4d5e6f7a8b</div>
+      <span class="form-hint form-hint--ok">✓ 格式正确</span>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">状态</div>
+      <div class="toggle-row">
+        <span class="toggle-label">开启</span>
+        <div class="toggle on"><div class="knob"></div></div>
+      </div>
+    </div>
+
+    <div class="fgrp">
+      <div class="f-lbl">权重</div>
+      <div class="f-input f-input--mono">10</div>
+    </div>
+
+    <div class="config-tip">
+      <span class="config-tip__title">配置说明</span>
+      <span class="config-tip__item">• 广告位ID：唯一标识，创建后不可修改</span>
+      <span class="config-tip__item">• adUnitId：从微信公众平台广告管理后台获取</span>
+      <span class="config-tip__item">• 建议先在「广告单元」Tab 中添加配置</span>
+    </div>
+
+    <button class="del-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>删除此广告位</button>
+
+  </div>
+  <div class="modal-foot">
+    <div class="btn btn-default">取消</div>
+    <div class="btn btn-primary">保存</div>
+  </div>
+</div>
+
+</div>
+<div class="phone-label">④ 广告位 编辑弹窗 — 页面/类型/位置/单元/开关</div>
+</div>
+
+<!-- ===== PHONE 5: 加载骨架屏 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">广告配置</span>
+</div>
+<div class="pg">
+<div class="seg">
+  <div class="seg-item on">广告单元</div>
+  <div class="seg-item">广告位</div>
+</div>
+<div class="sk-card"><div class="sk-line w50"></div><div class="sk-line w70"></div><div class="sk-line w40"></div></div>
+<div class="sk-card"><div class="sk-line w50"></div><div class="sk-line w70"></div><div class="sk-line w40"></div></div>
+<div class="sk-card"><div class="sk-line w50"></div><div class="sk-line w70"></div><div class="sk-line w40"></div></div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">⑤ 加载态 — 骨架屏 shimmer</div>
+</div>
+
+<!-- ===== PHONE 6: 空状态 + 错误状态 ===== -->
+<div class="phone">
+<div class="screen">
+<div class="notch"></div>
+<div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 8.7C4.7 4.7 8.2 3 12 3s7.3 1.7 11 5.7"/><path d="M5 12.7C7 10.7 9.4 9.5 12 9.5s5 1.2 7 3.2"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M22 11h1a1 1 0 011 1v0a1 1 0 01-1 1h-1" fill="currentColor"/></svg></span></div>
+<div class="navbar">
+  <div class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg></div>
+  <span class="nav-title">广告配置</span>
+</div>
+<div class="pg">
+<div class="seg">
+  <div class="seg-item on">广告单元</div>
+  <div class="seg-item">广告位</div>
+</div>
+<div class="empty">
+  <div class="e-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+  <div class="e-t">暂无广告单元</div>
+  <div class="e-d">点击下方按钮<br>添加你的第一个广告单元</div>
+  <div class="e-btn">添加广告单元</div>
+</div>
+</div>
+<div class="tabbar">
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span>概览</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>内容</span></div>
+  <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>运营</span></div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>设置</span></div>
+</div>
+</div>
+<div class="phone-label">⑥ 空状态（单元）— 错误态见规范说明</div>
+</div>
+
+</div>
+
+<!-- ===== SPEC SECTION ===== -->
+<div class="spec-section">
+<h2>广告配置 — 设计规范说明</h2>
+
+<div class="spec-grid">
+<div>
+<h3>数据模型 — 广告单元（adUnits 库）</h3>
+<table class="stbl">
+<tr><th>字段</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>name</code></td><td>string</td><td>名称（必填）</td></tr>
+<tr><td><code>adUnitId</code></td><td>string</td><td>微信广告单元 ID，正则 <code>^adunit-[0-9a-fA-F]{16}$</code></td></tr>
+<tr><td><code>type</code></td><td>6 种类型</td><td>见下方类型枚举</td></tr>
+<tr><td><code>notes</code></td><td>string</td><td>备注说明</td></tr>
+</table>
+
+<h3>数据模型 — 广告位（adConfig）</h3>
+<table class="stbl">
+<tr><th>字段</th><th>类型</th><th>说明</th></tr>
+<tr><td><code>pagePath</code></td><td>string</td><td>页面路径（必填，10 个预设）</td></tr>
+<tr><td><code>adId</code></td><td>string</td><td>广告位 ID（必填，创建后不可改）</td></tr>
+<tr><td><code>type</code></td><td>6 种类型</td><td>原生顶部/底部/视频、视频、插屏、激励</td></tr>
+<tr><td><code>position</code></td><td>top/middle/bottom</td><td>位置（默认自动）</td></tr>
+<tr><td><code>adUnitId</code></td><td>string</td><td>关联广告单元 ID</td></tr>
+<tr><td><code>isEnable</code></td><td>boolean</td><td>启用状态（卡片开关直控）</td></tr>
+<tr><td><code>weight</code></td><td>number</td><td>权重（优先级）</td></tr>
+<tr><td><code>scrollThreshold</code></td><td>number</td><td>滚动阈值（仅 native_top）</td></tr>
+<tr><td><code>startTime / endTime</code></td><td>string</td><td>生效时间区间（可选）</td></tr>
+<tr><td><code>meta.materialUrl</code></td><td>string</td><td>素材 URL（可选）</td></tr>
+</table>
+</div>
+
+<div>
+<h3>广告类型枚举（6 种）</h3>
+<table class="stbl">
+<tr><th>value</th><th>标签</th></tr>
+<tr><td><code>native_top</code></td><td>原生顶部广告</td></tr>
+<tr><td><code>native_bottom</code></td><td>原生底部广告</td></tr>
+<tr><td><code>native_video</code></td><td>原生视频广告</td></tr>
+<tr><td><code>video</code></td><td>视频广告</td></tr>
+<tr><td><code>interstitial</code></td><td>插屏广告</td></tr>
+<tr><td><code>rewarded</code></td><td>激励视频广告</td></tr>
+</table>
+
+<h3>页面路径预设（10 个）</h3>
+<table class="stbl">
+<tr><th>label</th><th>path</th></tr>
+<tr><td>首页</td><td>/pages/index/index</td></tr>
+<tr><td>壁纸页</td><td>/pages/wallpaper/wallpaper</td></tr>
+<tr><td>个人中心</td><td>/pages/profile/profile</td></tr>
+<tr><td>每日精选</td><td>/subpackages/daily-picks/daily-picks</td></tr>
+<tr><td>搜索</td><td>/subpackages/search/search</td></tr>
+<tr><td>头像预览</td><td>/subpackages/preview/preview</td></tr>
+<tr><td>壁纸预览</td><td>/subpackages/wallpaper-preview/wallpaper-preview</td></tr>
+<tr><td>资源列表</td><td>/subpackages/resource-list/resource-list</td></tr>
+<tr><td>灵感文案</td><td>/subpackages/inspiration-writer/inspiration-writer</td></tr>
+<tr><td>积分</td><td>/subpackages/points/points</td></tr>
+</table>
+</div>
+</div>
+
+<div class="spec-grid">
+<div>
+<h3>功能清单（完整复刻）</h3>
+<table class="stbl">
+<tr><th>分类</th><th>功能</th><th>原型位置</th></tr>
+<tr><td rowspan="2">Tab</td><td>广告单元库</td><td>① / ③ / ⑤ / ⑥</td></tr>
+<tr><td>广告位管理</td><td>② / ④</td></tr>
+<tr><td>单元</td><td>名称/adUnitId/类型/备注 + 正则校验</td><td>③</td></tr>
+<tr><td>单元</td><td>搜索 + 类型筛选</td><td>①</td></tr>
+<tr><td>广告位</td><td>页面筛选 + 批量开启/关闭</td><td>②</td></tr>
+<tr><td>广告位</td><td>卡片开关直控 isEnable</td><td>②</td></tr>
+<tr><td>广告位</td><td>页面/类型/位置/单元/权重/阈值/时间</td><td>④</td></tr>
+<tr><td>删除</td><td>移至编辑弹窗（删除此单元 / 删除此广告位）</td><td>③ / ④</td></tr>
+<tr><td rowspan="4">状态</td><td>正常列表</td><td>① / ②</td></tr>
+<tr><td>空状态</td><td>⑥</td></tr>
+<tr><td>加载骨架屏</td><td>⑤</td></tr>
+<tr><td>错误重试</td><td>见下方说明</td></tr>
+</table>
+</div>
+
+<div>
+<h3>关键设计决策</h3>
+<table class="stbl">
+<tr><th>决策</th><th>原因</th></tr>
+<tr><td>双 Tab 分段控件</td><td>单元库与广告位职责分离</td></tr>
+<tr><td>卡片仅留编辑</td><td>卡片上只显示「编辑」按钮（绿色胶囊，按下填充）；删除收敛进编辑弹窗的删除此单元/广告位，与专题/首页Tab 约定统一</td></tr>
+<tr><td>广告位开关直控</td><td>卡片 toggle 即时启用/暂停，无需进弹窗</td></tr>
+<tr><td>批量开启/关闭</td><td>广告位 Tab 顶部针对当前页面一键操作</td></tr>
+<tr><td>adUnitId 校验</td><td>实时正则提示，保存拦截非法格式</td></tr>
+<tr><td>滚动阈值条件显示</td><td>仅 native_top 类型才出现该字段</td></tr>
+</table>
+
+<h3>设计规范遵循</h3>
+<table class="stbl">
+<tr><th>规范</th><th>实现</th></tr>
+<tr><td>主色</td><td><code>#07C160</code></td></tr>
+<tr><td>图标</td><td>Feather 线性 SVG，stroke-width 2</td></tr>
+<tr><td>弹窗</td><td>底部 Sheet，max-height 90%</td></tr>
+<tr><td>触控</td><td>图标按钮 34pt、开关 42×24、分段控件 9pt 内边距</td></tr>
+<tr><td>四态完备</td><td>loading / empty / error / success</td></tr>
+</table>
+</div>
+</div>
+
+<div class="note">
+  <strong>广告配置原型图</strong><br>
+  6 屏覆盖：① 广告单元列表 · ② 广告位列表 · ③ 广告单元弹窗 · ④ 广告位弹窗 · ⑤ 加载骨架屏 · ⑥ 空状态<br>
+  完整复刻 ad-config 实现：双 Tab 切换 · 单元库（搜索/类型筛选/正则校验）· 广告位（页面筛选/批量/卡片开关）· 底部 Sheet 弹窗
+</div>
+
+<div class="warn">
+  <strong>⚠ 与代码差异 / 待实现项</strong><br>
+  1. <b>错误状态</b>：①/② 均含加载失败分支（alertCircle + 重试按钮），失败时保留已缓存数据不清空；原型仅以 ⑥ 示意空态，错误态逻辑同资源管理「重试」交互。<br>
+  2. <b>曝光/点击/eCPM 指标</b>：仅存在于早期设计稿，<b>当前代码未实现</b>，原型未绘制该类统计卡片，需后续后端埋点補齐。<br>
+  3. <b>字段命名</b>：设计稿早期记为 <code>interval(4~50)</code>，实际代码使用 <code>scrollThreshold</code>（默认 200，仅 native_top），原型以代码为准。
+</div>
+
+</div>
+
+</body>
+</html>

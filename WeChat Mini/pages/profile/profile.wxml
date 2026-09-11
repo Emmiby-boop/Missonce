@@ -1,0 +1,264 @@
+<!-- 顶部渐变背景区（低端机挂 low-end 降级：去 blur、隐藏光晕） -->
+<view class="header-banner {{lowEnd ? 'low-end' : ''}}" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
+  <!-- 导航栏 -->
+  <view class="custom-nav">
+    <view class="nav-bar">
+      <text class="nav-title">我的</text>
+    </view>
+  </view>
+
+  <!-- 用户信息 -->
+  <view class="header-profile">
+    <view class="avatar-wrapper" bindtap="handleLogin" wx:if="{{!isLoggingIn}}">
+      <block wx:if="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}">
+        <image class="avatar-img" src="{{displayAvatarUrl || (userInfo && userInfo.avatarUrl)}}" mode="aspectFill" binderror="onAvatarImageError"></image>
+      </block>
+      <block wx:else>
+        <view class="avatar-placeholder">
+          <view class="avatar-head"></view>
+          <view class="avatar-body"></view>
+        </view>
+      </block>
+    </view>
+    <view class="avatar-wrapper logging-in" wx:if="{{isLoggingIn}}">
+      <view class="loading-spinner"></view>
+    </view>
+
+    <block wx:if="{{userInfo}}">
+      <text class="profile-name">{{userInfo.nickName}}</text>
+      <text class="profile-id" wx:if="{{userInfo.displayId}}">ID: {{userInfo.displayId}}</text>
+      <view class="edit-btn" bindtap="goEditProfile">编辑资料</view>
+    </block>
+    <block wx:else>
+      <button class="login-btn" bindtap="handleLogin" disabled="{{isLoggingIn}}">{{isLoggingIn ? '登录中...' : '立即登录'}}</button>
+      <text class="login-tip">登录后同步喜欢与下载记录</text>
+    </block>
+  </view>
+
+</view>
+
+<!-- 内容区域 -->
+<view class="content-body {{theme === 'dark' ? 'dark' : ''}}">
+
+  <!-- 数据统计 -->
+  <view class="stats-row" wx:if="{{userInfo}}">
+    <view class="stat-item" bindtap="openFavorites">
+      <text class="stat-num">{{favoriteCount || 0}}</text>
+      <text class="stat-label">喜欢</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item" bindtap="openDownloadHistory">
+      <text class="stat-num">{{downloadCount || 0}}</text>
+      <text class="stat-label">下载</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item" bindtap="openBrowseHistory">
+      <text class="stat-num">{{browseCount || 0}}</text>
+      <text class="stat-label">浏览</text>
+    </view>
+  </view>
+
+  <!-- 未登录提示 -->
+  <view class="login-hint-card" wx:if="{{!userInfo}}">
+    <text class="hint-icon">🔐</text>
+    <text class="hint-text">登录后可查看喜欢与下载记录</text>
+  </view>
+
+  <!-- 最近使用 -->
+  <view class="recent-section" wx:if="{{userInfo && recentItems.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">最近使用</text>
+      <view class="section-more" bindtap="openDownloadHistory">
+        <text>查看全部</text>
+        <image class="arrow-right" src="../../images/icon-arrow.png" mode="widthFix"></image>
+      </view>
+    </view>
+    <scroll-view class="recent-scroll" scroll-x enable-flex>
+      <view class="recent-item" wx:for="{{recentItems}}" wx:key="url" bindtap="onRecentTap" data-item="{{item}}">
+        <image class="recent-img" src="{{item.coverUrl || item.url}}" mode="aspectFill" lazy-load></image>
+        <text class="recent-type">{{item.type === 'avatar' ? '头像' : '壁纸'}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 菜单列表 -->
+  <view class="menu-section">
+    <block wx:for="{{menuItems}}" wx:key="title">
+      <block wx:if="{{!item.isShare && !(item.title === '清除缓存' && !userInfo)}}">
+        <view class="menu-item" bindtap="onMenuItemTap" data-title="{{item.title}}">
+          <view class="menu-left">
+            <view class="menu-icon-box" style="background: {{item.color}};">
+              <image class="menu-icon-img" src="{{item.iconPath}}"></image>
+            </view>
+            <text class="menu-title">{{item.title}}</text>
+          </view>
+          <view class="menu-right">
+            <text class="menu-desc">{{item.desc || ''}}</text>
+            <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
+          </view>
+        </view>
+      </block>
+      <button class="menu-item share-item" open-type="share" wx:if="{{item.isShare}}">
+        <view class="menu-left">
+          <view class="menu-icon-box" style="background: {{item.color}};">
+            <image class="menu-icon-img" src="{{item.iconPath}}"></image>
+          </view>
+          <text class="menu-title">{{item.title}}</text>
+        </view>
+        <view class="menu-right">
+          <text class="menu-desc">分享给好友</text>
+          <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
+        </view>
+      </button>
+    </block>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-area" wx:if="{{userInfo}}">
+    <view class="logout-btn" bindtap="handleLogout">退出当前账号</view>
+  </view>
+
+</view>
+
+<!-- ====== 弹层保持不变 ====== -->
+
+<!-- 喜欢弹层 -->
+<view class="download-mask" wx:if="{{showFavorites && userInfo}}" bindtap="closeFavoritesPanel">
+  <view class="download-panel" catchtap="noop">
+    <view class="download-header">
+      <text class="download-title">我的喜欢</text>
+      <view class="download-actions">
+        <text class="download-action" bindtap="clearFavorites">清空</text>
+        <text class="download-action" bindtap="closeFavoritesPanel">关闭</text>
+      </view>
+    </view>
+    <scroll-view scroll-y class="download-list" bindscrolltolower="loadMoreFavorites">
+      <block wx:if="{{favoritesList.length}}">
+        <view class="download-grid">
+          <view class="download-grid-item" wx:for="{{favoritesList}}" wx:key="url" bindtap="handleFavoriteTap" data-item="{{item}}">
+            <image class="download-thumb" src="{{item.url}}" mode="aspectFill" lazy-load></image>
+            <view class="download-type-tag {{item.type}}">{{item.type === 'avatar' ? '头像' : '壁纸'}}</view>
+          </view>
+        </view>
+      </block>
+      <view class="download-empty" wx:else>
+        <text>暂无喜欢</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+
+<!-- 下载记录弹层 -->
+<view class="download-mask" wx:if="{{showDownload && userInfo}}" bindtap="closeDownloadPanel">
+  <view class="download-panel" catchtap="noop">
+    <view class="download-header">
+      <text class="download-title">下载记录</text>
+      <view class="download-actions">
+        <text class="download-action" bindtap="clearDownloadHistory">清空</text>
+        <text class="download-action" bindtap="closeDownloadPanel">关闭</text>
+      </view>
+    </view>
+    <scroll-view scroll-y class="download-list" bindscrolltolower="loadMoreDownloads">
+      <block wx:if="{{downloadHistory.length}}">
+        <view class="download-grid">
+          <view class="download-grid-item" wx:for="{{downloadHistory}}" wx:key="time" bindtap="previewDownloadImage" data-item="{{item}}">
+            <image class="download-thumb" src="{{item.url}}" mode="aspectFill" lazy-load></image>
+            <view class="download-type-tag {{item.type}}">{{item.type === 'avatar' ? '头像' : '壁纸'}}</view>
+          </view>
+        </view>
+      </block>
+      <view class="download-empty" wx:else>
+        <text>暂无下载记录</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+
+<!-- 浏览记录弹层 -->
+<view class="download-mask" wx:if="{{showBrowse && userInfo}}" bindtap="closeBrowsePanel">
+  <view class="download-panel" catchtap="noop">
+    <view class="download-header">
+      <text class="download-title">浏览记录</text>
+      <view class="download-actions">
+        <text class="download-action" bindtap="clearBrowseHistory">清空</text>
+        <text class="download-action" bindtap="closeBrowsePanel">关闭</text>
+      </view>
+    </view>
+    <scroll-view scroll-y class="download-list" bindscrolltolower="loadMoreBrowse">
+      <block wx:if="{{browseList.length}}">
+        <view class="download-grid">
+          <view class="download-grid-item" wx:for="{{browseList}}" wx:key="_id" bindtap="handleBrowseTap" data-item="{{item}}">
+            <image class="download-thumb" src="{{item.coverUrl || item.url}}" mode="aspectFill" lazy-load></image>
+            <view class="download-type-tag {{item.type}}">{{item.type === 'avatar' ? '头像' : '壁纸'}}</view>
+          </view>
+        </view>
+        <view class="loading" wx:if="{{browseLoading}}">
+          <view class="loading-spinner"></view>
+          <text>加载中...</text>
+        </view>
+      </block>
+      <view class="download-empty" wx:else>
+        <text>暂无浏览记录</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+
+<!-- 关于我们弹层 -->
+<view class="download-mask" wx:if="{{showAbout}}" bindtap="closeAboutPanel">
+  <view class="about-panel" catchtap="noop">
+    <view class="about-content">
+      <image class="about-logo" src="../../images/logo.png" mode="aspectFit"></image>
+      <text class="about-name">动态头像壁纸精选</text>
+      <text class="about-version" bindlongpress="runPerfTest">Version {{version}}</text>
+      <text class="about-desc">精选高清壁纸、动态头像。每日更新二次元动漫、情侣、风景、创意锁屏等热门资源。支持无水印下载，让你的头像和手机桌面动起来！</text>
+    </view>
+    <view class="about-actions">
+      <button class="about-btn primary" bindtap="openPrivacyContract">用户隐私保护指引</button>
+      <button class="about-btn" bindtap="closeAboutPanel">关闭</button>
+    </view>
+  </view>
+</view>
+
+<!-- 联系我们二级菜单弹层 -->
+<view class="action-sheet-mask" wx:if="{{showContactMenu}}" bindtap="closeContactMenu">
+  <view class="action-sheet-panel" catchtap="noop">
+    <view class="action-sheet-header">
+      <text class="action-sheet-title">联系我们</text>
+    </view>
+    <view class="action-sheet-body">
+      <button class="action-btn-item" hover-class="none" open-type="contact">
+        <text>在线客服</text>
+      </button>
+      <button class="action-btn-item" hover-class="none" bindtap="handleOfficialAccount">
+        <text>官方账号</text>
+      </button>
+    </view>
+    <view class="action-sheet-footer">
+      <view class="action-btn-cancel" bindtap="closeContactMenu">取消</view>
+    </view>
+  </view>
+</view>
+
+<!-- 公众号二维码弹窗 -->
+<view class="action-sheet-mask" wx:if="{{showOfficialAccount}}" bindtap="closeOfficialAccount">
+  <view class="action-sheet-panel" catchtap="noop">
+    <view class="action-sheet-header">
+      <text class="action-sheet-title">{{officialAccount.title || '官方账号'}}</text>
+    </view>
+    <view class="action-sheet-body official-account-body" wx:if="{{officialAccount && officialAccount.qrcodeUrl}}">
+      <view class="qrcode-loading" wx:if="{{!qrcodeLoaded}}">
+        <view class="loading-spinner"></view>
+        <text class="qrcode-loading-text">加载中...</text>
+      </view>
+      <image class="qrcode-img {{qrcodeLoaded ? '' : 'hidden'}}" src="{{officialAccount.qrcodeUrl}}" mode="aspectFit" show-menu-by-longpress="{{true}}" bindload="onQrcodeLoad" binderror="onQrcodeError"></image>
+      <text class="qrcode-desc">{{officialAccount.description || '长按二维码识别关注'}}</text>
+    </view>
+    <view class="action-sheet-body official-account-body" wx:else>
+      <text class="qrcode-desc">暂无公众号配置</text>
+    </view>
+    <view class="action-sheet-footer">
+      <view class="action-btn-cancel" bindtap="closeOfficialAccount">关闭</view>
+    </view>
+  </view>
+</view>

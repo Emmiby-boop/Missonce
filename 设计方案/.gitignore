@@ -1,0 +1,36 @@
+# 依赖
+node_modules/
+**/node_modules/
+
+# 编译产物
+dist/
+dist.zip
+.build/
+**/.cache/
+
+# 敏感配置（含密钥，必须通过云开发控制台环境变量注入）
+**/cloudbaserc.json
+.env
+.env.*
+!.env.example
+
+# 日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 编辑器/系统
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# 云函数本地缓存
+**/.wrangler/
+**/tmp/
+
+# 小程序工具产物
+**/miniprogram_npm/

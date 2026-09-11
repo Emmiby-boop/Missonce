@@ -1,0 +1,17 @@
+{
+  "name": "prebuildTopics",
+  "version": "1.0.0",
+  "description": "预构建专题列表缓存云函数，每10分钟自动执行",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  },
+  "timeout": 20,
+  "triggers": [
+    {
+      "name": "every10min",
+      "type": "timer",
+      "config": "0 */10 * * * * *"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "prebuildDailyPicks",
+  "version": "1.0.0",
+  "description": "预构建每日推荐缓存云函数，每天北京时间0点自动执行",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

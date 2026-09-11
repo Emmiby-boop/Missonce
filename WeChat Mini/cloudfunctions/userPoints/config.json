@@ -1,0 +1,13 @@
+{
+  "permissions": { "openapi": [] },
+  "envVariables": {},
+  "timeout": 30,
+  "memory": 256,
+  "triggers": [
+    {
+      "name": "keepalive",
+      "type": "timer",
+      "config": "0 */10 * * * * *"
+    }
+  ]
+}

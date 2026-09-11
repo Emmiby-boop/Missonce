@@ -1,0 +1,9 @@
+{
+  "name": "shareCode",
+  "version": "1.0.0",
+  "description": "生成/解析短分享码，用于海报二维码携带资源ID",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

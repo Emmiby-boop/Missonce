@@ -1,0 +1,12 @@
+{
+  "name": "adminAuth",
+  "version": "2.0.0",
+  "description": "管理员认证 + 会话 Token 管理（合并自原 adminAuth + adminSession）",
+  "main": "index.js",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "wx-server-sdk": "latest",
+    "crypto-js": "^4.2.0",
+    "ws": "^8.16.0"
+  }
+}

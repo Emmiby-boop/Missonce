@@ -1,0 +1,32 @@
+# ===== 依赖 =====
+node_modules/
+.pnp/
+.pnp.js
+
+# ===== 构建产物 =====
+dist/
+dist.zip
+unpackage/
+unpackage/res/
+.husky/_
+*.tsbuildinfo
+
+# ===== 环境变量 / 密钥（绝不可提交）=====
+.env
+.env.*
+!.env.example
+cloudbaserc.json
+
+# ===== 缓存 / 本地数据 =====
+.workbuddy/
+.cloudbase/
+
+# ===== 系统 / 编辑器 =====
+.DS_Store
+Thumbs.db
+*.log
+nul
+
+# ===== 二进制 / 大文件 =====
+*.apk
+*.zip

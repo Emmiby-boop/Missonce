@@ -1,0 +1,100 @@
+<!-- 毛玻璃导航栏（低端机挂 low-end 降级为纯色） -->
+<view class="custom-nav {{lowEnd ? 'low-end' : ''}}" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-bar" style="height: {{navBarHeight}}px;">
+    <text class="nav-title">精选专题</text>
+    <view class="nav-icon-btn nav-search-btn" bindtap="navigateToSearch" style="right: {{menuRightGap}}px;">
+      <image class="nav-icon-img" src="../../images/icon-search.png" mode="aspectFit"></image>
+    </view>
+  </view>
+</view>
+<view class="nav-holder" style="height: {{statusBarHeight + navBarHeight - 1}}px;"></view>
+
+<view class="container">
+  <ad-unit kind="interstitial" page-path="/pages/topics/topics"></ad-unit>
+
+  <!-- ====== 骨架屏 ====== -->
+  <block wx:if="{{loading && topics.length === 0}}">
+    <view class="skeleton-hero shimmer"></view>
+    <view class="skeleton-tags">
+      <view class="skeleton-tag shimmer" wx:for="{{4}}" wx:key="index"></view>
+    </view>
+    <view class="skeleton-grid">
+      <view class="skeleton-card shimmer" wx:for="{{4}}" wx:key="index"></view>
+    </view>
+  </block>
+
+  <!-- ====== 空态 ====== -->
+  <view class="empty" wx:if="{{!loading && topics.length === 0}}">
+    <text class="empty-title">暂无专题</text>
+    <text class="empty-desc">下拉刷新试试</text>
+  </view>
+
+  <!-- ====== 主体内容 ====== -->
+  <block wx:if="{{topics.length > 0}}">
+    <!-- 1. 精选专题 Hero（轮播） -->
+    <swiper class="hero-swiper" wx:if="{{featuredTopics.length > 0}}" autoplay circular interval="4000" indicator-dots indicator-color="rgba(255,255,255,0.35)" indicator-active-color="#fff">
+      <swiper-item wx:for="{{featuredTopics}}" wx:key="id" data-id="{{item.id}}" bindtap="onTopicTap">
+        <view class="hero-card">
+          <image class="hero-image" src="{{item.coverUrl}}" mode="aspectFill" lazy-load></image>
+          <view class="hero-overlay"></view>
+          <view class="hero-content">
+            <view class="hero-badge" wx:if="{{item.badge}}">{{item.badgeText}}</view>
+            <view class="hero-title">{{item.name}}</view>
+            <view class="hero-desc" wx:if="{{item.description}}">{{item.description}}</view>
+            <view class="hero-cta {{lowEnd ? 'low-end' : ''}}">
+              <view class="hero-cta-text">立即查看</view>
+              <view class="hero-arrow">→</view>
+            </view>
+          </view>
+        </view>
+      </swiper-item>
+    </swiper>
+
+    <!-- 2. 标签筛选栏 -->
+    <scroll-view scroll-x class="tag-bar" enhanced show-scrollbar="{{false}}" wx:if="{{tags.length > 1}}">
+      <view class="tag-list">
+        <view class="tag-item {{activeTag === '' ? 'active' : ''}} {{lowEnd ? 'low-end' : ''}}" data-tag="" bindtap="onTagTap">
+          <text>全部</text>
+        </view>
+        <view class="tag-item {{activeTag === item ? 'active' : ''}} {{lowEnd ? 'low-end' : ''}}" wx:for="{{tags}}" wx:key="*this" data-tag="{{item}}" bindtap="onTagTap">
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- 3. 专题网格（列数后台可配） -->
+    <view class="topic-grid topic-grid-{{listColumns}}" wx:if="{{filteredTopics.length > 0}}">
+      <view class="topic-card" wx:for="{{filteredTopics}}" wx:key="id" data-id="{{item.id}}" bindtap="onTopicTap" hover-class="card-hover" hover-stay-time="80">
+        <view class="card-cover-wrap">
+          <image class="card-cover" src="{{item.coverUrl}}" mode="aspectFill" lazy-load></image>
+          <!-- 渐变遮罩：底部深色保证标题可读性 -->
+          <view class="card-overlay"></view>
+          <!-- 角标 -->
+          <view class="card-badge {{item.badgeClass}}" wx:if="{{item.badgeText}}">{{item.badgeText}}</view>
+          <!-- 标题信息叠加在封面底部 -->
+          <view class="card-info">
+            <text class="card-name">{{item.name}}</text>
+            <view class="card-meta" wx:if="{{item.itemCount}}">
+              <text class="meta-icon">▦</text>
+              <text class="meta-count">{{item.itemCount}} 款</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 筛选无结果 -->
+    <view class="empty-filter" wx:if="{{filteredTopics.length === 0}}">
+      <text>该分类下暂无专题</text>
+    </view>
+
+    <!-- 加载状态 -->
+    <view class="loading" wx:if="{{loadingMore}}">
+      <view class="loading-spinner"></view>
+      <text>加载中...</text>
+    </view>
+    <view class="no-more" wx:if="{{!loadingMore && !hasMore && topics.length > 0 && activeTag === ''}}">
+      <text>没有更多了</text>
+    </view>
+  </block>
+</view>
