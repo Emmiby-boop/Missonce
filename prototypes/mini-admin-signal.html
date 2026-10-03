@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-page-node-id="XoD4Wf3msg4l4XVSTZ0QeZ">
+<head data-page-node-id="WdexfPeYeUXh114mgyiYs7">
+<meta charset="UTF-8" data-page-node-id="8ABnFJBceqoClFDmQ9Esih" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="F9eTcx7oxlborJBWSq9bA4" />
+<title>小辣椒控制台 · Signal Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="P1glqKzHmMFxvJDCJqxUK1" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="DH7BztdPc3TPhY6AKtZQEl" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" data-page-node-id="tswMF2x7fy2Mci4yqig0HD" />
+<style>
+/* ============================================================
+   SIGNAL DESK · 设计令牌（单一来源）
+   方向：工业实用 × 编辑感 · 暖墨底 + 信号青柠强调
+   ============================================================ */
+:root{
+  --ink-900:#0E0D0B;   /* 全局背景 */
+  --ink-850:#131210;   /* 应用背景 */
+  --ink-800:#171614;   /* 表面 */
+  --ink-780:#1B1916;   /* 表面（带边框感） */
+  --ink-750:#211E1A;   /* 抬升表面 */
+  --ink-700:#2A2620;   /* 悬停 */
+  --line:rgba(245,241,234,.10);
+  --line-2:rgba(245,241,234,.18);
+  --text:#F5F1EA;
+  --text-dim:#B7AFA3;
+  --text-mute:#7C7468;
+  --accent:#C6F24E;          /* 信号青柠 */
+  --accent-press:#B0DC39;
+  --accent-ink:#14160A;      /* 强调底上的文字 */
+  --accent-soft:rgba(198,242,78,.12);
+  --data-v:#7C6CF0;          /* 数据系列 紫 */
+  --data-c:#4FB8C9;          /* 数据系列 青 */
+  --data-a:#F2A93B;          /* 数据系列 琥珀 */
+  --ok:#6FE3A0; --warn:#F2C14E; --bad:#FF6B5C;
+  --r-xs:6px; --r-sm:10px; --r-md:16px; --r-lg:22px; --r-xl:30px; --r-pill:999px;
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px; --s-7:48px; --s-8:64px; --s-9:96px;
+  --sh-1:0 2px 10px rgba(0,0,0,.30);
+  --sh-2:0 10px 34px rgba(0,0,0,.42);
+  --sh-3:0 26px 70px rgba(0,0,0,.55);
+  --sh-accent:0 10px 30px rgba(198,242,78,.22);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --d-fast:160ms; --d-base:340ms; --d-slow:680ms;
+  --rail:78px; --top:68px;
+  --font-disp:"Bricolage Grotesque","Noto Sans SC",sans-serif;
+  --font-body:"IBM Plex Sans","Noto Sans SC",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+  --font-cjk:"Noto Sans SC",sans-serif;
+}
+/* 浅色规格（作为设计系统文档，不启用切换，本原型锁定暗色身份） */
+[data-theme="light"]{
+  --ink-900:#F4F1EA; --ink-850:#EFEBE2; --ink-800:#FFFFFF; --ink-780:#FBF8F2; --ink-750:#F6F2E9; --ink-700:#ECE6DA;
+  --line:rgba(20,18,14,.10); --line-2:rgba(20,18,14,.18);
+  --text:#1A1814; --text-dim:#564F45; --text-mute:#8A8175;
+  --accent:#6FA300; --accent-press:#5E8C00; --accent-ink:#FBFDF2; --accent-soft:rgba(111,163,0,.12);
+  --sh-1:0 2px 10px rgba(20,18,14,.08); --sh-2:0 10px 34px rgba(20,18,14,.12); --sh-3:0 26px 70px rgba(20,18,14,.16);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-body);
+  background:var(--ink-900);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.6;
+  overflow:hidden;
+  font-feature-settings:"tnum" 0;
+}
+::selection{background:var(--accent);color:var(--accent-ink)}
+button{font-family:inherit;cursor:pointer;color:inherit;border:none;background:none}
+a{color:inherit;text-decoration:none}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.disp{font-family:var(--font-disp);letter-spacing:-.02em;line-height:1.02}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--text-mute)}
+
+/* ===== 氛围层 ===== */
+.atmosphere::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(48rem 36rem at 8% -8%, rgba(198,242,78,.16), transparent 58%),
+    radial-gradient(40rem 32rem at 102% 4%, rgba(124,108,240,.16), transparent 55%),
+    radial-gradient(34rem 30rem at 88% 108%, rgba(79,184,201,.10), transparent 60%);
+  filter:saturate(1.1);
+}
+.grain::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.045;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   登录台
+   ============================================================ */
+#login{
+  position:fixed;inset:0;z-index:50;display:grid;grid-template-columns:1.1fr .9fr;
+  background:var(--ink-900);transition:opacity var(--d-slow) var(--ease),transform var(--d-slow) var(--ease);
+}
+#login.gone{opacity:0;transform:scale(1.02);pointer-events:none}
+.login-art{
+  position:relative;overflow:hidden;padding:var(--s-8);
+  background:
+    radial-gradient(40rem 30rem at 20% 10%, rgba(198,242,78,.20), transparent 60%),
+    radial-gradient(36rem 30rem at 90% 100%, rgba(124,108,240,.20), transparent 58%),
+    var(--ink-850);
+  display:flex;flex-direction:column;justify-content:space-between;
+  border-right:1px solid var(--line);
+}
+.login-art .mark{display:flex;align-items:center;gap:14px}
+.glyph{
+  width:54px;height:54px;border-radius:14px;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-family:var(--font-disp);font-weight:800;font-size:28px;
+  box-shadow:var(--sh-accent);
+}
+.login-head{margin-top:auto}
+.login-head h1{font-family:var(--font-disp);font-weight:800;font-size:clamp(40px,5vw,68px);letter-spacing:-.03em;line-height:.98}
+.login-head h1 em{font-style:normal;color:var(--accent)}
+.login-head p{margin-top:var(--s-4);max-width:34ch;color:var(--text-dim);font-size:15px}
+.login-meta{display:flex;gap:var(--s-5);margin-top:var(--s-6);font-family:var(--font-mono);font-size:12px;color:var(--text-mute)}
+.login-meta b{color:var(--text);display:block;font-size:20px;margin-top:4px}
+.login-form{
+  display:flex;flex-direction:column;justify-content:center;padding:var(--s-8) clamp(32px,6vw,88px);
+  background:var(--ink-900);
+}
+.login-form .wrap{max-width:380px;width:100%;margin-inline:auto}
+.login-form h2{font-family:var(--font-disp);font-size:30px;font-weight:600;letter-spacing:-.02em}
+.login-form .sub{color:var(--text-dim);font-size:14px;margin:var(--s-3) 0 var(--s-6)}
+.field{margin-bottom:var(--s-4)}
+.field label{display:block;font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px}
+.field input{
+  width:100%;background:var(--ink-800);border:1px solid var(--line-2);color:var(--text);
+  padding:14px 16px;border-radius:var(--r-sm);font-size:15px;font-family:var(--font-body);
+  transition:border-color var(--d-fast),box-shadow var(--d-fast);
+}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.btn-accent{
+  width:100%;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;
+  padding:15px;border-radius:var(--r-sm);margin-top:var(--s-3);
+  transition:transform var(--d-fast) var(--ease),background var(--d-fast),box-shadow var(--d-fast);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.btn-accent:hover{background:var(--accent-press);transform:translateY(-2px);box-shadow:var(--sh-accent)}
+.btn-accent:active{transform:translateY(0)}
+.login-hint{margin-top:var(--s-5);font-size:12px;color:var(--text-mute);text-align:center;font-family:var(--font-mono)}
+.login-hint span{color:var(--accent)}
+
+/* ============================================================
+   应用骨架
+   ============================================================ */
+#app{position:relative;z-index:2;height:100vh;display:none;grid-template-columns:var(--rail) 1fr}
+#app.on{display:grid}
+
+/* 命令轨 */
+.rail{
+  background:var(--ink-850);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;padding:var(--s-4) 0;gap:var(--s-3);
+  position:relative;
+}
+.rail .brand{margin-bottom:var(--s-4)}
+.rail .nav{flex:1;display:flex;flex-direction:column;gap:6px;width:100%;align-items:center}
+.nav-item{
+  position:relative;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;
+  color:var(--text-mute);transition:color var(--d-fast),background var(--d-fast);
+}
+.nav-item svg{width:22px;height:22px}
+.nav-item:hover{color:var(--text);background:var(--ink-800)}
+.nav-item.active{color:var(--accent);background:var(--accent-soft)}
+.nav-item.active::before{
+  content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);
+  width:3px;height:26px;border-radius:3px;background:var(--accent);box-shadow:0 0 12px var(--accent);
+}
+.nav-item .idx{position:absolute;top:6px;right:8px;font-family:var(--font-mono);font-size:9px;color:var(--text-mute)}
+.rail .me{
+  width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--data-v),var(--data-c));
+  display:grid;place-items:center;font-family:var(--font-disp);font-weight:700;color:#0E0D0B;font-size:16px;
+  margin-top:var(--s-3);
+}
+
+/* 主区 */
+.main{display:flex;flex-direction:column;min-width:0;height:100vh}
+.topbar{
+  height:var(--top);flex:0 0 auto;display:flex;align-items:center;gap:var(--s-5);
+  padding:0 var(--s-6);border-bottom:1px solid var(--line);background:rgba(14,13,11,.7);
+  backdrop-filter:blur(14px);position:sticky;top:0;z-index:5;
+}
+.topbar .title{font-family:var(--font-disp);font-weight:600;font-size:22px;letter-spacing:-.02em}
+.topbar .title small{font-family:var(--font-mono);font-size:11px;color:var(--text-mute);display:block;letter-spacing:.1em;font-weight:400}
+.ticker{
+  flex:1;overflow:hidden;height:34px;border:1px solid var(--line);border-radius:var(--r-pill);
+  display:flex;align-items:center;position:relative;mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+}
+.ticker .track{display:flex;gap:var(--s-7);white-space:nowrap;animation:scroll 26s linear infinite;padding-left:var(--s-5);font-family:var(--font-mono);font-size:13px}
+.ticker .track b{color:var(--accent)}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.topbar .acts{display:flex;align-items:center;gap:var(--s-3)}
+.icon-btn{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:var(--text-dim);border:1px solid var(--line);background:var(--ink-800);transition:var(--d-fast)}
+.icon-btn:hover{color:var(--text);border-color:var(--line-2)}
+.icon-btn svg{width:19px;height:19px}
+
+.stage{padding:var(--s-6) var(--s-6) var(--s-8);overflow-y:auto;flex:1;scroll-behavior:smooth}
+.stage::-webkit-scrollbar{width:10px}
+.stage::-webkit-scrollbar-thumb{background:var(--ink-700);border-radius:99px;border:3px solid var(--ink-900)}
+
+.view{display:none;max-width:1340px;margin:0 auto}
+.view.on{display:block}
+
+/* 入场编排 */
+.reveal{opacity:0;transform:translateY(22px)}
+.view.on .reveal{opacity:1;transform:none;transition:opacity var(--d-base) var(--ease),transform var(--d-base) var(--ease)}
+.view.on .reveal:nth-child(1){transition-delay:40ms}
+.view.on .reveal:nth-child(2){transition-delay:120ms}
+.view.on .reveal:nth-child(3){transition-delay:200ms}
+.view.on .reveal:nth-child(4){transition-delay:280ms}
+.view.on .reveal:nth-child(5){transition-delay:360ms}
+.view.on .reveal:nth-child(6){transition-delay:440ms}
+@media (prefers-reduced-motion:reduce){
+  .reveal{opacity:1!important;transform:none!important}
+  .ticker .track{animation:none}
+  *{transition:none!important}
+}
+
+/* ============================================================
+   概览 · 非对称 Bento 数据台
+   ============================================================ */
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:var(--s-6);flex-wrap:wrap;gap:var(--s-4)}
+.page-head h2{font-family:var(--font-disp);font-size:clamp(30px,4vw,44px);font-weight:800;letter-spacing:-.03em}
+.page-head .eyebrow{margin-bottom:10px}
+
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--s-4)}
+.card{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s-5);position:relative;overflow:hidden;transition:border-color var(--d-fast),transform var(--d-fast)}
+.card:hover{border-color:var(--line-2)}
+.card.hl{border-color:rgba(198,242,78,.35);box-shadow:var(--sh-2)}
+.card .ct{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-mute)}
+
+/* 英雄 KPI */
+.kpi-hero{grid-column:span 5;display:flex;flex-direction:column;justify-content:space-between;min-height:230px}
+.kpi-hero .big{font-family:var(--font-disp);font-weight:800;font-size:clamp(54px,7vw,82px);letter-spacing:-.04em;line-height:.9;margin-top:var(--s-3)}
+.kpi-hero .big .unit{font-size:.32em;color:var(--text-mute);font-family:var(--font-mono);font-weight:400;margin-left:6px}
+.kpi-hero .delta{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:13px;color:var(--ok);background:rgba(111,227,160,.10);padding:5px 10px;border-radius:var(--r-pill);margin-top:var(--s-3)}
+.kpi-hero .spark{position:absolute;right:-10px;bottom:-6px;opacity:.5}
+
+.kpi{grid-column:span 4;display:flex;flex-direction:column;justify-content:space-between;min-height:150px}
+.kpi .num{font-family:var(--font-disp);font-weight:700;font-size:40px;letter-spacing:-.03em;margin-top:var(--s-3)}
+.kpi .num .unit{font-size:.4em;color:var(--text-mute);font-family:var(--font-mono);margin-left:4px}
+.kpi .delta{font-family:var(--font-mono);font-size:13px;color:var(--ok)}
+
+.trend{grid-column:span 8;min-height:300px}
+.trend .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s-4)}
+.trend svg{width:100%;height:200px;display:block}
+.donut{grid-column:span 4;min-height:300px;display:flex;flex-direction:column}
+.donut svg{width:100%;flex:1}
+.legend{display:flex;flex-direction:column;gap:8px;margin-top:var(--s-3);font-size:13px}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:8px}
+.legend .row{display:flex;align-items:center;justify-content:space-between;color:var(--text-dim)}
+.legend .row b{color:var(--text);font-family:var(--font-mono)}
+
+.activity{grid-column:span 4;min-height:300px;display:flex;flex-direction:column}
+.activity .feed{flex:1;overflow:auto;margin-top:var(--s-3);display:flex;flex-direction:column;gap:2px}
+.activity .item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
+.activity .dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:7px}
+.activity .item .t{color:var(--text-dim)}
+.activity .item .t b{color:var(--text);font-weight:500}
+.activity .item .time{font-family:var(--font-mono);font-size:11px;color:var(--text-mute);margin-top:2px}
+
+/* ============================================================
+   资源管理 · 内容网格
+   ============================================================ */
+.toolbar{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap;margin-bottom:var(--s-5)}
+.search{flex:1;min-width:220px;display:flex;align-items:center;gap:10px;background:var(--ink-800);border:1px solid var(--line-2);border-radius:var(--r-pill);padding:10px 16px}
+.search svg{width:17px;height:17px;color:var(--text-mute)}
+.search input{flex:1;background:none;border:none;color:var(--text);font-size:14px;outline:none;font-family:var(--font-body)}
+.chip{font-family:var(--font-mono);font-size:12px;padding:9px 15px;border-radius:var(--r-pill);border:1px solid var(--line-2);color:var(--text-dim);transition:var(--d-fast)}
+.chip:hover{color:var(--text);border-color:var(--text-mute)}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn-ghost{border:1px solid var(--line-2);padding:10px 16px;border-radius:var(--r-sm);font-size:13px;color:var(--text-dim);transition:var(--d-fast);display:flex;align-items:center;gap:8px}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-mute);transform:translateY(-1px)}
+
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:var(--s-4)}
+.rcard{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;transition:transform var(--d-base) var(--ease),border-color var(--d-fast),box-shadow var(--d-fast)}
+.rcard:hover{transform:translateY(-4px);border-color:var(--line-2);box-shadow:var(--sh-2)}
+.rcard .thumb{aspect-ratio:1/1;position:relative;overflow:hidden}
+.rcard .thumb .og{position:absolute;inset:0}
+.rcard .badge{position:absolute;top:10px;left:10px;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;padding:4px 8px;border-radius:var(--r-pill);background:rgba(14,13,11,.6);backdrop-filter:blur(6px);color:var(--text)}
+.rcard .badge.live{color:var(--accent)}
+.rcard .acts{position:absolute;inset:auto 0 0 0;display:flex;gap:8px;padding:12px;background:linear-gradient(0deg,rgba(14,13,11,.85),transparent);opacity:0;transform:translateY(8px);transition:var(--d-base) var(--ease)}
+.rcard:hover .acts{opacity:1;transform:none}
+.rcard .acts button{flex:1;font-size:12px;padding:8px;border-radius:var(--r-xs);background:var(--ink-800);color:var(--text);border:1px solid var(--line-2)}
+.rcard .acts button:hover{background:var(--ink-700);color:var(--accent)}
+.rcard .meta{padding:14px}
+.rcard .meta .name{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcard .meta .sub{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
+
+/* ============================================================
+   用户会员 · 表格
+   ============================================================ */
+.panel{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mute);padding:14px 18px;border-bottom:1px solid var(--line-2);font-weight:500}
+.tbl td{padding:15px 18px;border-bottom:1px solid var(--line);color:var(--text-dim)}
+.tbl tr:hover td{background:var(--ink-780)}
+.tbl .uid{font-family:var(--font-mono);color:var(--text)}
+.tier{font-family:var(--font-mono);font-size:11px;padding:4px 10px;border-radius:var(--r-pill);border:1px solid var(--line-2)}
+.tier.vip{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.tier.pro{color:var(--data-c);border-color:rgba(79,184,201,.4)}
+.tier.free{color:var(--text-mute)}
+.bar{height:6px;border-radius:99px;background:var(--ink-700);overflow:hidden;min-width:90px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.split2{display:grid;grid-template-columns:1.6fr 1fr;gap:var(--s-4);margin-top:var(--s-4)}
+.mini-stat{display:flex;flex-direction:column;gap:4px;padding:var(--s-4);background:var(--ink-780);border-radius:var(--r-sm);border:1px solid var(--line)}
+.mini-stat .n{font-family:var(--font-disp);font-weight:700;font-size:30px;letter-spacing:-.02em}
+.mini-stat .l{font-family:var(--font-mono);font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.1em}
+
+/* ============================================================
+   首页装修 · 画布 + 配置
+   ============================================================ */
+.decor{display:grid;grid-template-columns:1fr 360px;gap:var(--s-5);align-items:start}
+.config{background:var(--ink-800);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s-5)}
+.config h3{font-family:var(--font-disp);font-size:18px;font-weight:600;margin-bottom:var(--s-4)}
+.config .grp{margin-bottom:var(--s-5)}
+.config .grp .lab{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:10px}
+.opt{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--ink-780);border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:8px}
+.opt .nm{font-size:14px}
+.sw{width:44px;height:26px;border-radius:99px;background:var(--ink-700);position:relative;transition:var(--d-fast);flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--text-mute);transition:var(--d-fast)}
+.sw.on{background:var(--accent)}
+.sw.on::after{left:21px;background:var(--accent-ink)}
+.swatches{display:flex;gap:10px}
+.swatches button{width:34px;height:34px;border-radius:10px;border:2px solid transparent;transition:var(--d-fast)}
+.swatches button.on{border-color:var(--text);transform:scale(1.08)}
+
+/* 手机预览 */
+.phone{width:300px;margin:0 auto;background:#0A0908;border:8px solid #2A2620;border-radius:38px;padding:14px 12px 20px;box-shadow:var(--sh-3);position:relative}
+.phone .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:90px;height:18px;background:#2A2620;border-radius:99px}
+.phone .scr{background:var(--ink-850);border-radius:26px;overflow:hidden;margin-top:10px}
+.phone .scr .hero{height:120px;background:linear-gradient(135deg,var(--accent),var(--data-v));display:grid;place-items:center;color:#0E0D0B;font-family:var(--font-disp);font-weight:800;font-size:18px;text-align:center;padding:0 12px}
+.phone .scr .sec{display:flex;gap:10px;padding:14px;overflow:hidden}
+.phone .scr .sec .b{flex:0 0 64px;height:64px;border-radius:12px;background:var(--ink-700)}
+.phone .scr .sec .b.a{background:linear-gradient(135deg,var(--data-c),var(--data-v))}
+.phone .scr .sec .b.b{background:linear-gradient(135deg,var(--data-a),var(--accent))}
+.phone .scr .row{padding:10px 14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim)}
+.phone .scr .row .ic{width:30px;height:30px;border-radius:9px;background:var(--ink-700);flex:0 0 auto}
+.phone .scr .feed{padding:0 14px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.phone .scr .feed .c{aspect-ratio:3/4;border-radius:12px;background:var(--ink-700)}
+.phone .scr .feed .c.x{background:linear-gradient(160deg,var(--data-v),var(--ink-700))}
+.phone .scr .feed .c.y{background:linear-gradient(160deg,var(--data-c),var(--ink-700))}
+.phone .scr .feed .c.z{background:linear-gradient(160deg,var(--accent),var(--ink-700))}
+
+/* ============================================================
+   广告变现
+   ============================================================ */
+.adrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:var(--s-4);align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+.adrow:last-child{border-bottom:none}
+.adrow .slot{width:46px;height:46px;border-radius:12px;background:var(--ink-750);display:grid;place-items:center;color:var(--accent);font-family:var(--font-mono);font-size:12px}
+.adrow .nm{font-weight:500}
+.adrow .nm small{display:block;color:var(--text-mute);font-family:var(--font-mono);font-size:11px;font-weight:400;margin-top:2px}
+.status{font-family:var(--font-mono);font-size:11px;padding:4px 10px;border-radius:var(--r-pill);border:1px solid var(--line-2)}
+.status.run{color:var(--ok);border-color:rgba(111,227,160,.4)}
+.status.pause{color:var(--warn);border-color:rgba(242,193,78,.4)}
+.rev{font-family:var(--font-mono);font-size:15px;color:var(--text)}
+
+/* ============================================================
+   设计系统页
+   ============================================================ */
+.tokens{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--s-3);margin-top:var(--s-4)}
+.swatch{height:88px;border-radius:var(--r-sm);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end;padding:12px;font-family:var(--font-mono);font-size:11px;color:var(--text)}
+.type-spec{display:flex;flex-direction:column;gap:var(--s-3);margin-top:var(--s-4)}
+.type-spec .t{border-bottom:1px solid var(--line);padding-bottom:var(--s-3)}
+.spec-note{background:var(--ink-800);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-sm);padding:var(--s-4);color:var(--text-dim);font-size:14px;margin-top:var(--s-4);max-width:70ch}
+.spec-note b{color:var(--text)}
+
+.sec-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:var(--s-6) 0 var(--s-2)}
+.empty{padding:var(--s-7);text-align:center;color:var(--text-mute);font-family:var(--font-mono);font-size:13px;border:1px dashed var(--line-2);border-radius:var(--r-md)}
+
+/* 自定义光标 */
+@media (pointer:fine){
+  .cur{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--accent);mix-blend-mode:difference;pointer-events:none;z-index:99;transform:translate(-50%,-50%);transition:width .2s,height .2s;left:-100px;top:-100px}
+  a:hover ~ .cur,button:hover ~ .cur{}
+}
+/* 移动端 */
+.menu-toggle{display:none}
+@media (max-width:900px){
+  #login{grid-template-columns:1fr}
+  .login-art{display:none}
+  #app{grid-template-columns:1fr}
+  .rail{position:fixed;bottom:0;left:0;right:0;top:auto;flex-direction:row;height:64px;width:100%;z-index:20;border-right:none;border-top:1px solid var(--line);padding:0 var(--s-3)}
+  .rail .brand,.rail .me{display:none}
+  .rail .nav{flex-direction:row;justify-content:space-around}
+  .nav-item .idx{display:none}
+  .nav-item.active::before{display:none}
+  .main{height:100vh}
+  .stage{padding-bottom:90px}
+  .ticker{display:none}
+  .bento{grid-template-columns:repeat(6,1fr)}
+  .kpi-hero,.kpi,.trend,.donut,.activity{grid-column:span 6}
+  .decor{grid-template-columns:1fr}
+  .split2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body class="atmosphere grain" data-page-node-id="DJcMfJu5VoJsvHeskCA3FK">
+<div class="cur" id="cur" data-page-node-id="fJo99gR3UzCwgs90kE5zwN"></div>
+
+<!-- ============================ 登录台 ============================ -->
+<section id="login" data-page-node-id="9CRsrBwfXvOrjoz2XNCJTi">
+  <div class="login-art" data-page-node-id="AJoXLaX5U1C0ll0Oe8Qk3v">
+    <div class="mark" data-page-node-id="NCkVaBp7xJSMPWt4Q38yzC"><div class="glyph" data-page-node-id="O6YpxtFthA9VLvBi9kQLru">椒</div><span class="disp" style="font-size:20px;font-weight:600" data-page-node-id="HSENfe2mQeBXrS76rNiUyu">小辣椒控制台</span></div>
+    <div class="login-head" data-page-node-id="bRXL6gLxkBpVT8Np2e5gxv">
+      <div class="eyebrow" data-page-node-id="DKUmXSeKHI5WS8ZUwbrPo7">Missonce · Operations Console</div>
+      <h1 data-page-node-id="ktuuql3npj7Zi4eDJYnH5A">运营<em data-page-node-id="Bm7N6lVd0Zrxmdo1JzvivB">信号台</em><br data-page-node-id="Gww6ZHFMcR8QDgByHo8J5A"/>一眼掌控内容</h1>
+      <p data-page-node-id="f5sxoN7lGDYpgF2JlEEZPn">动态头像壁纸的内容、用户、商业化与首页装修，集中在一个克制的暗色工作台。</p>
+      <div class="login-meta" data-page-node-id="dhZQ39wBEiCMzyk02j2utg">
+        <div data-page-node-id="gMhuBmyKpCPcJZikoZtFEZ">今日 DAU<b class="mono" data-page-node-id="tZVzmbQNIcBp9uGEogsg1g">12,840</b></div>
+        <div data-page-node-id="zlz0VXNHy9nk8REKlHHWBm">待审内容<b class="mono" data-page-node-id="vBPfxqELe5nREUDCfIIXOU">37</b></div>
+        <div data-page-node-id="RdQA7q8GrgdVvTh8mqFZwA">本月营收<b class="mono" data-page-node-id="O12wDA2i8EIQzt78HrS5V2">¥48.2k</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="login-form" data-page-node-id="irASMeFOxgBOg95XFqxFzS">
+    <div class="wrap" data-page-node-id="Fl9C46YyGcdGtc7WeWYP3D">
+      <h2 data-page-node-id="jc7wlCPX7p8ncIRk1p1qnJ">进入控制台</h2>
+      <p class="sub" data-page-node-id="Vnm6Wn5xEaylAYMZAswA4j">使用管理员账号登录 CloudBase 环境。</p>
+      <form id="loginForm" onsubmit="return false" data-page-node-id="oENNbHVDOh3nnZ6IqEV58q">
+        <div class="field" data-page-node-id="pj0tunsp1DeJBHjrA9GyjZ">
+          <label data-page-node-id="oqJCtuCGAu0XVIyyAQ1HPJ">账号</label>
+          <input type="text" value="admin@missonce.cn" autocomplete="off" data-page-node-id="2yICZjlnU3TFdcCWZpKKbg" />
+        </div>
+        <div class="field" data-page-node-id="HrdjGaLEoS1wNQGSbYPPJl">
+          <label data-page-node-id="Jw3T5ZLEQElmeJQOmAQEUr">密码</label>
+          <input type="password" value="••••••••••" autocomplete="off" data-page-node-id="WRC3mA9qkQYRBjuLQykIVJ" />
+        </div>
+        <button class="btn-accent" id="enterBtn" data-page-node-id="a1O7bFRCGByHHjROe8X2Lj">
+          登 录 控 制 台
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" data-page-node-id="iGFCDHLFTzxmIyGBQk8fAJ"><path d="M5 12h14M13 6l6 6-6 6" data-page-node-id="UVCBn8AbOfRM6kc6sPu5bj"/></svg>
+        </button>
+      </form>
+      <p class="login-hint" data-page-node-id="UupMjVhG5wJez8UH6BoknG">演示原型 · 任意输入即可进入 · <span data-page-node-id="SkyE9bYIFwGO7GpZci5DEA">Signal Desk v1</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 应用 ============================ -->
+<div id="app" data-page-node-id="p9RfOtlJ9WoM5NaDStGq1q">
+  <!-- 命令轨 -->
+  <nav class="rail" data-page-node-id="Pnbf8b4Pdoy7FKhDYWY9hD">
+    <div class="brand" data-page-node-id="27QT8M5j5w21HYPAH3TrCq"><div class="glyph" data-page-node-id="pu2nXvHSPnx1U4CYWRFNf5">椒</div></div>
+    <div class="nav" id="nav" data-page-node-id="xXZPr1goGAiRj9PBBdgRIV">
+      <button class="nav-item active" data-view="overview" title="概览" data-page-node-id="SFenVZc7pLoh1b3CRKeIxH">
+        <span class="idx" data-page-node-id="v6TgyfYoqponCq9VJeQ28M">01</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="Edinw8tR9bf4JGpyGR1OAz"><rect x="3" y="3" width="7" height="9" rx="1.5" data-page-node-id="CMFY5TWrq0zP8GdqeJkHsJ"/><rect x="14" y="3" width="7" height="5" rx="1.5" data-page-node-id="JCinuY2E8LWPIL7BP5yd9q"/><rect x="14" y="12" width="7" height="9" rx="1.5" data-page-node-id="VJ5qXJV3q0lI98DD4hTciS"/><rect x="3" y="16" width="7" height="5" rx="1.5" data-page-node-id="5oRZqXVuqvOQiNER4Uowm4"/></svg>
+      </button>
+      <button class="nav-item" data-view="resources" title="内容资源" data-page-node-id="4iYndua1XsQAhvHJajctfn">
+        <span class="idx" data-page-node-id="yVYkXFn9RT6zAKzcfdXHP7">02</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="ocFi5JbnWHrFkyBmebwAGo"><rect x="3" y="3" width="18" height="18" rx="2" data-page-node-id="kzafdXjSwkdWTW5NfMq0FB"/><circle cx="9" cy="9" r="2" data-page-node-id="yIK7Puh4o5HOOSU0hXEdHm"/><path d="M21 15l-5-5L5 21" data-page-node-id="zGyiNHFuEYNIFImX2IxXMW"/></svg>
+      </button>
+      <button class="nav-item" data-view="members" title="用户会员" data-page-node-id="GIG2YJj6QfV7IHMha2BQ2s">
+        <span class="idx" data-page-node-id="7IgdIUAmKh5K2I0q5yJCgZ">03</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="WL5U4WFt2ejIE1SKlwScNR"><circle cx="9" cy="8" r="3.2" data-page-node-id="N27NHLQqcBAK7xNJrQDTfm"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" data-page-node-id="p0iG6nBUqDROPJM5ZetlIh"/><path d="M16 5.5a3 3 0 010 5.8M21 20c0-2.5-1.5-4.7-3.7-5.6" data-page-node-id="g1uurRBgjYWGOTvqsjCEkK"/></svg>
+      </button>
+      <button class="nav-item" data-view="decorator" title="首页装修" data-page-node-id="mvGDsyPq9WXjajkK0irx1n">
+        <span class="idx" data-page-node-id="PZCYWgNoy0fjwCyYi1kmDI">04</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="wcfjGoIQzSpHxavbAwadPT"><rect x="6" y="2" width="12" height="20" rx="2.5" data-page-node-id="mpXJrUrp3kYLxjjijKkKBJ"/><path d="M10 5h4M9 10h6M9 14h6M9 18h3" data-page-node-id="rKLNdMAn0eHkJ7zCZwsj7d"/></svg>
+      </button>
+      <button class="nav-item" data-view="ads" title="广告变现" data-page-node-id="yEtugbsBSy48s5FLdoyATf">
+        <span class="idx" data-page-node-id="tZfA2Q1zENdLocmvCSD2Xe">05</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="K69lnledJoEXAAE2F1fFum"><path d="M3 11l14-6v14L3 13z" data-page-node-id="fAApyX3kGqTT7iuKokRKC0"/><path d="M17 9l4-2v10l-4-2" data-page-node-id="gMjmR3aYxLycoZpQTgMjZV"/></svg>
+      </button>
+      <button class="nav-item" data-view="design" title="设计系统" data-page-node-id="uvRciYyVDjB77Cfa0mpEwH">
+        <span class="idx" data-page-node-id="Qu05u9lNV7cUFjWmAxJpF9">06</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="bLwbxjQEnSV6kmU9cmj7PO"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" data-page-node-id="JBI4zBKuDITpPNM7H12jV6"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5" data-page-node-id="rYLPpjPzXOf1SK75GKKiS3"/></svg>
+      </button>
+    </div>
+    <div class="me" title="管理员" data-page-node-id="Mnn907DpWOXSG3CEVyQ2kR">M</div>
+  </nav>
+
+  <!-- 主区 -->
+  <div class="main" data-page-node-id="dutu9VMbj9HVsZqiSPZYR1">
+    <header class="topbar" data-page-node-id="WT2oeHAa2e9nJGLWpZh3SZ">
+      <div class="title" data-page-node-id="9wFxMiuDbxEBKhD2pXzTEo"><span id="pageTitle" data-page-node-id="zrw1wiwE9zm8hWtdm7Ztj1">运营概览</span><small id="pageSub" data-page-node-id="gfm0Rr6nQaZTZPSPcROWEO">OVERVIEW · 实时</small></div>
+      <div class="ticker" data-page-node-id="qpHHttCjqQg8RYKpuisI5q"><div class="track" id="ticker" data-page-node-id="mrxS9WC3V7m9pSZxUDz5FU">
+        <span data-page-node-id="BNJ3crHCzRmw5ydzUIxId1">DAU <b data-page-node-id="AHN0N9gtG5DPqu5urkHMbR">12,840</b> ▲ 4.2%</span><span data-page-node-id="H18TRspGIXUDVIfSgApPHi">新增内容 <b data-page-node-id="BKiwFJSPNrYS9FtZUWkagm">318</b></span><span data-page-node-id="IeRFe3JmAq5fBeGScqeXHx">激励广告展示 <b data-page-node-id="8SCHch9mLLcQ4kjWu8pOuE">9,204</b></span>
+        <span data-page-node-id="5fo7ynSP6Yjkb6FAjrSWaa">今日营收 <b data-page-node-id="4zMiP0Z9N9pR0EIWjjNqpb">¥1,628</b> ▲ 6.1%</span><span data-page-node-id="xrG5NHPHDr2KhASaWa0YZP">待审 <b data-page-node-id="BfzsRiiX3CtipH90c27xwn">37</b></span><span data-page-node-id="NuAjdqfFl8TlodrMWwL2kd">会员转化 <b data-page-node-id="XzGKNJCEuQgaM2rnIfKeMs">3.8%</b></span>
+        <span data-page-node-id="2xli8RR5BSeutfd2Pso9kh">DAU <b data-page-node-id="YyzXxLMwbovinLDiT7JBoh">12,840</b> ▲ 4.2%</span><span data-page-node-id="BdYAzUSCzm7qXgFxwJyYgI">新增内容 <b data-page-node-id="BCkTFF9WxvD4hlPhjL3YYS">318</b></span><span data-page-node-id="HBIZpuSxCbZmhBELCbcKHE">激励广告展示 <b data-page-node-id="ci2AOReV6b2cBj8khrut2I">9,204</b></span>
+        <span data-page-node-id="lAKyDrTmDYiVtR8RZP2mZs">今日营收 <b data-page-node-id="8609KKcD9Xm81wYBQAMrSk">¥1,628</b> ▲ 6.1%</span><span data-page-node-id="xQ65MpU0zZRUYIvQ7MbrI0">待审 <b data-page-node-id="N64QZCWLcoibEos8CN3iHh">37</b></span><span data-page-node-id="lU2cbpWbLjL8RoIpSi0Lkn">会员转化 <b data-page-node-id="jwBm3X7T3IMTZzmMbpEAdS">3.8%</b></span>
+      </div></div>
+      <div class="acts" data-page-node-id="KU9oh5UyDh0pHnB7URfZOV">
+        <button class="icon-btn" title="搜索" data-page-node-id="TvbH1yxFZeLySNiui0qcGA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="Tw3sMbiXxm0FuEnps8PiF7"><circle cx="11" cy="11" r="7" data-page-node-id="Xb1gq7gx8rNU6BvbKqobpI"/><path d="M21 21l-4-4" data-page-node-id="GV7C0GCVmjU2H2juVtai31"/></svg></button>
+        <button class="icon-btn" title="通知" data-page-node-id="xMXFtgeSxGsoNDwOu6Bs5Q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="8AAifIh2htBFgBbcatZ32M"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" data-page-node-id="3b5KMh9DopojlQe8N5eg4s"/><path d="M13.7 21a2 2 0 01-3.4 0" data-page-node-id="OKvAigLcn4UIPxdAOolakl"/></svg></button>
+      </div>
+    </header>
+
+    <main class="stage" id="stage" data-page-node-id="y4l72Lz3clnrEFtAOgFIIS">
+
+      <!-- ===== 概览 ===== -->
+      <section class="view on" data-view="overview" data-page-node-id="dhpQwLkWkkyEv25FidPXyA">
+        <div class="page-head reveal" data-page-node-id="d6zqJNmcnuDhyj60CXH2kB">
+          <div data-page-node-id="u52koquKuE2i3T307GMBnL"><div class="eyebrow" data-page-node-id="z39ASFgiaJqP34Bzn7egoJ">Last 30 days · 数据信号台</div><h2 data-page-node-id="w7X96f0QZ1yNccmmDEAHrd">运营概览</h2></div>
+          <button class="btn-ghost" data-page-node-id="gDejhB3zl9KmE3MvBCUBe2">导出报表
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px" data-page-node-id="Nd4FB2CpcGSUCHzwpnzB4G"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" data-page-node-id="r5FsP106M35Vg14Y6Eq8Zk"/></svg>
+          </button>
+        </div>
+        <div class="bento" data-page-node-id="4GFq38xjuDKmGDJsVioLj2">
+          <div class="card hl kpi-hero reveal" data-page-node-id="qtVR1OH9Z7mtiMl1ukU5SC">
+            <div data-page-node-id="gVSYSm5SUjo7VFZRiEFNlo"><div class="ct" data-page-node-id="JVsHW8n5oYVpK62nkrCKBn">累计用户</div><div class="big mono" data-page-node-id="ajkYZummSGUUtKs8PPfvs9">286.4<span class="unit" data-page-node-id="BGc6IBqctCv6SxRTolXGqv">k</span></div></div>
+            <div data-page-node-id="FmIaQ0on4p75haUAVG38OX">
+              <span class="delta" data-page-node-id="d5Tddmb2VtviOAfxntvk3C">▲ 8.6% 环比</span>
+              <svg class="spark" width="220" height="70" viewBox="0 0 220 70" fill="none" data-page-node-id="zpi75YJ7XhXHZ24d9oCYh4">
+                <path d="M0 58 C30 52 50 40 80 44 C110 48 130 26 160 30 C190 34 205 14 220 10" stroke="var(--accent)" stroke-width="2.4" fill="none" data-page-node-id="3llbtU0pE1ZsWZ1wNewpis"/>
+                <path d="M0 58 C30 52 50 40 80 44 C110 48 130 26 160 30 C190 34 205 14 220 10 L220 70 L0 70Z" fill="rgba(198,242,78,.10)" data-page-node-id="t3hGMlH3BRSbi9nPBznx9l"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card kpi reveal" data-page-node-id="n0k0PiFuUFAIlPuBb7gQn9">
+            <div class="ct" data-page-node-id="3gtgzKq9GAQAXowdDoQsop">今日 DAU</div>
+            <div class="num mono" data-page-node-id="QZLsqD9AGUbMEIQ1rh7Knv">12,840</div>
+            <div class="delta" data-page-node-id="7sPg0huXCbVA5UVeHpJPxo">▲ 4.2%</div>
+          </div>
+          <div class="card kpi reveal" data-page-node-id="6T8GExbRZJASv6r0c3eetV">
+            <div class="ct" data-page-node-id="eZs5JRwfiSgEyNmv9sW2GE">内容总量</div>
+            <div class="num mono" data-page-node-id="WbxYylGHoTt8jhHGAmC56X">9,712</div>
+            <div class="delta" data-page-node-id="PZWVHkxkj8jpbL059xBfK5">▲ 318 今日</div>
+          </div>
+          <div class="card trend reveal" data-page-node-id="hiT93KX8eTfe464UDJud7i">
+            <div class="head" data-page-node-id="CNaZReug9TAFyWXLUeAkN5"><div class="ct" data-page-node-id="YZOs6Yu4k0DVs7zSRtazF2">访问与互动趋势（近 14 日）</div><span class="eyebrow" data-page-node-id="cjfhU2iMYmT7cnXrTbYxQL">DAU / 互动</span></div>
+            <svg viewBox="0 0 720 200" preserveAspectRatio="none" data-page-node-id="nLlxyji3GOLLddm0csdXUT">
+              <defs data-page-node-id="SxnFjMFxswLId2DzOjfnOo"><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1" data-page-node-id="ZBiIAaDaZoPpgWA2tydmvz"><stop offset="0" stop-color="rgba(198,242,78,.35)" data-page-node-id="cjp4fxgHnU3FU3GyxDHrG3"/><stop offset="1" stop-color="rgba(198,242,78,0)" data-page-node-id="6LKVraRGYbXQHfpBrZFQKL"/></linearGradient></defs>
+              <g stroke="var(--line)" stroke-width="1" data-page-node-id="WpIG3DU5AkkEaiQI2KbOpb">
+                <line x1="0" y1="40" x2="720" y2="40" data-page-node-id="NJnGe0YQgiamFu1R40SbGZ"/><line x1="0" y1="90" x2="720" y2="90" data-page-node-id="6Oqp44cipIrgch38RoG1jn"/><line x1="0" y1="140" x2="720" y2="140" data-page-node-id="cdGGvJRCv0o6Y7Qx7fZS5F"/><line x1="0" y1="190" x2="720" y2="190" data-page-node-id="SL9KDsiHdc9qmQajxw0pHq"/>
+              </g>
+              <path d="M0 150 C60 140 100 120 160 128 C220 136 260 90 320 96 C380 102 420 60 480 70 C540 80 580 40 640 52 C680 58 700 44 720 40 L720 200 L0 200Z" fill="url(#g1)" data-page-node-id="lhixHPABvEaEAWDyjit9pS"/>
+              <path d="M0 150 C60 140 100 120 160 128 C220 136 260 90 320 96 C380 102 420 60 480 70 C540 80 580 40 640 52 C680 58 700 44 720 40" stroke="var(--accent)" stroke-width="2.6" fill="none" data-page-node-id="OHi6oKPUbQFuUOzDRXtfwq"/>
+              <path d="M0 170 C60 166 100 160 160 162 C220 164 260 140 320 144 C380 148 420 130 480 132 C540 134 580 120 640 124 C680 126 700 120 720 118" stroke="var(--data-v)" stroke-width="2" fill="none" stroke-dasharray="2 6" opacity=".8" data-page-node-id="vLoFpoAeoY5N5POcTxQkVN"/>
+              <circle cx="720" cy="40" r="4.5" fill="var(--accent)" data-page-node-id="1o5AFYXxq0YrnDIDqgIWSs"/><circle cx="720" cy="40" r="9" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".5" data-page-node-id="5HzM4j3xzAzSAzghZramYA"/>
+            </svg>
+          </div>
+          <div class="card donut reveal" data-page-node-id="nPEDh3Eu8FJvonrwTlXiRT">
+            <div class="ct" data-page-node-id="zysz8dEpM9fK1zH9EMdhFz">内容类型占比</div>
+            <svg viewBox="0 0 120 120" data-page-node-id="q2V5c5wnCcRpkRfZPJwz0t">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--ink-700)" stroke-width="14" data-page-node-id="8DO4Lgv3207SjUTeEEU3cD"/>
+              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--accent)" stroke-width="14" stroke-dasharray="180 289" stroke-dashoffset="0" transform="rotate(-90 60 60)" stroke-linecap="round" data-page-node-id="1NP4cbC3smZt1WjdyH3Kr7"/>
+              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--data-v)" stroke-width="14" stroke-dasharray="62 289" stroke-dashoffset="-180" transform="rotate(-90 60 60)" data-page-node-id="wYFbouQltKPkYbXdFbdTWU"/>
+              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--data-c)" stroke-width="14" stroke-dasharray="47 289" stroke-dashoffset="-242" transform="rotate(-90 60 60)" data-page-node-id="MsiiEY1X4tkXQhuBHShQbU"/>
+              <text x="60" y="56" text-anchor="middle" font-family="var(--font-disp)" font-size="20" font-weight="800" fill="var(--text)" data-page-node-id="IkfA1inzwmuKOg0eK9MBNl">62%</text>
+              <text x="60" y="72" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="var(--text-mute)" data-page-node-id="vGnJh9zRiPoqFQWFTP996X">头像</text>
+            </svg>
+            <div class="legend" data-page-node-id="CbO3dSQ13S3npyfFxSEQfK">
+              <div class="row" data-page-node-id="5ckw4WCfLddzBKDl3xtqOw"><span data-page-node-id="y9H2bN7PBGPd5xep3uxQDZ"><i style="background:var(--accent)" data-page-node-id="J9YGjgiwGDGvCEvToIKpPN"></i>动态头像</span><b data-page-node-id="HolR2N1craIWFfxJlqLJYd">62%</b></div>
+              <div class="row" data-page-node-id="IpVkTkMf8Oo04vl8pO3iHs"><span data-page-node-id="8CQuk3r3bZU2rg0npDXW3v"><i style="background:var(--data-v)" data-page-node-id="V2qAmNwLUabfp8o6TTKY36"></i>壁纸</span><b data-page-node-id="dt8HJz1UuOfUbPL6xHi3Gv">21%</b></div>
+              <div class="row" data-page-node-id="rUAo9F0ygASxnUDEQTZRb9"><span data-page-node-id="YGaTvAUwGdJBe37yt5EyJk"><i style="background:var(--data-c)" data-page-node-id="ACLJvWyVK7xsFlYbQGvQWj"></i>文案/海报</span><b data-page-node-id="YQHFDbhxcAnTEncEshxgFo">17%</b></div>
+            </div>
+          </div>
+          <div class="card activity reveal" data-page-node-id="rEf2EyaMNG7YrI3v995sQr">
+            <div class="ct" data-page-node-id="SDDdGL6MkWYAgWVTijlHfb">实时动态</div>
+            <div class="feed" id="feed" data-page-node-id="SzYwE9LQEurSsSJGigp3wO">
+              <div class="item" data-page-node-id="cjDbmC0CxUC6KpfjE53ubl"><span class="dot" data-page-node-id="SEBAXaY02S9A4crZZBU1Tu"></span><div data-page-node-id="JS0swUbHZYQs9bV0mDJMKH"><div class="t" data-page-node-id="ZDW05S2cTJ7TXMm8sK7wTf"><b data-page-node-id="KxX8A66gXx6CWDpIkpGtOx">用户_8842</b> 上传了动态头像「赛博晚霞」</div><div class="time" data-page-node-id="t6HHsftWbB6tGWPgBD8ATt">刚刚</div></div></div>
+              <div class="item" data-page-node-id="EYglQf4PGfnF3tkAfjiJjQ"><span class="dot" data-page-node-id="AyWvQQkWhItoPEdxmNOIKC"></span><div data-page-node-id="N0DElRSfwe4m965ty4Cb5S"><div class="t" data-page-node-id="7PQeH3XgGPk6HAqZMG5rJr"><b data-page-node-id="8vRwtaDFnrsDCqtO3vms1G">管理员</b> 下架了违规内容 #A392</div><div class="time" data-page-node-id="Ejh4oeUt2LNBMsSEYuVsEz">2 分钟前</div></div></div>
+              <div class="item" data-page-node-id="4SQ4iQ2rx8Nd1P5WZ0UAXl"><span class="dot" data-page-node-id="dPwg7gjWh1tgX7lm97yxcH"></span><div data-page-node-id="FgAR83ihqPSF6AJovlt5zN"><div class="t" data-page-node-id="8igASkBd0jnWq4ne4DYHY2"><b data-page-node-id="qzbgFFeiodYrFQy4HWVYKX">用户_5510</b> 开通年费 VIP</div><div class="time" data-page-node-id="8YNuZsUDK8EABHCnsxCe78">6 分钟前</div></div></div>
+              <div class="item" data-page-node-id="YHNwDs1iOsvbrgifAfAr57"><span class="dot" data-page-node-id="vHFPorFQeIqVoTbJTd73sg"></span><div data-page-node-id="UFgtz6bDRu0ylkVG8dH2xJ"><div class="t" data-page-node-id="fWIdAlBLpE9U7vBbh0niyc"><b data-page-node-id="J0CbxOy3uawUMMBVQ29C8v">系统</b> 激励广告收益 +¥126</div><div class="time" data-page-node-id="KweCRlop0AiNOCZLOW0QqE">11 分钟前</div></div></div>
+              <div class="item" data-page-node-id="CjlYhETYsn1QLZzS9vNzmF"><span class="dot" data-page-node-id="G6sSDEBFuOoH3jFjuH1Cyf"></span><div data-page-node-id="ZCL2TFI2TKxnygFgPeCHHc"><div class="t" data-page-node-id="8S7qeaUaAValPHsKiZglC5"><b data-page-node-id="AUbgcBSSFOACFQ9p81ZuD5">用户_2271</b> 收藏壁纸「雾屿」×12</div><div class="time" data-page-node-id="ldanA7nJLrGMYURqaNBpAD">18 分钟前</div></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 内容资源 ===== -->
+      <section class="view" data-view="resources" data-page-node-id="3X9sDY2HrxeCNQ1q9S6mki">
+        <div class="page-head reveal" data-page-node-id="hZIWIwLTN8tiJT2ORiHG8N">
+          <div data-page-node-id="zM43A4vlebMvLBOPtZOG8N"><div class="eyebrow" data-page-node-id="XhKW6S8Jg8v3lkmyIjWXbC">Content Library · 头像 / 壁纸</div><h2 data-page-node-id="Md1pFsOVvFANiv9FenvOvZ">内容资源</h2></div>
+          <button class="btn-ghost" data-page-node-id="aOyVSJVKIH0fx2hAOFzM5h">+ 新建内容
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px" data-page-node-id="8UHRRdMk0NkcGzxXzn3sO9"><path d="M12 5v14M5 12h14" data-page-node-id="mke5gb9rvPefA8izBMcDk1"/></svg>
+          </button>
+        </div>
+        <div class="toolbar reveal" data-page-node-id="PZsufgCMLZxZSNiDPL5zB9">
+          <div class="search" data-page-node-id="1eHxDtA9VcKi9JXROKmbNz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-page-node-id="cKLkoZi6mHutJoQedRH897"><circle cx="11" cy="11" r="7" data-page-node-id="tyFPZXu4wufXxDvEU9ATCv"/><path d="M21 21l-4-4" data-page-node-id="3jV2c8OYDFPwfkirAacArY"/></svg><input placeholder="搜索标题、标签或 ID…" data-page-node-id="wKtAbWgZqgLX0NBu781uQC" /></div>
+          <button class="chip on" data-page-node-id="1Pqx8tH1CtOu3YupJENwQX">全部</button>
+          <button class="chip" data-page-node-id="by5yb2r27RuAcDOqAv9Cr3">动态头像</button>
+          <button class="chip" data-page-node-id="aIGMRx0KVutzqk28gVoKQS">壁纸</button>
+          <button class="chip" data-page-node-id="w6cLSqY7KCY4KrQBsbKo4Q">文案海报</button>
+          <button class="chip" data-page-node-id="6JJpm6rETjKtrokrUypNFI">待审核</button>
+        </div>
+        <div class="grid-cards reveal" id="rcards" data-page-node-id="7LruGTILCkOXSuyIH68xP7"></div>
+      </section>
+
+      <!-- ===== 用户会员 ===== -->
+      <section class="view" data-view="members" data-page-node-id="sZEymaBkMiQDWh1ykx6Cwl">
+        <div class="page-head reveal" data-page-node-id="fVd5dfVIBVk5EZLn20i4P8">
+          <div data-page-node-id="zHJzksX3gzw10S3ruqJVXQ"><div class="eyebrow" data-page-node-id="3hVrbIPp0DAJ1kSx5doaxU">Members & Tiers</div><h2 data-page-node-id="2lfRFJkxAYSkPhDfuIJ32P">用户与会员</h2></div>
+          <button class="btn-ghost" data-page-node-id="7ZMaH1HnsuxPGiByWPttGJ">导出名单
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px" data-page-node-id="sFaBFFCcdZJVzuUPAqYIMG"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" data-page-node-id="O8klPPUsbuRh5tkDpTXbem"/></svg>
+          </button>
+        </div>
+        <div class="panel reveal" data-page-node-id="PRLWRedODmgsoFvt6TRLdY">
+          <table class="tbl" data-page-node-id="i0WDb7RMV0zTwZO9i5OGhu">
+            <thead data-page-node-id="UVdWlwDMGgoW7d8ewhwOZ0"><tr data-page-node-id="piioSmOQI7vK9G0OWkn4rQ"><th data-page-node-id="kv5OeoTEKRHJ3qP8mjbM7d">用户</th><th data-page-node-id="KmEU7EcAs1XX4YKoVMtk9O">等级</th><th data-page-node-id="S51upgU1B9r7VejbRhdqyi">积分</th><th data-page-node-id="rpAKlbWFLs1GEHsvH17EkL">下载</th><th data-page-node-id="cs4FPrPjdDBRGaYocNuAYl">活跃度</th><th data-page-node-id="0PpIeDNSmyj7qo55Ius3Mp">注册</th></tr></thead>
+            <tbody data-page-node-id="j55d4HmAdLyEwXY39WExtR">
+              <tr data-page-node-id="CsU3rJ0XfW6eeu0WIuNxeq"><td class="uid" data-page-node-id="GhrbyBN90sGzIscbChyIhx">u_8842a</td><td data-page-node-id="65WevZOLpZQg0rhx28Zpss"><span class="tier vip" data-page-node-id="vE8FMVabjazLCTXK60xaT0">年费 VIP</span></td><td data-page-node-id="Pric7HxOi3muU5SBAedTVX">12,480</td><td data-page-node-id="a7irI1PxnN46HJHOqimZd9">326</td><td data-page-node-id="HFaJGuKWgA8g17zfvqJNAJ"><div class="bar" data-page-node-id="mpHM6r17pmE3FIE2o8oBWD"><i style="width:92%" data-page-node-id="60AGUFbxAifJ2cxoBy1XdY"></i></div></td><td data-page-node-id="7ckNFaEu6z5HhubZEiAktl">2025-03</td></tr>
+              <tr data-page-node-id="Zd5AjghBWUDxShUUY7Wr1S"><td class="uid" data-page-node-id="0xQTiJj1eO1S2aIChgUcyv">u_5510c</td><td data-page-node-id="Y7pWdVCh1p78Wovm2KF4FP"><span class="tier vip" data-page-node-id="JoSaB23qLpceAvQILYK5ow">年费 VIP</span></td><td data-page-node-id="ERLeopKAZlXVFoeHgubGED">9,210</td><td data-page-node-id="EzxVf1WlDGDEwzXDYU8fg5">211</td><td data-page-node-id="rZ08I8KMVA0NtqjsyVYTD2"><div class="bar" data-page-node-id="cScOUAmaFmSxtiiNBDb5W6"><i style="width:78%" data-page-node-id="zIuUxfCkoJ1wubobiSdh6Z"></i></div></td><td data-page-node-id="nduQtBHXJRpLCLNRasRIeB">2025-06</td></tr>
+              <tr data-page-node-id="5MFQYd7TmryenJLfnxUL3m"><td class="uid" data-page-node-id="E2lmZmZwzgqL3YcSoNh1DN">u_2271f</td><td data-page-node-id="5rb7iDx1P175iBgyIp6HGK"><span class="tier pro" data-page-node-id="5afwvIIGGu44yVHnQjqiVy">会员</span></td><td data-page-node-id="j9Zo6NhMW4tnyGTtA20ARX">4,030</td><td data-page-node-id="NbAYbIXK27orqRebzOB2eU">98</td><td data-page-node-id="Ysv1yuxhhCsGSuZFjiN5w9"><div class="bar" data-page-node-id="CBCEz2syeeNCQqB3Deedba"><i style="width:61%" data-page-node-id="2Ui40Qxj5hFT0lbIzYCKaT"></i></div></td><td data-page-node-id="98SHjj7onDxflygrVoZrTQ">2025-11</td></tr>
+              <tr data-page-node-id="gsQirk99xXjqnRpm49FQXa"><td class="uid" data-page-node-id="nfst0Fyhm0B1F48A3OVGjR">u_7731b</td><td data-page-node-id="Ybr7Qux9Nds1MxG4jQyvKL"><span class="tier pro" data-page-node-id="KWv7JHrmDY8GGY8OjAFvcB">会员</span></td><td data-page-node-id="30PO52MqsGoVMoXOed11xp">3,118</td><td data-page-node-id="5zts1WoGI8MCQRtGMgLV2q">77</td><td data-page-node-id="Sqssg7ZpHaWSfJiRE4BonR"><div class="bar" data-page-node-id="mt8oKaZuRl3k46vT2bPL8p"><i style="width:54%" data-page-node-id="SDLMZi4geB4H1KE1iMkIid"></i></div></td><td data-page-node-id="OUboDCTDeuMiar57PjKRqW">2026-01</td></tr>
+              <tr data-page-node-id="e7FBJruBKZqWN1ujmpZTIA"><td class="uid" data-page-node-id="STRHF1pbeGnN1WLNCJTLv4">u_9002d</td><td data-page-node-id="gWPR9vnOI4EeEG8w8Gxj94"><span class="tier free" data-page-node-id="XUkcoVnbY2pJD96oUF0wUU">免费</span></td><td data-page-node-id="qMW9nQkMOmOEfOIT2TzsPF">420</td><td data-page-node-id="e2XfgW2pOzgSs7s4ZTCuxE">9</td><td data-page-node-id="TfGETjhqgfyo9q7Cj8r62l"><div class="bar" data-page-node-id="a9F7SlYCBIikavZm96bDrV"><i style="width:22%" data-page-node-id="q946jirmGlAGzwXkAVomiu"></i></div></td><td data-page-node-id="Mj02E5HkDLESaqM9uyHxTi">2026-07</td></tr>
+              <tr data-page-node-id="ceXJTB13A2rZicRifHloZY"><td class="uid" data-page-node-id="UdEks9PVQuIN32lBH1uZLq">u_6614e</td><td data-page-node-id="tDoAGbijbV6aeZEWR1jBwy"><span class="tier free" data-page-node-id="KOKekRXvrFaGgsKVaqV0dz">免费</span></td><td data-page-node-id="lY5dIuMPvjGK610e8zHEvv">188</td><td data-page-node-id="BYZrN4vcVehoQ8VvpOTLz1">3</td><td data-page-node-id="aGpMzmc6FHfcjWTCo0VF7C"><div class="bar" data-page-node-id="s9ViCxjTDZxf5lsYQ1CCrC"><i style="width:12%" data-page-node-id="gAeBBQIF3u8IfKCRJIQiTG"></i></div></td><td data-page-node-id="vSeglB4M7kK1xezD8ZRPRf">2026-08</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="split2 reveal" data-page-node-id="K5rbBBytSNq5O6Ma8MHJMW">
+          <div class="panel" style="padding:var(--s-5)" data-page-node-id="VbTT8Sql71wwPYUiVGjzFU">
+            <div class="ct" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute)" data-page-node-id="750HMJCFYs7oKSC5ByF2Qb">等级分布</div>
+            <div style="display:flex;gap:24px;align-items:flex-end;height:160px;margin-top:16px" data-page-node-id="sH2dI2HKsfDBFE4dG3hoVO">
+              <div style="flex:1;text-align:center" data-page-node-id="oZX2yhIHFGlDuDldvKjchZ"><div style="height:120px;background:var(--accent);border-radius:8px 8px 0 0" data-page-node-id="AifmdNfQkxEQdZ8CKQHVNh"></div><div class="mono" style="font-size:12px;margin-top:8px;color:var(--text-mute)" data-page-node-id="3fJVh2vLaRJ1pAsyPnZb5g">VIP 6%</div></div>
+              <div style="flex:1;text-align:center" data-page-node-id="syZ0TBRONwcIY7BfmSumFz"><div style="height:84px;background:var(--data-c);border-radius:8px 8px 0 0" data-page-node-id="U26bMKcMLBg0PuWZFrtaam"></div><div class="mono" style="font-size:12px;margin-top:8px;color:var(--text-mute)" data-page-node-id="mmpCgE2c2ABOYEWLn4ZBLu">会员 18%</div></div>
+              <div style="flex:1;text-align:center" data-page-node-id="Mv3b2iV1CG61zA9fED1tlH"><div style="height:160px;background:var(--ink-700);border-radius:8px 8px 0 0" data-page-node-id="fSwmVv0Ac95FZDkTrNlqWR"></div><div class="mono" style="font-size:12px;margin-top:8px;color:var(--text-mute)" data-page-node-id="B2FIZeG8CALvw2rg687tXq">免费 76%</div></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--s-4)" data-page-node-id="jVrT7GqeJ36em62kpS4zDf">
+            <div class="mini-stat" data-page-node-id="CRp2tDz6kZXpwuBvX0SBzd"><span class="l" data-page-node-id="KBUDTJdvllLyxQ5tiZKE0n">付费会员</span><span class="n mono" data-page-node-id="TuvaFVk06IwFhL6cenisKk">6,914</span></div>
+            <div class="mini-stat" data-page-node-id="tYA8Sq7h2bwalowh4tSdR1"><span class="l" data-page-node-id="PNt3FHBkNADW2owckC591w">月会员转化</span><span class="n mono" data-page-node-id="X2HFWtgf78wKnFXQob6Cb7">3.8%</span></div>
+            <div class="mini-stat" data-page-node-id="MBXkaiy1aHaInhOQITzMx6"><span class="l" data-page-node-id="dGbAOvDsRcjO6C3KWqvqn5">7 日留存</span><span class="n mono" data-page-node-id="Yhkn5HwesL5dZvzlfPrphX">41.2%</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 首页装修 ===== -->
+      <section class="view" data-view="decorator" data-page-node-id="hWOkydzUW0lGTk7DcUK1Qq">
+        <div class="page-head reveal" data-page-node-id="WBHA92VldksAWpzrWBonAO">
+          <div data-page-node-id="EzuNBwTXVjddLOeskEpUPr"><div class="eyebrow" data-page-node-id="ryGMjFGv9kYwO8brT3ySbB">Home Decorator · 小程序首页</div><h2 data-page-node-id="WQvMXCzR9m2bPManNAOiMe">首页装修</h2></div>
+          <button class="btn-ghost" data-page-node-id="AAybup1XIMN2d78SNwSch8">预览发布
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px" data-page-node-id="IFniUw3F5G7inpvNLI8h03"><path d="M5 12h14M13 6l6 6-6 6" data-page-node-id="cEngA4K6ACenRpKb1SLH1I"/></svg>
+          </button>
+        </div>
+        <div class="decor" data-page-node-id="10fPRmNYFr4TD8NECWvIAj">
+          <div class="card reveal" style="display:grid;place-items:center;padding:var(--s-7)" data-page-node-id="3HvNCDeHga4Nv56Phld9xT">
+            <div class="phone" data-page-node-id="7GkNwxGuV9u1DHpdaKFjUp">
+              <div class="notch" data-page-node-id="hDvPTco8avwVhGEyfW0lqq"></div>
+              <div class="scr" data-page-node-id="5uiQ6ddSGlGvp6edO9UeSM">
+                <div class="hero" id="phHero" data-page-node-id="mZoGuJEdoE7zElhr4Qrg6Y">小辣椒 · 今日精选</div>
+                <div class="sec" data-page-node-id="Kl44qO4QqeKx2aMb1wCPab"><div class="b a" data-page-node-id="unXHpL0V41hpIZZm9Om6HL"></div><div class="b b" data-page-node-id="THmFNzqkXOlWobPkYQtfZR"></div><div class="b" data-page-node-id="hMk6PIidhAhIJ0E1N32JKu"></div><div class="b a" data-page-node-id="SryR4XJOnO8yv5dNcJtJnB"></div></div>
+                <div class="row" data-page-node-id="XBnqCCvckRusK5k9HGZNXj"><div class="ic" data-page-node-id="gwriHMOcgz1LrOC5fIZKKW"></div>专题 · 治愈系动态头像</div>
+                <div class="row" data-page-node-id="Im1NBk1OaNx3Wlxau0o7EK"><div class="ic" data-page-node-id="3qx67iHzhr8ED2i68YA3UU"></div>本周热榜 TOP 10</div>
+                <div class="feed" data-page-node-id="3SOTelen9qe8mKLq8SIcRe"><div class="c x" data-page-node-id="FTo7eY0lMPgHkJ4X9lPpSw"></div><div class="c y" data-page-node-id="BYCqALv8DaengidUJniP6Q"></div><div class="c z" data-page-node-id="ZF52tgLTu4Hdzdwk5gVLAP"></div><div class="c" data-page-node-id="XkAufdbuOQMPWCi6u9vrSV"></div><div class="c y" data-page-node-id="6DAlTWMlT5QZDkRRGYyrSq"></div><div class="c x" data-page-node-id="Tra0d6DBCNWA5c79GOx71G"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="config reveal" data-page-node-id="ZXTYuKhbgVL5rP3VF5XxG5">
+            <h3 data-page-node-id="luXAGIZtChA5vMQnBWGIYB">装修配置</h3>
+            <div class="grp" data-page-node-id="rzqkDCcyFKVGrkF0JlmaFh">
+              <div class="lab" data-page-node-id="H2eDJWtQWCUqdndXa1DlLt">模块开关</div>
+              <div class="opt" data-page-node-id="75wWjVVpCfkVH73OLPpAwK"><span class="nm" data-page-node-id="8si7KdQ8goMPfpcCdV4uri">顶部 Banner 轮播</span><span class="sw on" data-sw data-page-node-id="Y07vua7AV7jXqs0iaNWEzM"></span></div>
+              <div class="opt" data-page-node-id="gkaCqN2Sx7dMJ5bF9NtF19"><span class="nm" data-page-node-id="N7BcbOC9MNLhTMUKGqoEMi">专题推荐区</span><span class="sw on" data-sw data-page-node-id="aNJY2yEL8sQxQyWrh0C13Y"></span></div>
+              <div class="opt" data-page-node-id="yzNUIYHotENRuC25zT60FB"><span class="nm" data-page-node-id="aOPm7dmF0124arXvC7Cajv">本周热榜</span><span class="sw" data-sw data-page-node-id="43iRhkgvNyr8MEUC6hiBIB"></span></div>
+              <div class="opt" data-page-node-id="XBapz6oY7xMRgyn3MHcMQY"><span class="nm" data-page-node-id="wBSEXRDZtxMXkjZzwReeuH">微信小店入口</span><span class="sw on" data-sw data-page-node-id="9mSeV7cHKp2dOgtqP35Z8S"></span></div>
+            </div>
+            <div class="grp" data-page-node-id="qGAFYGgwGlnNYN6ZWGUSWE">
+              <div class="lab" data-page-node-id="bPuN85DG6aGcgrkfJI5Kj3">主题色</div>
+              <div class="swatches" id="swatches" data-page-node-id="8AVR38Kn5VC5IaOrIvDFGr">
+                <button class="on" style="background:#C6F24E" data-c="#C6F24E" data-page-node-id="jAlmaEysOkoujaFBVCYEUo"></button>
+                <button style="background:#FF6B5C" data-c="#FF6B5C" data-page-node-id="WGgD2TRvIt4NTXRy8tMR5u"></button>
+                <button style="background:#7C6CF0" data-c="#7C6CF0" data-page-node-id="38JVcKfWC0hdjAclQJbGDe"></button>
+                <button style="background:#4FB8C9" data-c="#4FB8C9" data-page-node-id="05h2FH99cW7zW7OT9g66C1"></button>
+                <button style="background:#F2A93B" data-c="#F2A93B" data-page-node-id="DrKBzWwZmkD6yNqcF9Elve"></button>
+              </div>
+            </div>
+            <div class="grp" data-page-node-id="CQPxwAZmlzDcgq4gVQXODn">
+              <div class="lab" data-page-node-id="Em2Y0MSJkiPJ3xeUgNrIzA">首页标题</div>
+              <input id="heroInput" value="小辣椒 · 今日精选" style="width:100%;background:var(--ink-780);border:1px solid var(--line-2);color:var(--text);padding:12px;border-radius:var(--r-xs);font-family:var(--font-body);font-size:14px" data-page-node-id="i69tNdKxoKuVSnz4AWZBZV" />
+            </div>
+            <div class="spec-note" data-page-node-id="2kaz6Kz2uFX1aCGOyzxFdp">配置实时映射到右侧小程序预览。发布后约 5 分钟在小程序端生效，无需发版。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 广告变现 ===== -->
+      <section class="view" data-view="ads" data-page-node-id="Ov3hAbDGfYC2Bc1H2JQszJ">
+        <div class="page-head reveal" data-page-node-id="663lGO2jX4k1OzF43B1Frx">
+          <div data-page-node-id="iOBEkHOW2jhCwxJynL6eT1"><div class="eyebrow" data-page-node-id="DWWCQRGUezvEBSBudoTus5">Monetization · Ad Slots</div><h2 data-page-node-id="kf8Dutt8bYLD6J0kb1elD9">广告变现</h2></div>
+          <button class="btn-ghost" data-page-node-id="hBVEEnQqhLCEYaYAfG5nXk">+ 新建广告位
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px" data-page-node-id="x4Wio9UpTTMBWpG5ETcHkF"><path d="M12 5v14M5 12h14" data-page-node-id="9uHYwU2s0IxlpdNsPkr8V6"/></svg>
+          </button>
+        </div>
+        <div class="panel reveal" data-page-node-id="i69ca439BuAwt5k05Ua3ed">
+          <div class="adrow" data-page-node-id="aQTnp3X6cQGRgIZsEK8t3i"><div class="slot" data-page-node-id="sGyLr4S74lrvycnaLMSvvL">首页</div><div class="nm" data-page-node-id="5Nxmj0g0prTSuMDcQ5Eu2D">首页信息流激励广告<small data-page-node-id="xFL8basoMn7euNZkPCcPGW">激励视频 · 看完免广告下载</small></div><span class="status run" data-page-node-id="bpW2UMQSOwk8OjuOb26igH">运行中</span><span class="rev" data-page-node-id="VhybNZULpyWVSESLH3kC9F">¥26.4k</span></div>
+          <div class="adrow" data-page-node-id="hfwefduhFpalgAkvCeRSz7"><div class="slot" data-page-node-id="8xuJZBN9ptTkcVDGcjDqxo">详情</div><div class="nm" data-page-node-id="oy4XNrZd6Kp3WXNlnKRD1y">内容详情页插屏<small data-page-node-id="7it9xBo5hFR2KHjhO86ac2">全屏插屏 · 每 3 次展示</small></div><span class="status run" data-page-node-id="PsoHUldoJL9szUpM65yeTS">运行中</span><span class="rev" data-page-node-id="WXEEMXOGLaT2vTbfjlGiyQ">¥12.1k</span></div>
+          <div class="adrow" data-page-node-id="WATpPdPWx927IeSqHAbj2S"><div class="slot" data-page-node-id="vyAnALBx9RQdxFaN2mB6fL">下载</div><div class="nm" data-page-node-id="BlzkoRe6fGoN0qWwnBHtqW">下载页横幅<small data-page-node-id="iGjFe1qR6E4U4tF2ndPFnA"> Banner · 高频曝光</small></div><span class="status pause" data-page-node-id="OnY0dviqceRxIYgb6eEi1J">已暂停</span><span class="rev" data-page-node-id="cx2AZtro4I1uHJOUD3Bwd1">¥3.8k</span></div>
+          <div class="adrow" data-page-node-id="Kgi1ipeO2BWnQHWHAIaGW9"><div class="slot" data-page-node-id="BCyZvp1PtcAgayEm9yHjzu">社区</div><div class="nm" data-page-node-id="yzh9CwbfJTVmFf7UF6AUnD">社群公告悬浮窗<small data-page-node-id="MXKCx7C9JpZCbGbyZqA8aS">原生模板 · 低打扰</small></div><span class="status run" data-page-node-id="uejIlGTtofEb7hjtLgKZkB">运行中</span><span class="rev" data-page-node-id="MrkBAe0wp4ZFB68l998bhu">¥5.9k</span></div>
+        </div>
+        <div class="split2 reveal" data-page-node-id="ijJkcpQNITc2V4Dav0bSCM">
+          <div class="card" style="min-height:200px" data-page-node-id="OsMQdDq0G8dIa5yO6pdmCB">
+            <div class="ct" data-page-node-id="mg9CA85Gwu5gm8PWXQuWes">本月营收趋势</div>
+            <svg viewBox="0 0 720 160" preserveAspectRatio="none" style="width:100%;height:150px;margin-top:12px" data-page-node-id="HQKhdUxxvDYH6l9mkPe9pK">
+              <g stroke="var(--line)" stroke-width="1" data-page-node-id="tCTqR3heq23QNfOXMGh5sW"><line x1="0" y1="40" x2="720" y2="40" data-page-node-id="IOtS58971GHqRNy6DYacNh"/><line x1="0" y1="100" x2="720" y2="100" data-page-node-id="Ucf3boNQ7GqiZGoeenPUUW"/></g>
+              <path d="M0 130 L120 110 L240 118 L360 80 L480 70 L600 44 L720 36" stroke="var(--accent)" stroke-width="2.6" fill="none" data-page-node-id="7028SBt6cNw7nA0yr6SQnl"/>
+              <path d="M0 130 L120 110 L240 118 L360 80 L480 70 L600 44 L720 36 L720 160 L0 160Z" fill="rgba(198,242,78,.10)" data-page-node-id="K4jzW1FZiMsGOaocFNdCHs"/>
+            </svg>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--s-4)" data-page-node-id="lJLfnyDxPnWvmEIWZUpRRJ">
+            <div class="mini-stat" data-page-node-id="nXC5HKOnrFfUNgEVzDgXGv"><span class="l" data-page-node-id="Vryu0TzrdqaPkfHdFXyXvf">本月预估营收</span><span class="n mono" data-page-node-id="PFjEUca7QRl70kmmDp020q">¥48.2k</span></div>
+            <div class="mini-stat" data-page-node-id="9hrnxUv1rBt3C3VdAaOGhR"><span class="l" data-page-node-id="24KwqJ9B2PKX8Z8ppjXRrP">eCPM</span><span class="n mono" data-page-node-id="07MCDwnfEIdocYOZuv7W8Y">¥42.6</span></div>
+            <div class="mini-stat" data-page-node-id="kKFgpDjPWFHrYobQdbDPkh"><span class="l" data-page-node-id="Hz3IEShjYR8rGOGmLgEW9S">填充率</span><span class="n mono" data-page-node-id="k6yap9BTiqGVoQM7mHQniL">98.3%</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 设计系统 ===== -->
+      <section class="view" data-view="design" data-page-node-id="fcYAuZyKWjCUNWifF24MDT">
+        <div class="page-head reveal" data-page-node-id="WByYcBStL0Z2ngXPgwCxYQ">
+          <div data-page-node-id="bg9ueExQqGjgQZfyy7T6qM"><div class="eyebrow" data-page-node-id="BUJw9CH3GvLFf9G3CbwfOG">Signal Desk · Design System</div><h2 data-page-node-id="dMsxSL9GNrpH0cHMftxyO1">设计系统</h2></div>
+        </div>
+        <div class="sec-title reveal" data-page-node-id="Nj99aRFlUMrJISjddbmnlC">色彩 · 信号墨底 + 青柠强调</div>
+        <div class="tokens reveal" data-page-node-id="BDaJjq8OT50hTOx22ql5wB">
+          <div class="swatch" style="background:var(--ink-900);color:var(--text-mute)" data-page-node-id="RAv2KO3hkdujRqBlj8kZEI">--ink-900<br data-page-node-id="9QqKX1q3rH5gA2EdADYF5Q"/>#0E0D0B</div>
+          <div class="swatch" style="background:var(--ink-800);color:var(--text-mute)" data-page-node-id="Yh43uVAf63wAPTzhCnvDMM">--ink-800<br data-page-node-id="MWn4bVnLXZuSWV8qSqD2CS"/>#171614</div>
+          <div class="swatch" style="background:var(--ink-750);color:var(--text-mute)" data-page-node-id="EDk1zZnkTCHoVilHQmvrXF">--ink-750<br data-page-node-id="VwVW2KKHzteOIwcL10EGjh"/>#211E1A</div>
+          <div class="swatch" style="background:var(--accent);color:var(--accent-ink)" data-page-node-id="rGAD6RF8Stkqx7C4LsdI1B">--accent<br data-page-node-id="Nsris0zkAi2A3zmIIlxT7U"/>#C6F24E</div>
+          <div class="swatch" style="background:var(--data-v);color:#0E0D0B" data-page-node-id="HTAtnlcrwHEEy6AoQsEcnT">--data-v<br data-page-node-id="1kM95kGZZBC9zIV7bnTyhi"/>#7C6CF0</div>
+          <div class="swatch" style="background:var(--data-c);color:#0E0D0B" data-page-node-id="45faGdBNgDXypx6nzYClKM">--data-c<br data-page-node-id="M3Szf3mDJCC3YkGkhy7wuo"/>#4FB8C9</div>
+          <div class="swatch" style="background:var(--data-a);color:#0E0D0B" data-page-node-id="Jy9Bd0cmR80EYHv5akYOTY">--data-a<br data-page-node-id="ZTQGIvvbvoo5YVl8qXe4cI"/>#F2A93B</div>
+          <div class="swatch" style="background:var(--ok);color:#0E0D0B" data-page-node-id="M5cTryxXoXt4Ek3gcjibla">--ok<br data-page-node-id="ARj5cwICMUdToOA8d77uNF"/>#6FE3A0</div>
+        </div>
+        <div class="sec-title reveal" data-page-node-id="1WHG5JcjHLvAdI1wnAlvh7">字体 · 展示 / 正文 / 等宽</div>
+        <div class="type-spec reveal" data-page-node-id="u8F1wWBCjCCA1H9gbydSrS">
+          <div class="t" data-page-node-id="H4QyGqEIMDiv9xJ6cfQGv1"><div class="disp" style="font-size:40px;font-weight:800" data-page-node-id="z5x9aHDUxfFFlhQyxJvEaR">小辣椒运营信号台</div><div class="eyebrow" style="margin-top:6px" data-page-node-id="8WuxFEWGXxmUL5jat0hMa3">Bricolage Grotesque · 展示</div></div>
+          <div class="t" data-page-node-id="Bia8hY4gJoIrJbnIiMnTPJ"><div style="font-size:18px" data-page-node-id="dpkayDfHUb0bmcPHBBdbc3">正文内容使用 IBM Plex Sans，数据使用 IBM Plex Mono 等宽数字。</div><div class="eyebrow" style="margin-top:6px" data-page-node-id="T6TBgZYbRlIT11k991GpYf">IBM Plex Sans · 正文</div></div>
+          <div class="t" data-page-node-id="9ug8MyWgggMsqGt8AhaRn1"><div class="mono" style="font-size:20px" data-page-node-id="RZCDB8XtVQv6ZGpllKHCDa">12,840 ▲ 4.2% · DAU</div><div class="eyebrow" style="margin-top:6px" data-page-node-id="AhUqUrnCn4XIwT7SEJGQtm">IBM Plex Mono · 数据</div></div>
+        </div>
+        <div class="sec-title reveal" data-page-node-id="JmJdt8fsWVXbxV55P2tKUC">形状 · 圆角与阴影</div>
+        <div class="tokens reveal" data-page-node-id="B45JiaQSQKBntlLU9Y7QF8">
+          <div class="swatch" style="background:var(--ink-800)" data-page-node-id="P0v0dGFbnFxvrIUDdasmjm">--r-sm 10</div>
+          <div class="swatch" style="background:var(--ink-800)" data-page-node-id="nrMv0pCa71cA2K1JJWbdQ6">--r-md 16</div>
+          <div class="swatch" style="background:var(--ink-800)" data-page-node-id="FKKfbmwLwb0zKIAbIlMFeq">--r-lg 22</div>
+          <div class="swatch" style="background:var(--ink-800)" data-page-node-id="0G4NQCUUnNfguyIjVXXnI4">--r-pill 999</div>
+        </div>
+        <div class="spec-note reveal" data-page-node-id="h7GfNiJFfigcMZmzKvXtfL">
+          <b data-page-node-id="vhfwnqWzCsr9T53kxJklCL">方向宣言：</b>这是一套「工业实用 × 编辑感」的后台身份——暖墨底承载高密度运营数据，唯一锐利的<b data-page-node-id="YeTQkYgiXh6BiqBEUjHmQ6">信号青柠</b>只服务于关键动作与激活态，图表数据色退居次级。
+          字体以 Bricolage Grotesque 的展示张力对抗后台的枯燥，等宽数字保证数据对齐。本原型<b data-page-node-id="PaEtNUQRSCzwgWXLD3Ojou">锁定纯暗色身份</b>（不提供浅色切换），浅色令牌仅作为上层文档保留，确保单一记忆点。
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+/* ===== 登录 → 应用 ===== */
+const login=document.getElementById('login'),app=document.getElementById('app'),stage=document.getElementById('stage');
+document.getElementById('enterBtn').addEventListener('click',()=>{
+  login.classList.add('gone');
+  setTimeout(()=>{login.style.display='none';app.classList.add('on');switchView('overview');},620);
+});
+
+/* ===== 视图切换 ===== */
+const titles={overview:['运营概览','OVERVIEW · 实时'],resources:['内容资源','CONTENT LIBRARY'],members:['用户与会员','MEMBERS & TIERS'],decorator:['首页装修','HOME DECORATOR'],ads:['广告变现','MONETIZATION'],design:['设计系统','DESIGN SYSTEM']};
+function switchView(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.dataset.view===v));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===v));
+  document.getElementById('pageTitle').textContent=titles[v][0];
+  document.getElementById('pageSub').textContent=titles[v][1];
+  stage.scrollTop=0;
+}
+document.getElementById('nav').addEventListener('click',e=>{
+  const b=e.target.closest('.nav-item');if(b)switchView(b.dataset.view);
+});
+
+/* ===== 内容卡片（程序生成，含渐变缩略图占位） */}
+const grads=[
+  ['var(--data-v)','var(--data-c)'],['var(--data-a)','var(--accent)'],['var(--accent)','var(--data-v)'],
+  ['var(--data-c)','var(--ink-700)'],['var(--data-v)','var(--ink-700)'],['var(--data-a)','var(--data-c)']
+];
+const items=[
+  ['赛博晚霞','动态头像','2.1k','live'],['雾屿','壁纸','1.8k',''],['治愈系·呼吸','动态头像','3.4k','live'],
+  ['橘色黄昏','壁纸','980',''],['霓虹城市','动态头像','1.2k',''],['薄荷星球','文案海报','640',''],
+  ['星轨','壁纸','2.7k',''],['胶片日记','动态头像','1.5k','live'],['暖冬','文案海报','420','']
+];
+const rc=document.getElementById('rcards');
+items.forEach((it,i)=>{
+  const [a,b]=grads[i%grads.length];
+  rc.insertAdjacentHTML('beforeend',`
+  <div class="rcard">
+    <div class="thumb"><div class="og" style="background:linear-gradient(155deg,${a},${b})"></div>
+      <span class="badge ${it[3]}">${it[3]==='live'?'● 动态':'静态'}</span>
+      <div class="acts"><button>编辑</button><button>下架</button></div>
+    </div>
+    <div class="meta"><div class="name">${it[0]}</div>
+      <div class="sub"><span>${it[1]}</span><span>♥ ${it[2]}</span></div>
+    </div>
+  </div>`);
+});
+
+/* ===== 装修配置交互 ===== */
+document.querySelectorAll('[data-sw]').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+document.querySelectorAll('#swatches button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#swatches button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.documentElement.style.setProperty('--accent',b.dataset.c);
+}));
+document.getElementById('heroInput').addEventListener('input',e=>{
+  document.getElementById('phHero').textContent=e.target.value||'小辣椒';
+});
+
+/* ===== 自定义光标（桌面） ===== */
+const cur=document.getElementById('cur');
+if(window.matchMedia('(pointer:fine)').matches){
+  window.addEventListener('mousemove',e=>{cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';});
+  document.addEventListener('mouseover',e=>{if(e.target.closest('button,a,.rcard,.nav-item'))cur.style.width=cur.style.height='22px';});
+  document.addEventListener('mouseout',e=>{if(e.target.closest('button,a,.rcard,.nav-item'))cur.style.width=cur.style.height='10px';});
+}
+
+/* ===== 实时动态模拟 ===== */
+const feed=document.getElementById('feed');
+const msgs=[
+  ['用户_'+Math.floor(Math.random()*9000+1000),' 上传了新头像'],
+  ['系统',' 激励广告收益 +¥'+Math.floor(Math.random()*80+40)],
+  ['管理员',' 审核通过内容 #'+Math.floor(Math.random()*900+100)]
+];
+setInterval(()=>{
+  const m=msgs[Math.floor(Math.random()*msgs.length)];
+  const el=document.createElement('div');el.className='item';
+  el.innerHTML=`<span class="dot"></span><div><div class="t"><b>${m[0]}</b>${m[1]}</div><div class="time">刚刚</div></div>`;
+  feed.prepend(el);if(feed.children.length>6)feed.lastChild.remove();
+},5200);
+</script>
+</body>
+</html>
