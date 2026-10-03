@@ -12,9 +12,17 @@ import {
 import { performanceMonitor } from '../../utils/performance.js'
 import logger from '../../utils/logger.js'
 import { getStorage, setStorage, getWindowInfo, getTheme } from '../../utils/storageManager'
+import { hapticSelect, hapticLongPress, isHapticEnabled, setHapticEnabled, hapticTap } from '../../utils/haptic'
 
 Page({
+  // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
+  onTabItemTap() {
+    hapticSelect()
+  },
+
   data: {
+    // 触感反馈开关（与 utils/haptic 的 storage 状态保持同步）
+    hapticEnabled: true,
     userInfo: null,
     displayAvatarUrl: '',
 
@@ -82,6 +90,8 @@ Page({
   },
 
   onLoad() {
+    // 同步触感反馈开关状态（读取 storage，默认开启）
+    this.setData({ hapticEnabled: isHapticEnabled() })
     performanceMonitor.startPageLoad('个人中心')
     this.initNavBar()
 
@@ -809,7 +819,19 @@ Page({
   },
 
   // 🔥 性能测试入口：长按版本号触发
+  /**
+   * 触感反馈开关切换
+   */
+  onHapticToggle(e) {
+    const enabled = !!e.detail.value
+    setHapticEnabled(enabled)
+    this.setData({ hapticEnabled: enabled })
+    // 打开时立即给一次反馈，让用户感知开关已生效
+    if (enabled) hapticTap()
+  },
+
   async runPerfTest() {
+    hapticLongPress()  // 触感反馈：长按生效
     wx.showLoading({ title: '性能测试中...', mask: true })
     try {
       const perfTest = require('../../utils/perf-test.js')

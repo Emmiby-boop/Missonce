@@ -378,6 +378,19 @@
   color: var(--text-sub);
 }
 
+/* 触感反馈开关项（图标为 images/menu-haptic.svg，与其他菜单项规范一致） */
+.menu-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.menu-subtitle {
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+
 .menu-arrow {
   width: 28rpx;
   height: 28rpx;

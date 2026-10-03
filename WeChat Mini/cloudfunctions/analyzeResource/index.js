@@ -75,7 +75,7 @@ async function analyzeImageWithQwen(imageUrl, type, filename = '') {
         {
           role: "user",
           content: [
-            { type: "text", text: `图片文件名/标题: "${filename}"。\n用户上传时的选择类型是: ${type || '未指定'}。\n请分析这张图片，严格区分【头像】和【壁纸】。如果是静态图片(jpg/png)，绝对不要标记为"动态头像"。\n\n另外，请识别图片的主色调，从以下颜色中选择最接近的1-3个：红色、橙色、黄色、绿色、青色、蓝色、紫色、粉色、黑色、白色。` },
+            { type: "text", text: `图片的文件名是: "${filename}"（通常无意义，仅供参考，请不要直接沿用）。\n用户上传时的选择类型是: ${type || '未指定'}。\n请分析这张图片，严格区分【头像】和【壁纸】。如果是静态图片(jpg/png)，绝对不要标记为"动态头像"。\n\n另外，请识别图片的主色调，从以下颜色中选择最接近的1-3个：红色、橙色、黄色、绿色、青色、蓝色、紫色、粉色、黑色、白色。\n\n请务必在 JSON 中返回 "title" 字段：一个 6-16 字的中文标题，简洁有吸引力，体现画面主体与氛围（例如「赛博晚霞」「雾屿蓝调」「几何奶油白」），不要包含扩展名，不要写「一张图片」这类空泛描述。` },
             {
               type: "image_url",
               image_url: {
@@ -253,6 +253,39 @@ exports.main = withAdmin(async (event, context, admin) => {
     
     if (aiResult.colors && Array.isArray(aiResult.colors)) {
       updateData.colors = aiResult.colors;
+    }
+
+    // AI 自动命名：仅当用户未手动命名时才用 AI 标题覆盖。
+    //
+    // 判定依据不能再用「title === originalFileName」：上传端落库的 title 是云存储随机文件名
+    // （形如 20261003-223612-a3f9k2.gif），与 originalFileName（下载1.gif）天然不相等，
+    // 该判断会恒为 true，导致 AI 命名一次都不生效。
+    // 因此改为「反向识别系统自动命名」：
+    //   1. title 是系统生成的云存储名 → 未手动命名
+    //   2. title 仍等于原始文件名（历史数据形态）→ 未手动命名
+    //   3. 其余（用户手写的标题）→ 一律保留，不覆盖
+    const AUTO_NAME_RE = /^\d{8}-\d{6}-[a-z0-9]{4,8}\.[a-z0-9]{1,5}$/i;
+    const aiTitleRaw = (aiResult.title || aiResult.name || '').toString().trim();
+    const currentTitle = String(resource.title || '').trim();
+    const isSystemNamed = AUTO_NAME_RE.test(currentTitle);
+    const sameAsOriginal =
+      !!resource.originalFileName && currentTitle === String(resource.originalFileName).trim();
+    const titledByUser = !isSystemNamed && !sameAsOriginal;
+
+    if (aiTitleRaw && !titledByUser) {
+      let aiTitle = aiTitleRaw
+        .replace(/\.(jpe?g|png|gif|webp|bmp|svg)$/i, '')       // 去掉可能带上的扩展名
+        .replace(/^[\s"'「『《]+|[\s"'」』》]+$/g, '')          // 去掉包裹的引号
+        .trim();
+      if (aiTitle.length > 30) aiTitle = aiTitle.slice(0, 30); // 限长，防止脏数据
+      if (aiTitle) {
+        updateData.title = aiTitle;
+        addLog('AI 自动命名:', aiTitle);
+      }
+    } else if (aiTitleRaw && titledByUser) {
+      addLog('用户已手动命名，保留原标题:', currentTitle);
+    } else {
+      addLog('AI 未返回 title，保留原标题:', currentTitle);
     }
     
     // 自动修正主分类

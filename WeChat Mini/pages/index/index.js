@@ -1,6 +1,7 @@
 import { performanceMonitor } from '../../utils/performance.js'
 import { getWindowInfo, getStorage, getStorageAsync, removeStorage, getTheme } from '../../utils/storageManager'
 import { STORAGE_KEYS } from '../../config/constants'
+import { hapticSelect, hapticRefresh } from '../../utils/haptic'
 
 const homeCache = require('./modules/home-cache')
 const homeTab = require('./modules/home-tab')
@@ -10,6 +11,11 @@ const homeInspire = require('./modules/home-inspire')
 const { getListAdConfig, clearListAdConfigCache } = require('../../utils/adUtil.js')
 
 Page({
+  // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
+  onTabItemTap() {
+    hapticSelect()
+  },
+
   data: {
     unreadNotificationCount: 0,
     statusBarHeight: 20,
@@ -524,6 +530,7 @@ Page({
   },
 
   onPullDownRefresh() {
+    hapticRefresh()  // 触感反馈：下拉到达刷新阈值
     // 下拉刷新时清除所有缓存，强制获取最新数据
     try {
       // 异步清除旧版缓存 key（避免同步 API 阻塞）

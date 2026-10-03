@@ -1,6 +1,7 @@
 import { performanceMonitor } from '../../utils/performance.js'
 import logger from '../../utils/logger.js'
 import { getStorage, setStorage, getWindowInfo } from '../../utils/storageManager.js'
+import { hapticSelect, hapticRefresh } from '../../utils/haptic'
 
 // 角标配置映射
 const BADGE_CONFIG = {
@@ -10,6 +11,11 @@ const BADGE_CONFIG = {
 }
 
 Page({
+  // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
+  onTabItemTap() {
+    hapticSelect()
+  },
+
   data: {
     statusBarHeight: 20,
     navBarHeight: 44,
@@ -117,6 +123,7 @@ Page({
   },
 
   onPullDownRefresh() {
+    hapticRefresh()  // 触感反馈：下拉到达刷新阈值
     if (this.data.activeTag !== '') {
       this.setData({ activeTag: '' })
     }

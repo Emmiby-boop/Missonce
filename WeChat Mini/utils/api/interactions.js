@@ -1,5 +1,6 @@
 import logger from '../logger'
 import { getStorageAsync } from '../storageManager'
+import { hapticSuccess, hapticCancel } from '../haptic'
 
 /**
  * 切换点赞状态
@@ -22,6 +23,14 @@ export const toggleLike = async (resourceId, isLiked) => {
   if (!res.result.success) {
     logger.error('切换点赞失败', res.result.message)
     throw new Error(res.result.message)
+  }
+
+  // 触感反馈：点赞成功用 medium，取消点赞用更轻的 light
+  // （isLiked 是点击前的状态，因此 isLiked=true 表示本次为「取消」）
+  if (isLiked) {
+    hapticCancel()
+  } else {
+    hapticSuccess()
   }
 
   return { liked: !isLiked }

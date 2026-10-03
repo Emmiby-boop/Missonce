@@ -111,6 +111,20 @@
         </view>
       </button>
     </block>
+
+    <!-- 触感反馈开关 -->
+    <view class="menu-item">
+      <view class="menu-left">
+        <view class="menu-icon-box" style="background: linear-gradient(135deg, #ffedd5, #fed7aa);">
+          <image class="menu-icon-img" src="/images/menu-haptic.svg"></image>
+        </view>
+        <view class="menu-text-col">
+          <text class="menu-title">触感反馈</text>
+          <text class="menu-subtitle">切页、收藏、下载时震动</text>
+        </view>
+      </view>
+      <switch checked="{{hapticEnabled}}" bindchange="onHapticToggle" color="#07c160" />
+    </view>
   </view>
 
   <!-- 退出登录 -->

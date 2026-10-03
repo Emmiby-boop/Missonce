@@ -33,7 +33,7 @@
     <draggable
       v-else-if="tabs.length > 0"
       v-model="tabs"
-      item-key="_id"
+      item-key="id"
       :animation="200"
       ghost-class="opacity-50"
       drag-class="!cursor-grabbing"
@@ -247,6 +247,13 @@ const canSave = computed(() => {
   return true;
 });
 
+/**
+ * Tab 主键取值：getHomeTabs 云函数返回的是 `id`（不是 `_id`）。
+ * 统一兼容两种，避免写操作时拿到 undefined —— 那会导致保存静默走「新增」分支，
+ * 表现为「排序保存不生效」，并额外插入重复 Tab。
+ */
+const tabId = (item: any): string => item?._id || item?.id || "";
+
 onMounted(() => {
   loadTabs();
   loadAvailableTags();
@@ -293,7 +300,7 @@ const sortByLabel = (sort: string) => {
 
 const onDragEnd = async () => {
   try {
-    const tabsData = tabs.value.map((item, index) => ({ id: item._id, sort: index }));
+    const tabsData = tabs.value.map((item, index) => ({ id: tabId(item), sort: index }));
     await callCloudFunction("manageHomeTabs", { action: "sort", data: { tabs: tabsData } });
     message.success("排序已更新");
   } catch {
@@ -304,7 +311,7 @@ const onDragEnd = async () => {
 
 const toggleVisible = async (item: any) => {
   try {
-    const res = await callCloudFunction("manageHomeTabs", { action: "toggleVisible", id: item._id });
+    const res = await callCloudFunction("manageHomeTabs", { action: "toggleVisible", id: tabId(item) });
     item.visible = res.data.visible;
   } catch {
     message.error("操作失败");
@@ -324,7 +331,13 @@ const openCreateModal = () => {
 };
 
 const openEditModal = (item: any) => {
-  editingId.value = item._id;
+  const id = tabId(item);
+  // 内置默认 Tab 没有主键，直接拦下，避免保存时静默降级成「新增」
+  if (!id) {
+    message.error("该 Tab 缺少标识，无法编辑");
+    return;
+  }
+  editingId.value = id;
   form.title = item.title;
   form.type = item.type;
   form.fixedId = item.fixedId || "";
@@ -397,7 +410,7 @@ const deleteTab = async (item: any) => {
   })
   if (!confirmed) return
   try {
-    await callCloudFunction("manageHomeTabs", { action: "delete", id: item._id });
+    await callCloudFunction("manageHomeTabs", { action: "delete", id: tabId(item) });
     message.success("已删除");
     loadTabs();
   } catch {

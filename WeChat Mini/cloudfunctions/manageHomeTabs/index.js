@@ -52,11 +52,16 @@ exports.main = withAdmin(async (event, context, admin) => {
           return { success: false, message: '缺少 Tab ID' }
         }
 
+        // sortBy 只在「完全没传」时才兜底为 hot，避免空串等异常值被静默吞成 hot
+        const finalSortBy = (data.sortBy === undefined || data.sortBy === null)
+          ? 'hot'
+          : (data.sortBy || 'hot')
+
         const updateData = {
           title: (data.title || '').trim(),
           tag: data.tag || '',
           resourceType: data.resourceType || 'all',
-          sortBy: data.sortBy || 'hot',
+          sortBy: finalSortBy,
           visible: data.visible !== false
         }
 
@@ -115,8 +120,15 @@ exports.main = withAdmin(async (event, context, admin) => {
           return { success: false, message: '已存在 Tab 配置，无法重复初始化' }
         }
 
+        // 固定 Tab 用确定性主键（与 getHomeTabs 的自愈逻辑一致，安全字符）
         const promises = DEFAULT_TABS.map(tab =>
-          db.collection('home_tabs').add({ data: { ...tab, createTime: db.serverDate() } })
+          db.collection('home_tabs').add({
+            data: {
+              ...tab,
+              _id: tab.fixedId === 'recommend' ? 'fixed_recommend' : 'fixed_latest',
+              createTime: db.serverDate()
+            }
+          })
         )
         await Promise.all(promises)
         return {

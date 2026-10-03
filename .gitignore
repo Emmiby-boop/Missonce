@@ -16,6 +16,9 @@ unpackage/res/
 .env.*
 !.env.example
 cloudbaserc.json
+# cloudbaserc 的本地备份（含 envId / appId），同上，不可提交
+cloudbaserc*.bak*
+*.bak-*
 
 # ===== 缓存 / 本地数据 =====
 .workbuddy/

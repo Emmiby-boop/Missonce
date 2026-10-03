@@ -1,6 +1,7 @@
 import { getWindowInfo, getTheme, getStorage, setStorage } from '../../utils/storageManager'
 import { performanceMonitor } from '../../utils/performance'
 import { checkLoginStatus } from '../../utils/auth'
+import { hapticSelect, hapticTap } from '../../utils/haptic'
 
 // 🔥 签到信息缓存 key（5 分钟节流，避免每次切到工具页都调 userPoints 云函数）
 const CHECKIN_CACHE_KEY = 'tools_checkin_cache'
@@ -35,6 +36,11 @@ const PRESET_ICONS = [
 ]
 
 Page({
+  // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
+  onTabItemTap() {
+    hapticSelect()
+  },
+
   data: {
     statusBarHeight: 20,
     navBarHeight: 44,
@@ -296,6 +302,7 @@ Page({
 
   // ===== 工具入口统一跳转 =====
   onToolTap(e) {
+    hapticTap()  // 触感反馈：点击工具项
     const tool = e.currentTarget.dataset.tool
     if (!tool) return
 

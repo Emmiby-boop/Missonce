@@ -12,6 +12,7 @@
 const { getStorage, setStorage, getTheme, getWindowInfo } = require('../utils/storageManager.js')
 const { getResources, addFavorite, removeFavorite, recordDownload, getFavorites, findResourceByUrl, recordBrowseHistory } = require('../utils/api.js')
 const { reportError, logger } = require('../utils/logger.js')
+const { hapticSuccess } = require('../utils/haptic.js')
 
 const HIDE_INDICATOR_DELAY = 2000
 const BROWSE_RECORD_DELAY = 1000
@@ -815,6 +816,7 @@ module.exports = Behavior({
             id: current._id,
             downloadMethod: downloadMethod
           })
+          hapticSuccess()  // 触感反馈：下载保存成功
           wx.showToast({
             title: '已保存到相册',
             icon: 'success',

@@ -1,4 +1,5 @@
 import { getStorageAsync } from '../storageManager'
+import { hapticSuccess, hapticCancel } from '../haptic'
 
 /**
  * 添加收藏
@@ -19,6 +20,7 @@ export const addFavorite = async (resourceId, type, url, title) => {
       })
       if (res.result && res.result.success) {
         invalidateFavoritesCache()  // 🔥 P1-6 收藏变更，缓存失效
+        hapticSuccess()             // 触感反馈：收藏成功
         return res.result
       }
     } catch (e) {
@@ -52,6 +54,7 @@ export const addFavorite = async (resourceId, type, url, title) => {
 
   return db.collection('favorites').add({ data }).then(res => {
     invalidateFavoritesCache()  // 🔥 P1-6 收藏变更，缓存失效
+    hapticSuccess()             // 触感反馈：收藏成功
     return res
   })
 }
@@ -76,6 +79,7 @@ export const removeFavorite = async (identifier, type) => {
         }
       })
       if (res.result && res.result.success) {
+        hapticCancel()  // 触感反馈：取消收藏（比收藏更轻）
         return res.result
       }
     } catch (e) {
@@ -96,6 +100,7 @@ export const removeFavorite = async (identifier, type) => {
 
   return db.collection('favorites').where(where).remove().then(res => {
     invalidateFavoritesCache()  // 🔥 P1-6 收藏变更，缓存失效
+    hapticCancel()              // 触感反馈：取消收藏
     return res
   })
 }

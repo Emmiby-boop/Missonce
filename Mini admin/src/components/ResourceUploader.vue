@@ -162,6 +162,10 @@ const handleUpload = async () => {
 
       const cloudPath = generateRandomFileName(file, folderType);
 
+      // 显示名：优先用用户填的标题；未填则用系统生成的云存储文件名 basename
+      // （形如 20261003-223612-a3f9k2.gif），避免把「下载1.gif」这类原始文件名暴露到后台/前端
+      const autoName = cloudPath.split("/").pop() || file.name;
+
       try {
           const uploadRes = await app.uploadFile({
             cloudPath,
@@ -169,7 +173,7 @@ const handleUpload = async () => {
           });
 
           const callRes = await callFunctionWithAuth("uploadResource", {
-            title: uploadForm.title || file.name,
+            title: uploadForm.title || autoName,
             originalFileName: file.name,
             type: fileType,
             status: uploadForm.status,
