@@ -299,6 +299,47 @@ async function manageAdmins(event) {
   return { success: false, message: '未知的子操作，支持: create / update / delete / list' }
 }
 
+/**
+ * 读取 CloudBase Auth 的调用者身份（用于验证码登录的信任链）
+ *
+ * 背景：P0-2 的根因是 loginByPhone 只凭一个 phone 字符串就签发超管 token，
+ * 攻击者可以完全跳过前端的短信验证环节，直接裸调本接口。
+ *
+ * 实现方式与 @cloudbase/node-sdk 的 auth().getUserInfo() 完全一致：
+ * 云函数运行时会把 TCB_CONTEXT_KEYS 列出的键注入到 process.env，
+ * node-sdk 内部同样是从 TCB_UUID / TCB_ISANONYMOUS_USER 这两个键取值。
+ * 这里直接读取，避免为登录关键路径引入 node-sdk 这个大依赖（冷启动代价）。
+ *
+ * 关键：这些值由平台注入，客户端无法伪造；匿名用户 isAnonymous 为 true。
+ *
+ * @returns {{uid:string, customUserId:string, isAnonymous:boolean, loginType:string, source:string}}
+ */
+function getCallerAuth(context) {
+  // 云函数互调等场景下，环境变量可能落在 context.environ 而非 process.env
+  const environ = (context && (context.environ || context.environment)) || {}
+  const read = (key) => (environ[key] !== undefined ? environ[key] : process.env[key]) || ''
+
+  const uid = read('TCB_UUID') || read('TCB_CUSTOM_USER_ID')
+
+  return {
+    uid,
+    customUserId: read('TCB_CUSTOM_USER_ID'),
+    isAnonymous: String(read('TCB_ISANONYMOUS_USER')).toLowerCase() === 'true',
+    loginType: read('LOGINTYPE'),
+    source: read('TCB_SOURCE') || read('SOURCE') || ''
+  }
+}
+
+/**
+ * 判断调用者是否已通过 CloudBase Auth 完成「真实的、非匿名」登录。
+ * 前端的 register/verifyOtp 流程走的就是 CloudBase Auth 短信验证码，
+ * 因此这一步等价于「调用者确实收到了并正确输入了短信验证码」。
+ */
+function isCallerPhoneVerified(context) {
+  const caller = getCallerAuth(context)
+  return !!caller.uid && !caller.isAnonymous
+}
+
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const callerOpenid = wxContext.OPENID
@@ -348,7 +389,10 @@ exports.main = async (event, context) => {
       return { success: false, message: '缺少 token 参数', reason: 'TOKEN_MISSING' }
     }
 
-    const result = await verifyAndGetAdmin({ token })
+    // 修复 P1-2：verifyAndGetAdmin 接收字符串，传 { token } 会命中
+    // `typeof token !== 'string'` 而恒定返回 TOKEN_EMPTY —— 这会让 verifyToken 永久失效，
+    // 进而使所有依赖 verifyToken 的 withAdmin 永远判定为未授权。
+    const result = await verifyAndGetAdmin(token)
 
     if (!result.valid) {
       console.warn(`[adminAuth] Token verification failed:`, result.reason)
@@ -484,101 +528,102 @@ exports.main = async (event, context) => {
     }
 
     const normalizedPhone = phone.replace(/[\s+]/g, '').replace(/^86/, '')
-    const callerUid = wxContext.UID || wxContext.OPENID || ''
+
+    // 🔒 P0-2：调用者必须已在前端完成 CloudBase Auth 短信验证码校验。
+    // 这一步堵死「跳过短信直接裸调 loginByPhone」的路径 —— 即使攻击者知道管理员手机号，
+    // 没有真实通过 CloudBase Auth 的已登录会话也无法继续。
+    const callerAuth = getCallerAuth(context)
+    if (!callerAuth.uid || callerAuth.isAnonymous) {
+      console.warn('[adminAuth][loginByPhone] 拒绝：调用者未通过 CloudBase Auth 验证', {
+        hasUid: !!callerAuth.uid,
+        isAnonymous: callerAuth.isAnonymous,
+        source: callerAuth.source
+      })
+      return {
+        success: false,
+        message: '未完成短信校验，请在登录页获取并填写验证码后再重试'
+      }
+    }
 
     console.log('[adminAuth][loginByPhone] 入参', {
       phone: normalizedPhone,
-      wxContext: { UID: wxContext.UID, OPENID: wxContext.OPENID, SOURCE: wxContext.SOURCE }
+      callerAuth: {
+        uid: String(callerAuth.uid).slice(0, 6) + '****',
+        isAnonymous: callerAuth.isAnonymous,
+        loginType: callerAuth.loginType,
+        source: callerAuth.source
+      }
     })
 
+    // 🔒 只按「已绑定且可信」的 CloudBase 身份匹配。authUid 只能经由 bindPhoneLogin
+    // 在有效 adminToken（账号密码登录）的前提下写入，因此是可信锚点。
+    //
+    // 这里刻意不做「phone 命中 + authUid 为空就首次绑定」的自动绑定：
+    // 那样等于「知道管理员手机号 + 任意一个通过 CloudBase 验证的手机号」即可抢占绑定，
+    // 攻击者用自己手机完成验证就能接管他人账号，区分度不足。
     let admin = null
     let matchBy = ''
     try {
-      const res = await db.collection('admins').where({ phone: normalizedPhone }).limit(1).get()
+      const res = await db.collection('admins')
+        .where({ authUid: callerAuth.uid })
+        .limit(1)
+        .get()
       if (res.data && res.data.length > 0) {
         admin = res.data[0]
-        matchBy = 'phone'
+        matchBy = 'authUid'
       }
     } catch (e) {
-      console.warn('[adminAuth][loginByPhone] phone 查询失败', e.message)
+      console.warn('[adminAuth][loginByPhone] authUid 查询失败', e.message)
     }
 
+    // 未命中时给出可操作的提示：区分「账号不存在」与「存在但未启用验证码登录」
     if (!admin) {
+      let phoneMatched = false
       try {
-        const resByUsername = await db.collection('admins').where({ username: normalizedPhone }).limit(1).get()
-        if (resByUsername.data && resByUsername.data.length > 0) {
-          admin = resByUsername.data[0]
-          matchBy = 'username'
-        }
+        const res = await db.collection('admins')
+          .where({ phone: normalizedPhone })
+          .limit(1)
+          .get()
+        phoneMatched = !!(res.data && res.data.length > 0)
       } catch (e) {
-        console.warn('[adminAuth][loginByPhone] username 查询失败', e.message)
+        console.warn('[adminAuth][loginByPhone] phone 存在性检查失败', e.message)
+      }
+
+      console.warn('[adminAuth][loginByPhone] 未找到匹配的 authUid', {
+        phoneMatched,
+        hasPhone: !!normalizedPhone
+      })
+
+      return {
+        success: false,
+        message: phoneMatched
+          ? '该账号尚未启用验证码登录。请先用账号密码登录，在「账号安全」中完成一次绑定后再使用。'
+          : '该手机号未注册为管理员，请联系超级管理员在后台「管理员管理」中添加'
       }
     }
 
-    if (!admin && callerUid) {
-      try {
-        const resByUid = await db.collection('admins').where({ uid: callerUid }).limit(1).get()
-        if (resByUid.data && resByUid.data.length > 0) {
-          admin = resByUid.data[0]
-          matchBy = 'uid'
-        }
-      } catch (e) {
-        console.warn('[adminAuth][loginByPhone] uid 查询失败', e.message)
-      }
-    }
+    // 已移除不可信的 uid / _openid 兜底匹配：
+    // 旧逻辑用 wxContext.UID || OPENID 反查管理员，Web 端该值不可靠；
+    // 旧的「回填 uid」还会把任意调用者的身份写进管理员记录，属于先污染再信任。
 
-    if (!admin && callerUid) {
-      try {
-        const resByOpenid = await db.collection('admins').where({ _openid: callerUid }).limit(1).get()
-        if (resByOpenid.data && resByOpenid.data.length > 0) {
-          admin = resByOpenid.data[0]
-          matchBy = '_openid'
-        }
-      } catch (e) {
-        console.warn('[adminAuth][loginByPhone] _openid 查询失败', e.message)
-      }
-    }
-
-    if (!admin) {
-      try {
-        const countRes = await db.collection('admins').count()
-        const total = countRes.total || 0
-        console.log('[adminAuth][loginByPhone] admins 集合记录数:', total)
-
-        if (total === 0) {
-          // 安全：不再为空库自动创建无密码超级管理员（先到先得 = 任意用户可成超管）。
-          // 初始化超级管理员请通过部署脚本 / 环境变量 / 数据库控制台一次性写入，
-          // 并强制其首次登录设置强密码。
-          return {
-            success: false,
-            message: '尚未初始化任何管理员账号。请由超级管理员通过后台「管理员管理」创建账号后，使用账号密码登录。'
-          }
-        }
-
-        return {
-          success: false,
-          message: '该手机号未注册为管理员，请联系超级管理员在后台「管理员管理」中添加'
-        }
-      } catch (e) {
-        console.error('[adminAuth][loginByPhone] 检查 admins 集合失败:', e)
-        return { success: false, message: '校验管理员状态失败: ' + e.message }
-      }
-    }
+    // 已删除原 uid / _openid 兜底匹配：
+    // wxContext.UID || OPENID 在 Web 端不可靠，且旧「回填 uid」逻辑会把任意调用者
+    // 的身份写进管理员记录，等于让攻击者自助绑定。信任链改为完全依赖 authUid。
 
     if (admin.status === 'disabled' || admin.status === 'banned') {
       return { success: false, message: '账号已被禁用，请联系超级管理员' }
     }
 
     try {
-      const patchData = {}
-      if (!admin.phone) patchData.phone = normalizedPhone
-      if (callerUid && !admin.uid) patchData.uid = callerUid
-      if (Object.keys(patchData).length > 0) {
-        await db.collection('admins').doc(admin._id).update({ data: patchData })
-        console.log('[adminAuth][loginByPhone] 回填字段:', patchData)
+      // 只回填展示用的手机号，绝不在此处写入 authUid —— 绑定必须走 bindPhoneLogin
+      if (!admin.phone) {
+        await db.collection('admins').doc(admin._id).update({
+          data: { phone: normalizedPhone }
+        })
+        console.log('[adminAuth][loginByPhone] 已回填 phone')
       }
     } catch (e) {
-      console.warn('[adminAuth][loginByPhone] 回填 phone/uid 失败:', e.message)
+      console.warn('[adminAuth][loginByPhone] 回填 phone 失败:', e.message)
     }
 
     const tokenResult = await generateToken(admin._id)
@@ -595,6 +640,55 @@ exports.main = async (event, context) => {
         avatarUrl: admin.avatarUrl || ''
       },
       token: tokenResult.token
+    }
+  }
+
+  /**
+   * 绑定 / 解绑「验证码登录」所使用的 CloudBase 身份
+   *
+   * P0-2 修复配套：验证码登录改为只认 authUid，因此需要一个受保护的入口来写入它。
+   * 绑定必须在已有有效 admin token（账号密码登录）的前提下进行，
+   * 并且要求调用者自身已完成 CloudBase Auth 短信验证，杜绝自助抢占。
+   */
+  if (action === 'bindPhoneLogin' || action === 'unbindPhoneLogin') {
+    const wantUnbind = action === 'unbindPhoneLogin'
+
+    if (!token) {
+      return { success: false, message: '缺少登录态，请先用账号密码登录' }
+    }
+    const authRes = await verifyAndGetAdmin(token)
+    if (!authRes.valid) {
+      return { success: false, message: getFailMessage(authRes.reason), reason: authRes.reason }
+    }
+
+    if (wantUnbind) {
+      try {
+        await db.collection('admins').doc(authRes.admin._id).update({
+          data: { authUid: null, authUidBindTime: null }
+        })
+        return { success: true, message: '已解除验证码登录绑定' }
+      } catch (e) {
+        return { success: false, message: '解绑失败: ' + e.message }
+      }
+    }
+
+    // 绑定：要求调用者已完成 CloudBase Auth 的短信验证
+    const callerAuth = getCallerAuth(context)
+    if (!callerAuth.uid || callerAuth.isAnonymous) {
+      return {
+        success: false,
+        message: '未完成短信校验，请先点击「发送验证码」并填写后再绑定'
+      }
+    }
+
+    try {
+      await db.collection('admins').doc(authRes.admin._id).update({
+        data: { authUid: callerAuth.uid, authUidBindTime: db.serverDate() }
+      })
+      console.log('[adminAuth][bindPhoneLogin] 已绑定当前管理员的验证码登录身份')
+      return { success: true, message: '绑定成功，之后可用验证码登录' }
+    } catch (e) {
+      return { success: false, message: '绑定失败: ' + e.message }
     }
   }
 
@@ -642,7 +736,7 @@ exports.main = async (event, context) => {
     if (!token) {
       return { success: false, message: '缺少 token 参数' }
     }
-    const checkResult = await verifyAndGetAdmin({ token })
+    const checkResult = await verifyAndGetAdmin(token)
     if (!checkResult.valid) {
       return { success: false, message: getFailMessage(checkResult.reason), reason: checkResult.reason }
     }

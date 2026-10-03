@@ -225,6 +225,44 @@ export const sendPhoneCode = async (phone: string) => {
   return data;
 };
 
+/** 本地是否已存在管理员会话 token（用于判断是否可进行「启用验证码登录」绑定） */
+export const hasAdminSession = (): boolean => {
+  try {
+    return !!localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * 为当前已登录管理员启用「验证码登录」
+ *
+ * 云函数侧已改为只认可信的 authUid（不再凭手机号自动绑定），
+ * 因此首次启用必须在「账号密码登录产生的有效 adminToken」+「CloudBase 短信已验证」
+ * 两个条件同时满足时写入，避免「知道手机号即可抢占绑定」。
+ */
+export const bindPhoneLoginWithCode = async (phone: string, code: string) => {
+  const authData = pendingAuthData as { verifyOtp?: (params: Record<string, unknown>) => Promise<unknown> } | null;
+  if (!authData || !authData.verifyOtp) {
+    throw new Error("请先获取验证码");
+  }
+
+  // 1. 先完成 CloudBase Auth 的短信验证，建立非匿名的调用身份
+  await authData.verifyOtp({
+    code,
+    phone,
+    token: code
+  });
+
+  // 2. 再在有效 adminToken 下写入绑定（callCloudFunction 会自动注入 token）
+  return callCloudFunction('adminAuth', { action: 'bindPhoneLogin' });
+};
+
+/** 解除当前管理员的验证码登录绑定 */
+export const unbindPhoneLogin = async () => {
+  return callCloudFunction('adminAuth', { action: 'unbindPhoneLogin' });
+};
+
 export const loginWithPhoneCode = async (phone: string, code: string) => {
   const authData = pendingAuthData as { verifyOtp?: (params: Record<string, unknown>) => Promise<unknown> } | null;
   if (!authData || !authData.verifyOtp) {

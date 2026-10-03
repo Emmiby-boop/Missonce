@@ -33,7 +33,9 @@ async function createUniqueCode() {
   return generateCode() + Date.now().toString(36).slice(-2)
 }
 
-exports.main = async (event, context) => {
+const { withAdmin } = require('./withAdmin')
+
+const handleRequest = async (event, context) => {
   try {
     const { action } = event
 
@@ -102,6 +104,13 @@ exports.main = async (event, context) => {
     return { success: false, error: err.message || '分享码服务异常' }
   }
 }
+
+// 🔒 P0-7：adminList / adminStats / adminDelete 原先完全零鉴权，
+// 任意用户可拉取并删除全部分享码记录（原注释写着「需 adminToken 鉴权」但从未实现）。
+//
+// encode / decode 是普通用户正常使用分享功能所必需，保持公开。
+// withAdmin 仅对未列在 exclude 中的 action 做鉴权。
+exports.main = withAdmin(handleRequest, { exclude: ['encode', 'decode'] })
 
 /**
  * 管理员：分页查询分享码列表

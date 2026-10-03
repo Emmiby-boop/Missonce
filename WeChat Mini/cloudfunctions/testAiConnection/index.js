@@ -1,16 +1,70 @@
 const cloud = require('wx-server-sdk')
 const https = require('https')
-const url = require('url')
+
+const { withAdmin } = require('./withAdmin')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-exports.main = async (event) => {
+/**
+ * 🔒 P0-5 SSRF 防护：只允许请求已知的 AI 服务商域名
+ *
+ * 漏洞原状：完全信任客户端传入的 API_URL，url.parse 后直接 https.request。
+ * 云函数位于内网，可直达数据库、元数据服务等本不该对外暴露的地址，
+ * 因此该接口此前可被当作探测内网的 HTTP 代理使用。
+ *
+ * 若需新增服务商，建议追加 AI_ALLOWED_HOSTS 环境变量（逗号分隔），
+ * 而不是放开整张白名单。
+ */
+const BUILTIN_ALLOWED_HOSTS = [
+  'dashscope.aliyuncs.com',   // 阿里云通义千问
+  'open.bigmodel.cn',         // 智谱 GLM
+  'bigmodel.cn',
+  'api.openai.com',           // OpenAI
+  'api.siliconflow.cn'        // SiliconFlow
+]
+
+const getAllowedHosts = () => {
+  const extra = (process.env.AI_ALLOWED_HOSTS || '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+  return [...BUILTIN_ALLOWED_HOSTS, ...extra]
+}
+
+const isHostAllowed = (hostname) => {
+  const host = String(hostname || '').toLowerCase()
+  if (!host) return false
+  return getAllowedHosts().some(allowed =>
+    host === allowed || host.endsWith('.' + allowed)
+  )
+}
+
+const handleRequest = async (event) => {
   const { API_URL, API_KEY, MODEL, messages, max_tokens } = event
 
   if (!API_URL || !API_KEY || !MODEL) {
     return {
       success: false,
       message: '缺少必要参数: API_URL / API_KEY / MODEL'
+    }
+  }
+
+  let parsedUrl
+  try {
+    parsedUrl = new URL(API_URL)
+  } catch (e) {
+    return { success: false, message: 'API_URL 格式不合法' }
+  }
+
+  if (parsedUrl.protocol !== 'https:') {
+    return { success: false, message: '仅允许 https 协议' }
+  }
+
+  if (!isHostAllowed(parsedUrl.hostname)) {
+    console.warn('[testAiConnection] 拒绝非白名单域名:', parsedUrl.hostname)
+    return {
+      success: false,
+      message: `域名不在白名单内: ${parsedUrl.hostname}`
     }
   }
 
@@ -22,10 +76,12 @@ exports.main = async (event) => {
     })
 
     const responseData = await new Promise((resolve, reject) => {
-      const parsedUrl = url.parse(API_URL)
+      // 复用已经通过白名单校验的 parsedUrl，避免「校验用一套解析、请求用另一套」的绕过。
+      // url.parse 与 WHATWG URL 对某些畸形 URL 结果不同，混用会导致白名单被绕过。
       const req = https.request({
         hostname: parsedUrl.hostname,
-        path: parsedUrl.path,
+        port: parsedUrl.port || 443,
+        path: (parsedUrl.pathname || '/') + (parsedUrl.search || ''),
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,8 +114,8 @@ exports.main = async (event) => {
       return {
         success: false,
         message: `连接失败: ${errMsg}`,
-        statusCode: responseData.statusCode,
-        rawBody: responseData.body.slice(0, 500)
+        statusCode: responseData.statusCode
+        // 已移除 rawBody 回显：原实现会把上游返回的任意内容回显 500 字符
       }
     }
 
@@ -79,3 +135,8 @@ exports.main = async (event) => {
     }
   }
 }
+
+// 🔒 P0-5：原实现无任何鉴权，任何人可把它当 HTTP 代理使用。
+// 调用方是 Mini admin 的 AIKeyManager / AIQuotesConfig，均走 callFunctionWithAuth
+// （自动注入 adminToken），因此加鉴权前端无需改动。
+exports.main = withAdmin(handleRequest)

@@ -132,6 +132,17 @@
                 </svg>
               </button>
             </ClickSpark>
+            <p v-if="showBindEntry" class="bind-entry">
+              尚未启用验证码登录？
+              <button
+                type="button"
+                class="link-btn"
+                :disabled="binding"
+                @click="handleBindPhoneLogin"
+              >
+                {{ binding ? "启用中..." : "点此启用" }}
+              </button>
+            </p>
           </div>
         </form>
 
@@ -154,6 +165,8 @@ import { useRouter } from "vue-router";
 import {
   loginWithPhoneCode,
   sendPhoneCode,
+  bindPhoneLoginWithCode,
+  hasAdminSession,
 } from "../utils/cloudbase";
 import { useAuthStore } from "../stores/auth";
 import ClickSpark from '../components/animations/ClickSpark.vue'
@@ -175,6 +188,32 @@ const timeRemaining = ref(0);
 // Account Login State
 const username = ref("");
 const password = ref("");
+
+// 启用验证码登录：仅在已有有效管理员会话时才允许绑定
+const binding = ref(false);
+const showBindEntry = ref(hasAdminSession());
+
+const handleBindPhoneLogin = async () => {
+  if (!phone.value || phone.value.length !== 11) {
+    showToast("请输入正确的手机号", "error");
+    return;
+  }
+  if (!code.value || code.value.length < 4) {
+    showToast("请先获取并填写验证码", "error");
+    return;
+  }
+
+  binding.value = true;
+  try {
+    await bindPhoneLoginWithCode(phone.value, code.value);
+    showToast("已启用，之后可直接用验证码登录");
+  } catch (error: any) {
+    console.error("启用验证码登录失败", error);
+    showToast("启用失败：" + (error?.message || "请确认已用账号密码登录"), "error");
+  } finally {
+    binding.value = false;
+  }
+};
 
 // Toast State
 const toast = reactive({
@@ -655,6 +694,36 @@ const switchMethod = (method: 'phone' | 'account') => {
 .link:hover {
   color: #059a4e;
   text-decoration: underline;
+}
+
+/* 启用验证码登录的入口 */
+.bind-entry {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 4px;
+  color: #07c160;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.link-btn:hover:not(:disabled) {
+  color: #059a4e;
+  text-decoration: underline;
+}
+
+.link-btn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 /* 响应式设计 */
