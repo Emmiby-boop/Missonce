@@ -612,7 +612,9 @@ const handleAIGenerate = async () => {
         message.warning('未能解析 AI 返回的内容，已将 AI 返回内容打印到控制台，请检查')
       }
     } else {
-      message.error(res.result?.error || '生成失败，请重试')
+      // 优先取 message：云函数鉴权失败（如登录过期）返回的是 message 而非 error，
+      // 取错字段会把「权限不足」显示成含糊的「生成失败，请重试」
+      message.error(res.result?.message || res.result?.error || '生成失败，请重试')
     }
   } catch (err: any) {
     logger.error('AI生成失败:', err)

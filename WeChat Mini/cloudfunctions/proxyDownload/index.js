@@ -31,8 +31,13 @@ const ALLOWED_DOMAINS = [
   'nipic.com',             // 昵图
 ]
 
-// 🔒 签名密钥（从环境变量读取，禁止硬编码）
-const SIGN_SECRET = process.env.PROXY_SIGN_SECRET || 'missonce-proxy-sign-key-v2'
+// 🔒 签名密钥（必须从环境变量读取，禁止硬编码兜底）
+//
+// 历史问题：这里原为 `process.env.PROXY_SIGN_SECRET || 'missonce-proxy-sign-key-v2'`，
+// 明文默认值已随仓库公开泄露 —— 任何人都能用它算出合法签名，把本函数当免费代理 / SSRF 跳板。
+// 现改为 fail-closed：未配置环境变量时直接拒绝服务，绝不降级到硬编码值。
+// 密钥通过 cloudbaserc.json 的 envVariables 下发（该文件已在 .gitignore 中），轮换只需改配置。
+const SIGN_SECRET = process.env.PROXY_SIGN_SECRET
 
 // 🔒 限流配置：每 IP 每分钟最多 20 次
 const RATE_LIMIT_PER_MIN = 20
@@ -190,6 +195,12 @@ exports.main = async (event, context) => {
   const ip = wxContext.CLIENTIP || 'unknown'
 
   const { url, sign, expireTs } = event || {}
+
+  // 服务端未配置签名密钥时拒绝服务，避免回退到不安全的默认值
+  if (!SIGN_SECRET) {
+    console.error('[proxyDownload] PROXY_SIGN_SECRET 未配置，拒绝服务')
+    return { success: false, code: 'MISCONFIGURED', message: '服务端签名未配置' }
+  }
 
   if (!url || typeof url !== 'string') {
     return { success: false, code: 'URL_MISSING', message: 'missing url' }

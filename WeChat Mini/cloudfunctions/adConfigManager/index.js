@@ -18,7 +18,9 @@ const denyIfMiniProgram = () => {
   return source.includes('wx')
 }
 
-exports.main = async (event) => {
+const { withAdmin } = require('./withAdmin')
+
+const handleRequest = async (event) => {
   try {
     const { action, ...payload } = event || {}
 
@@ -67,6 +69,16 @@ exports.main = async (event) => {
     return { success: false, msg: e.message || '服务器错误', data: null }
   }
 }
+
+// 🔒 P0-4：本函数是纯后台管理接口（create / update / delete / batchCreate / batchEnable /
+// setMiniProgramPages / ensureCollections / adUnit:* 全部为写操作），原先完全无鉴权 ——
+// 仅靠 denyIfMiniProgram() 挡小程序来源，任何非小程序来源（curl、云函数互调）可直接改广告位，
+// 后果是替换 adUnitId 截走广告收益或塞违规广告导致小程序被封。
+//
+// 现统一用 withAdmin 包裹，走 adminToken → adminAuth.verifyToken 校验；
+// Mini admin 的 callCloudFunction 会自动注入 adminToken，前端无需改动。
+// 与姊妹函数 manageAdConfig 保持同一鉴权强度。
+exports.main = withAdmin(handleRequest)
 
 async function ensureAdmin() {
   const ctx = cloud.getWXContext()

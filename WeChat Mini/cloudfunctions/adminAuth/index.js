@@ -325,22 +325,17 @@ exports.main = async (event, context) => {
         return { success: false, message: '鉴权失败' }
       }
     } else {
-      try {
-        let adminExists = false
-        if (adminId.match(/^[a-f0-9]{24}$/i)) {
-          const r = await db.collection('admins').doc(adminId).get()
-          adminExists = !!r.data
-        } else {
-          const r = await db.collection('admins').where({ _id: adminId }).limit(1).get()
-          adminExists = r.data && r.data.length > 0
-        }
-        if (!adminExists) {
-          return { success: false, message: '管理员账号不存在' }
-        }
-      } catch (err) {
-        console.error('[adminAuth] generateToken 查询管理员失败:', err)
-        return { success: false, message: '鉴权失败' }
-      }
+      // 🔒 P0-1：无 openid 的调用（Web 端 / curl / 云函数互调）一律拒绝签发。
+      //
+      // 历史实现在这里是「只要该 adminId 在 admins 表中存在就签发 token」，
+      // 等于任何人拿到任一管理员的 24 位 _id（日志、操作记录、分享链接均可泄露）
+      // 就能换取超管令牌，进而调用全部 withAdmin 云函数 —— 整个后台失守。
+      // 加 ObjectId 格式校验挡不住猜测与泄露，必须直接从行为上禁止。
+      //
+      // 本 action 当前在前端无任何调用方；正常获取令牌的路径是
+      // loginByAccount / loginByPhone / refreshToken，删此分支不影响现有功能。
+      console.warn('[adminAuth] generateToken 缺少调用者 openid，已拒绝')
+      return { success: false, message: '缺少登录态，无法生成 Token' }
     }
 
     const result = await generateToken(adminId)

@@ -83,7 +83,13 @@ async function callAI(prompt, systemPrompt) {
   return data.choices[0].message.content
 }
 
-exports.main = async (event, context) => {
+const { withAdmin } = require('./withAdmin')
+
+// 🔒 P0-6 费用护栏：调用上游大模型必须限长，防止超长 prompt 单次烧掉大量 token
+const MAX_PROMPT_LEN = 1000
+const MAX_SYSTEM_PROMPT_LEN = 2000
+
+const handleRequest = async (event, context) => {
   await loadConfig()
 
   const { action, prompt, scene } = event
@@ -99,8 +105,20 @@ exports.main = async (event, context) => {
   }
 
   if (action === 'generate') {
+    const systemPrompt = event.systemPrompt
+    // 入参合法性：长度护栏 + 类型校验
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      return { success: false, error: 'prompt 不能为空' }
+    }
+    if (prompt.length > MAX_PROMPT_LEN) {
+      return { success: false, error: `prompt 过长（上限 ${MAX_PROMPT_LEN} 字）` }
+    }
+    if (systemPrompt && String(systemPrompt).length > MAX_SYSTEM_PROMPT_LEN) {
+      return { success: false, error: `systemPrompt 过长（上限 ${MAX_SYSTEM_PROMPT_LEN} 字）` }
+    }
+
     try {
-      const result = await callAI(prompt, event.systemPrompt)
+      const result = await callAI(prompt, systemPrompt)
       return { success: true, text: result }
     } catch (err) {
       console.error('生成失败:', err)
@@ -110,3 +128,9 @@ exports.main = async (event, context) => {
 
   return { success: false, error: '无效的 action' }
 }
+
+// 🔒 P0-6：本函数直接消耗通义千问账单，原先无任何鉴权与限流，任何人可循环调用刷爆费用。
+// 现统一用 withAdmin 包裹（adminToken → adminAuth.verifyToken）。
+// 唯一调用方是 Mini admin 的 QuotesPage.vue，其 callFunctionWithAuth 会自动注入 adminToken，
+// 前端无需改动即可正常鉴权。
+exports.main = withAdmin(handleRequest)
