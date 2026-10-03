@@ -16,13 +16,11 @@
 | 小程序端改动（触感震动 / SVG 图标） | **未发版**，需开发者工具上传 |
 | 今日修复的 2 个云函数 | **未部署**，需手动 `tcb fn deploy` |
 
-> ⚠️ 最值得关注的是第一节：旧报告提出的 7 个 P0 中，P0-1、P0-3、P0-4、P0-6 均属于「知道管理员 ID 就能接管后台 / 盗刷 AI 账单 / 截走广告收益」级别，一个月过去仍全部在线上运行。
+> 📌 **后续进展（同日 05:20 更新）**：本节列出的 P0-1 / P0-3 / P0-4 / P0-6 **已完成代码修复并提交**（`security(云函数): 修复 4 个 P0 级鉴权漏洞`，commit `8a64f75`），但**尚未部署**。剩余 P0-2 / P0-5 / P0-7 仍未处理。详见第六节。
 
----
+## 一、旧报告 P0 修复状态核验（初版结论：7/7 未修复）
 
-## 一、旧报告 P0 修复状态核验（7/7 未修复）
-
-逐条本日复核，`state` 为真实代码加固证据：
+初版结论为**全部未修复**（下表「初版复核证据」列保留当时的取证记录）；其中 4 项已于同日修复，见「当前状态」列。
 
 | # | 问题 | 位置 | 状态 | 本日复核证据 |
 |---|---|---|---|---|
@@ -34,8 +32,21 @@
 | P0-6 | AI 盗刷 | `aiGenerateText/index.js` | ❌ 未修 | 全文鉴权关键词搜索**仅命中第 51 行 `max_tokens: 500`**，`OPENID` / `admin` / `quota` / `limit` 一律为空 |
 | P0-7 | 分享码 admin 动作零鉴权 | `shareCode/index.js:41-49` | ❌ 未修 | 注释写着「需 adminToken 鉴权」但三分支直接执行，无 token 校验 |
 
-**修复优先级建议**：P0-1 / P0-3 / P0-4 / P0-6 → 当天；P0-2 / P0-5 / P0-7 → 本周。
-P0-3 因密钥已进 Git 历史，**修复时必须同时轮换密钥**（现有密钥应视为已泄露）。
+### 当前修复状态（2026-10-04 05:20 更新）
+
+| # | 当前状态 | 修复方式 |
+|---|---|---|
+| P0-1 | ✅ 已修，**待部署** | 删除无 openid 时的签发分支，无登录态一律拒绝。该 action 前端无调用方，令牌发放实际由 `loginByAccount`/`loginByPhone`/`refreshToken` 承担 |
+| P0-2 | ❌ 未处理 | 建议接短信验证码或下线 `loginByPhone` |
+| P0-3 | ✅ 已修，**待部署**（含轮换） | 移除明文兜底改 fail-closed；新密钥为 32 字节随机串，经 `cloudbaserc.json` 的 `envVariables` 下发（该文件在 `.gitignore`，密钥不入库） |
+| P0-4 | ✅ 已修，**待部署** | 用 `withAdmin` 包裹 `exports.main`；Mini admin 的 `callCloudFunction` 已自动注入 `adminToken`，前端无感 |
+| P0-5 | ❌ 未处理 | 建议加域名白名单 + 响应体不回显 |
+| P0-6 | ✅ 已修，**待部署** | `withAdmin` 鉴权 + `prompt` 1000 字 / `systemPrompt` 2000 字长度护栏；唯一调用方 `QuotesPage.vue` 已走 `callFunctionWithAuth` |
+| P0-7 | ❌ 未处理 | 建议用 `withAdmin` 包裹 |
+
+> P0-3 的旧明文密钥 `'missonce-proxy-sign-key-v2'` 已随公开仓库泄露，即便不改代码也应视为失效——轮换是必须动作。
+
+**修复优先级**：P0-1 / P0-3 / P0-4 / P0-6 → 已修复待部署；P0-2 / P0-5 / P0-7 → 建议本周处理。
 
 ---
 
@@ -119,19 +130,53 @@ const titledByUser = !isSystemNamed && !sameAsOriginal;         // ③ 其余一
 ### 云函数部署命令（在 `WeChat Mini/` 目录执行）
 
 ```bash
+# 本轮审查修复的功能缺陷
 yes | node_modules/.bin/tcb fn deploy analyzeResource -e missonce-99-1gfaff6n002f6ac1
 yes | node_modules/.bin/tcb fn deploy getHomeTabs -e missonce-99-1gfaff6n002f6ac1
+
+# P0 安全修复
+yes | node_modules/.bin/tcb fn deploy adminAuth     -e missonce-99-1gfaff6n002f6ac1
+yes | node_modules/.bin/tcb fn deploy proxyDownload -e missonce-99-1gfaff6n002f6ac1
+yes | node_modules/.bin/tcb fn deploy getProxySign  -e missonce-99-1gfaff6n002f6ac1
+yes | node_modules/.bin/tcb fn deploy adConfigManager -e missonce-99-1gfaff6n002f6ac1
+yes | node_modules/.bin/tcb fn deploy aiGenerateText  -e missonce-99-1gfaff6n002f6ac1
 ```
 
+> ⚠️ **`proxyDownload` 与 `getProxySign` 必须在同一批内都部署成功**。
+> 两者校验的是同一个 `PROXY_SIGN_SECRET`，只部署其中一个会造成签名校验不匹配，
+> 代理下载功能直接全链路失败。
+>
+> ⚠️ **部署 `proxyDownload` / `getProxySign` 前，先确认环境变量已随 `cloudbaserc.json` 下发**。
+> 这两个函数已改为 fail-closed，若云端拿不到 `PROXY_SIGN_SECRET`，会明确返回
+> `MISCONFIGURED` 而不是悄悄降级（这正是目的），但意味着**功能会停**。
+> 部署后立即用一次真实下载验证。
+>
 > `tcb fn list` 只显示 20 条，别用它判断函数是否存在；用 `tcb fn invoke` 实测确认。
+> 新增的 `withAdmin.js` 副本已放进 `adConfigManager/` 与 `aiGenerateText/` 目录，
+> 部署时会随包上传（云函数无法跨目录 require，只能各带一份）。
 > 部署后验证 AI 命名：上传一张不填标题的图 → 触发 `analyzeResource` → 资源标题应变语义中文名（而非 `20261003-223612-xxxx.gif`）。
 
 ---
 
-## 五、建议的下一步
+## 五、Git 提交情况
 
-1. **当天**：补掉 P0-1 / P0-3 / P0-4 / P0-6，P0-3 同步轮换密钥
+| commit | 内容 |
+|---|---|
+| `aa5de27` | 功能修复：上传显示名、首页 Tab 主键、AI 自动命名失效、触感反馈；删除假安全报告；`.gitignore` 补 `*.bak-*` |
+| `8641204` | 文档：全量审查报告、增量复审报告、后台 UI 原型 |
+| `8a64f75` | 安全：4 个 P0 鉴权漏洞修复 + 密钥轮换 + `QuotesPage` 错误提示 |
+
+> 注意：`cloudbaserc.json` 已从 `.gitignore` 排除（含 envId / appId / 签名密钥），**不入库**。
+> 换机器或从仓库全新克隆后，需要本地重建该文件才能部署。
+
+---
+
+## 六、建议的下一步
+
+1. **部署**：上面 7 个云函数（注意两组函数的依赖关系），Mini admin 需重新构建以带上 `QuotesPage` 的错误提示改动
 2. **本周**：P0-2 接短信验证码或下线 `loginByPhone`；P0-5 加域名白名单；P0-7 用 `withAdmin` 包裹
 3. **本周**：补 P1-1（13 个云函数的 `withAdmin` 是 fail-open）
-4. **下次迭代**：把 P1-1 的 13 份 `withAdmin.js` 副本收敛成一个共享依赖，避免继续扩散
-5. 尚未提交的 23 个改动建议尽快入 git（当前无任何版本保护）
+4. **下次迭代**：把散布在 18 个目录下的 `withAdmin.js` 副本收敛成一个共享依赖。
+   本次为让 `adConfigManager` / `aiGenerateText` 能独立部署，只能再复制两份（现已 18 份），
+   这个扩散模式本身就很脆弱，建议尽快改成 CloudBase 层共享层
+5. **小程序发版**：触感反馈与 `menu-haptic.svg` 图标仍在本地，需开发者工具上传
