@@ -21,7 +21,8 @@ const SORT_FIELD_MAP = {
   'hot': 'hotScore', 'hotScore': 'hotScore',
   'todayHot': 'dailyHotScore', 'daily': 'dailyHotScore', 'dailyHotScore': 'dailyHotScore',
   // 🔥 混合排序（实际在 fetchFirstPage 中单独处理，这里仅占位避免 fallback）
-  'hotRandom': 'hotScore', 'latestRandom': 'createdAt'
+  'hotRandom': 'hotScore', 'latestRandom': 'createdAt',
+  'random': 'createdAt'
 }
 
 const DEFAULT_FIXED_TABS = {
@@ -71,6 +72,27 @@ async function fetchFirstPage(resourceType, sort, tag) {
     query = db.collection('resources').where({ type: resourceType, status: 'published', deletedAt: null })
   } else {
     query = db.collection('resources').where({ status: 'published', deletedAt: null })
+  }
+
+  // 🔥 完全随机：全库 $sample（与 getResources 云函数的 random 分支保持一致）
+  // 之前这里漏了该分支，会退化成 orderBy('createdAt') —— 预构建出来的首页是固定按时间排序，
+  // 后台选了「完全随机」却在 L3 预构建首屏看不到任何随机效果
+  if (sort === 'random') {
+    const conditions = [{ status: 'published' }, { deletedAt: null }]
+    if (resourceType && resourceType !== 'all') {
+      conditions.push({ type: resourceType })
+    }
+    if (tag) {
+      conditions.push(_.or([{ tags: tag }, { categories: tag }, { category: tag }]))
+    }
+    const sampleRes = await db.collection('resources')
+      .aggregate()
+      .match(conditions.length > 1 ? _.and(conditions) : conditions[0])
+      .sample({ size: 20 })
+      .project(RESOURCE_FIELD)
+      .end()
+    const list = ((sampleRes && sampleRes.list) || []).map(cleanResource)
+    return { list, hasMore: list.length >= 20 }
   }
 
   // 🔥 混合排序：从 Top 50 中随机抽取 20 条（与 getResources 云函数逻辑一致）

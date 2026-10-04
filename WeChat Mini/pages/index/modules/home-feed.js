@@ -93,6 +93,8 @@ async function loadRecommendResources(page) {
     // 🔥 第一页加载前确保文案池就绪（通常已在 _loadNonCriticalData 中预加载完成）
     if (page.data.recommendPage === 1) {
       await page._ensureQuotePool()
+      // 🔥 同时等 Tab 配置就绪：sortBy 必须来自后台配置，否则随机排序会被默认值 'hot' 覆盖
+      await page.waitTabsReady()
     }
     // 读取推荐 Tab 配置的 resourceType 和 sortBy（支持后台自定义排序方式）
     const tabConfig = page.data.categoryTabs.find(t => t.id === 'recommend') || {}
@@ -174,6 +176,7 @@ async function loadLatestResources(page) {
     // 🔥 第一页加载前确保文案池就绪
     if (page.data.latestPage === 1) {
       await page._ensureQuotePool()
+      await page.waitTabsReady()
     }
     // 读取最新 Tab 配置的 resourceType 和 sortBy（支持后台自定义排序方式）
     const tabConfig = page.data.categoryTabs.find(t => t.id === 'latest') || {}
@@ -247,6 +250,7 @@ async function loadTagResources(page) {
     // 🔥 第一页加载前确保文案池就绪
     if (page.data.tagPage === 1) {
       await page._ensureQuotePool()
+      await page.waitTabsReady()
     }
     // 读取当前标签 Tab 的 resourceType 和 sortBy 配置
     const tabConfig = page.data.categoryTabs.find(t => t.id === tag) || {}

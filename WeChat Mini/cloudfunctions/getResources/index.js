@@ -9,6 +9,8 @@ const $ = db.command.aggregate  // 🔥 聚合操作符
 // 缓存工具
 // ============================================================
 const CACHE_TTL = 5 * 60 * 1000 // 5分钟（资源列表缓存）
+// 🔥 随机类排序：结果每次都应不同，不能进公司两侧任何一层缓存
+const RANDOM_SORTS = ['random', 'hotRandom', 'latestRandom']
 const META_CACHE_TTL = 30 * 60 * 1000 // 🔥 30分钟（元数据缓存，标签/分类变动不频繁）
 const cacheStore = {}
 
@@ -340,7 +342,11 @@ exports.main = async (event) => {
     perf.markMilestone('参数解析完成')
 
     // 🔥 优化：第一页且无搜索条件时使用缓存
+    // 🔥 关键：随机类排序必须跳过缓存！
+    // 缓存命中会把一次随机结果固化 5 分钟（且写进 resources_cache 集合，冷启动/新实例同样命中），
+    // 于是用户每次进入看到的都是同一批内容，"随机排序"形同固定热门。
     const useCache = page === 1 && !keyword && !color && ids.length === 0
+      && RANDOM_SORTS.indexOf(sort) === -1
     const cacheKey = useCache ? `resources_${type}_${tag || 'all'}_${sort}` : null
     
     if (useCache && cacheKey) {

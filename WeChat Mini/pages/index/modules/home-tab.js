@@ -3,7 +3,28 @@ const { getStorage, setStorage } = require('../../../utils/storageManager')
 const { STORAGE_KEYS } = require('../../../config/constants')
 
 // 加载首页 Tab 配置（优先用缓存渲染，后台 callFunction 静默刷新）
-async function loadCategoryTabs(page, cachedTabs) {
+// 🔥 幂等：多次调用共用同一个 Promise。依赖 tabConfig.sortBy 的加载器必须先 await
+// 它（见 waitTabsReady），否则会读到 data 里的默认 sortBy='hot'，把后台配的随机排序覆盖掉
+function loadCategoryTabs(page, cachedTabs) {
+  if (page._tabsPromise) return page._tabsPromise
+  page._tabsPromise = loadCategoryTabsOnce(page, cachedTabs)
+  return page._tabsPromise
+}
+
+// 等待 Tab 配置就绪；未发起过加载或超时（1.5s）都直接放行，不拖慢首屏
+async function waitTabsReady(page) {
+  if (!page._tabsPromise) return
+  try {
+    await Promise.race([
+      page._tabsPromise,
+      new Promise(resolve => setTimeout(resolve, 1500))
+    ])
+  } catch (e) {
+    // tabs 加载失败不影响资源拉取，用默认配置继续
+  }
+}
+
+async function loadCategoryTabsOnce(page, cachedTabs) {
   if (page.data.categoryTabsLoaded) return
 
   // 🔥 优先用传入的缓存 tabs 或 storage 缓存立即渲染（秒开）
@@ -222,6 +243,8 @@ function scrollTabToView(page, index) {
 // 后台静默刷新标签第一页（有缓存时调用，不显示 loading）
 async function refreshTagInBackground(page, tag) {
   try {
+    // 取 Tab 配置前先等就绪，避免读到默认 sortBy
+    await waitTabsReady(page)
     // 读取当前标签 Tab 的 resourceType 和 sortBy 配置
     const tabConfig = page.data.categoryTabs.find(t => t.id === tag) || {}
     const resourceType = tabConfig.resourceType || 'all'
@@ -309,6 +332,7 @@ function prefetchTagTabs(page) {
 
 module.exports = {
   loadCategoryTabs,
+  waitTabsReady,
   normalizeTabs,
   ensureFirstTabLoaded,
   refreshTabsInBackground,

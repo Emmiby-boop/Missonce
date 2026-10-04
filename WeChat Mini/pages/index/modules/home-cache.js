@@ -35,6 +35,9 @@ async function refreshRecommendInBackground(page) {
   if (page._recommendRefreshing) return
   page._recommendRefreshing = true
   try {
+    // 🔥 必须等 Tab 配置就绪再取 sortBy：否则会读到默认 'hot'，
+    // 把后台配的「热门随机」拉成了固定热门顺序，随机就失效了
+    await page.waitTabsReady()
     const tabConfig = page.data.categoryTabs.find(t => t.id === 'recommend') || {}
     const resourceType = tabConfig.resourceType || 'all'
     const sortBy = tabConfig.sortBy || 'hot'  // 🔥 读取后台配置的排序方式
@@ -89,6 +92,7 @@ async function refreshLatestInBackground(page) {
   if (page._latestRefreshing) return
   page._latestRefreshing = true
   try {
+    await page.waitTabsReady()
     const tabConfig = page.data.categoryTabs.find(t => t.id === 'latest') || {}
     const resourceType = tabConfig.resourceType || 'all'
     const sortBy = tabConfig.sortBy || 'latest'  // 🔥 读取后台配置的排序方式

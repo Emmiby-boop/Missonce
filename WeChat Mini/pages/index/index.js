@@ -1,6 +1,6 @@
 import { performanceMonitor } from '../../utils/performance.js'
 import { getWindowInfo, getStorage, getStorageAsync, removeStorage, getTheme } from '../../utils/storageManager'
-import { STORAGE_KEYS } from '../../config/constants'
+import { STORAGE_KEYS, CACHE_EXPIRE } from '../../config/constants'
 import { hapticSelect, hapticRefresh } from '../../utils/haptic'
 
 const homeCache = require('./modules/home-cache')
@@ -9,6 +9,14 @@ const homeFeed = require('./modules/home-feed')
 const homeAnnounce = require('./modules/home-announce')
 const homeInspire = require('./modules/home-inspire')
 const { getListAdConfig, clearListAdConfigCache } = require('../../utils/adUtil.js')
+
+// 首页 feed 缓存保留时长：超过后不再当首屏用。
+// 随机类排序（hotRandom/latestRandom/random）被持久化缓存 = "固定的随机"，每次进首页都一样
+const HOME_FEED_CACHE_MAX_AGE = CACHE_EXPIRE.MEDIUM
+
+function isFeedCacheExpired(cache) {
+  return !!(cache && cache.timestamp && (Date.now() - cache.timestamp > HOME_FEED_CACHE_MAX_AGE))
+}
 
 Page({
   // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
@@ -93,6 +101,7 @@ Page({
     this._tagPrefetched = false
     this._lastVisibleIndex = 0      // 预加载：已滚过的最大可见项索引
     this._lastPrefetchCheck = 0     // 预加载：上次检查时间（节流）
+    this._tabsPromise = null        // Tab 配置加载 Promise（资源加载前必须 await，见 waitTabsReady）
     this._quotePool = []
     this._quotePoolPromise = null
     // 🔥 初始化加载同步锁：防止预加载与触底加载并发触发同一函数
@@ -163,6 +172,10 @@ Page({
     }
 
     this.syncTheme()
+
+    // 🔥 配置了随机排序的 Tab：回到首页时（还在列表顶部）静默换一批内容
+    // 否则页面保活期间推荐列表一直是同一批，"随机"就完全看不出来
+    this._maybeRefreshRandomFeed()
 
     // 插屏广告：延迟执行，不阻塞页面切换
     setTimeout(() => {
@@ -295,18 +308,23 @@ Page({
         recommendLoaded: true
       })
       this._logPageLoadDone('L1内存缓存', memCached.resources.length)
-      this._refreshRecommendInBackground()
+      // 🔥 先确保 Tab 配置加载已发起，再触发后台刷新：
+      // 否则 refreshRecommendInBackground 会读到默认 sortBy='hot'，把随机排序覆盖成热门
+      this._ensureTabs()
       this._loadNonCriticalData()
+      this._refreshRecommendInBackground()
       return
     }
 
     // 🔥 L2 storage 缓存秒开（storageManager 内存命中时同步返回，App 重启后首次进入可能命中）
     const feedCache = getStorage(STORAGE_KEYS.HOME_FEED_CACHE)
-    if (feedCache && feedCache.recommend && feedCache.recommend.list && feedCache.recommend.list.length > 0) {
+    if (feedCache && feedCache.recommend && feedCache.recommend.list && feedCache.recommend.list.length > 0
+        && !isFeedCacheExpired(feedCache)) {
       console.log('[首页] L2 storage 缓存命中（同步）')
       this._renderFromFeedCache(feedCache, 'L2同步')
-      this._refreshRecommendInBackground()
+      this._ensureTabs(feedCache.tabs)
       this._loadNonCriticalData(feedCache.tabs)
+      this._refreshRecommendInBackground()
       return
     }
 
@@ -320,11 +338,15 @@ Page({
   // 异步降级链路：L2 storage 异步 → L3 home_cache 直读 → L4 网络
   async _loadFromAsyncChain() {
     try {
+      // 🔥 先发起 Tab 配置加载，资源排序方式依赖它
+      this._ensureTabs()
       // L2: 异步读取 storage（storageManager 内存未命中时）
       const storageCache = await getStorageAsync(STORAGE_KEYS.HOME_FEED_CACHE)
-      if (storageCache && storageCache.recommend && storageCache.recommend.list && storageCache.recommend.list.length > 0) {
+      if (storageCache && storageCache.recommend && storageCache.recommend.list && storageCache.recommend.list.length > 0
+          && !isFeedCacheExpired(storageCache)) {
         console.log('[首页] L2 storage 缓存命中（异步）')
         this._renderFromFeedCache(storageCache, 'L2异步')
+        this._ensureTabs(storageCache.tabs)
         this._refreshRecommendInBackground()
         this.setData({ loading: false })
         return
@@ -354,9 +376,23 @@ Page({
   _loadNonCriticalData(cachedTabs) {
     this.loadNotificationBadge()
     this.checkAnnouncement()
-    this.loadCategoryTabs(cachedTabs)
+    this._ensureTabs(cachedTabs)
     // 🔥 后台预加载灵感文案池（不阻塞首屏，loadXxxResources 会 await 该 Promise）
-    this._ensureQuotePool()
+    return this._ensureQuotePool()
+  },
+
+  // 🔥 确保 Tab 配置加载已发起（幂等）：所有依赖 tabConfig.sortBy 的加载/刷新都要先有它，
+  // 否则会读到 Page.data 里的默认 sortBy='hot'，导致后台配的随机排序失效
+  _ensureTabs(cachedTabs) {
+    if (!this._tabsPromise) {
+      this._tabsPromise = this.loadCategoryTabs(cachedTabs)
+    }
+    return this._tabsPromise
+  },
+
+  // 等 Tab 配置就绪后再取排序方式（内部 1.5s 超时兜底，不会拖慢首屏）
+  waitTabsReady() {
+    return homeTab.waitTabsReady(this)
   },
 
   // 加载灵感文案池：优先用 storage 缓存，无则调用 getQuotes 云函数
@@ -399,6 +435,32 @@ Page({
   // 后台静默刷新最新第一页（有缓存时调用，不显示 loading）
   async _refreshLatestInBackground() {
     return homeCache.refreshLatestInBackground(this)
+  },
+
+  // 🔥 随机类排序 Tab 的「回到顶部时换一批」：
+  // 页面保活期间 onShow 不重新拉数据，用户来回切 Tab 看到的内容永远一样；
+  // 但只在用户没往下滚的时候换，避免打断浏览。1 分钟节流，防止频繁请求。
+  _maybeRefreshRandomFeed() {
+    try {
+      const RANDOM_SORTS = ['hotRandom', 'latestRandom', 'random']
+      const active = this.data.activeCategory
+      const tabConfig = (this.data.categoryTabs || []).find(t => t.id === active) || {}
+      if (RANDOM_SORTS.indexOf(tabConfig.sortBy) === -1) return
+
+      // 已经滚动过就不再替换列表
+      if ((this.data.waterfallScrollTop || 0) > 100) return
+      if ((this._lastVisibleIndex || 0) > 0) return
+
+      const now = Date.now()
+      if (now - (this._randomFeedRefreshedAt || 0) < 60 * 1000) return
+      this._randomFeedRefreshedAt = now
+
+      if (active === 'recommend') this._refreshRecommendInBackground()
+      else if (active === 'latest') this._refreshLatestInBackground()
+      else if (active) this._refreshTagInBackground(active)
+    } catch (e) {
+      console.warn('[首页] 随机流刷新失败:', e)
+    }
   },
 
   // 将推荐流和 latest 流第一页写入 storage 持久化缓存
