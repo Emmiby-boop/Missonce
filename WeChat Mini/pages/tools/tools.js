@@ -33,6 +33,13 @@ function formatThousands(n) {
   return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
+// 当天标识：签到状态必须按天失效，避免 23:58 打开、00:01 再打开时
+// 命中 5 分钟缓存仍显示「今日已签到」，导致新一天签不了到
+function todayKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
 Page({
   // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
   onTabItemTap() {
@@ -258,7 +265,8 @@ Page({
   async checkTodayCheckIn() {
     // 🔥 5 分钟节流：优先用本地缓存，避免每次切页都调 userPoints 云函数
     const cached = getStorage(CHECKIN_CACHE_KEY)
-    if (cached && (Date.now() - cached.timestamp < CHECKIN_CACHE_TTL)) {
+    const sameDay = cached && cached.date === todayKey()
+    if (sameDay && (Date.now() - cached.timestamp < CHECKIN_CACHE_TTL)) {
       const data = cached.data
       this._syncCheckInView(data)
       // 后台静默刷新（不阻塞 UI）
@@ -276,7 +284,7 @@ Page({
         const data = res.result.data
         this._syncCheckInView(data)
         // 写入缓存
-        setStorage(CHECKIN_CACHE_KEY, { data, timestamp: Date.now() })
+        setStorage(CHECKIN_CACHE_KEY, { data, timestamp: Date.now(), date: todayKey() })
       }
     } catch (e) {
       console.error('获取签到信息失败:', e)
@@ -293,7 +301,7 @@ Page({
       if (res.result.success) {
         const data = res.result.data
         this._syncCheckInView(data)
-        setStorage(CHECKIN_CACHE_KEY, { data, timestamp: Date.now() })
+        setStorage(CHECKIN_CACHE_KEY, { data, timestamp: Date.now(), date: todayKey() })
       }
     } catch (e) {
       // 静默失败，保留缓存数据
@@ -325,7 +333,8 @@ Page({
         // 🔥 签到成功后更新缓存
         setStorage(CHECKIN_CACHE_KEY, {
           data: { isCheckedIn: true, checkInDays: data.checkInDays, points: data.points },
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          date: todayKey()
         })
         // 🔥 兜底：云函数没返回奖励字段时不要显示 "+undefined"
         const baseReward = Number(data.pointsReward) || this.data.checkInReward
