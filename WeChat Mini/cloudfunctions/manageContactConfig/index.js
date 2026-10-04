@@ -1,31 +1,19 @@
 const cloud = require('wx-server-sdk')
+const { withAdmin } = require('./withAdmin')
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
 })
 const db = cloud.database()
 
-exports.main = async (event, context) => {
+const handleRequest = async (event, context, admin) => {
   const { action, data } = event
-  const wxContext = cloud.getWXContext()
-  const openid = wxContext.OPENID
+
+  // 鉴权由 withAdmin 统一处理：Web 后台走 adminToken，小程序端管理员走 openid。
+  // 旧实现在这里查 { _openid: openid, role: 'admin' } —— Web 后台没有 openid 恒为空，
+  // 导致后台无法新增/编辑/删除任何联系配置；且 super_admin 也会被这条查询挡在门外。
 
   try {
-    // 获取管理员列表验证权限
-    const adminRes = await db.collection('admins')
-      .where({
-        _openid: openid,
-        role: 'admin'
-      })
-      .get()
-
-    if (adminRes.data.length === 0) {
-      return {
-        success: false,
-        message: '无权限操作'
-      }
-    }
-
     switch (action) {
       case 'add':
         // 检查是否已存在公众号配置
@@ -118,3 +106,5 @@ exports.main = async (event, context) => {
     }
   }
 }
+
+exports.main = withAdmin(handleRequest)

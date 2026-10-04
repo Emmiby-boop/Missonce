@@ -398,6 +398,9 @@ const fetchOptions = async () => {
 
 const buildWhere = () => {
   const where: Record<string, any> = {};
+  // 排除已进回收站的资源（软删除会写入 deletedAt 时间戳）
+  // 不加这条的话，删除成功后列表照样把它查出来，看起来像「删不掉」
+  where.deletedAt = cmd.exists(false);
   if (filters.type) where.type = filters.type;
   if (filters.status) where.status = filters.status;
   if (filters.category) where.categories = cmd.in([filters.category]);

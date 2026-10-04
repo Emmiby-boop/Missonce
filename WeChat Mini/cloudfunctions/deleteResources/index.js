@@ -1,4 +1,5 @@
 ﻿const cloud = require('wx-server-sdk')
+const { withAdmin } = require('./withAdmin')
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -70,23 +71,14 @@ async function purgeResourcesFromDB(ids) {
  *   恢复资源：         { action: 'restore', resourceId }
  *   彻底删除：         { action: 'purge', resourceId } 或 { action: 'purge', resourceIds: [...] }
  */
-exports.main = async (event, context) => {
+const handleRequest = async (event, context, admin) => {
   const wxContext = cloud.getWXContext()
   const callerOpenid = wxContext.OPENID
+  // 操作者标识：Web 后台走 admin._id，小程序端管理员走 openid
+  const operatorId = admin?._id || callerOpenid || 'admin'
 
   try {
     const { action } = event
-
-    // 🔒 安全检查：验证调用者是否为管理员
-    if (!callerOpenid) {
-      return { success: false, message: '未登录' }
-    }
-    const adminCheck = await db.collection('admins')
-      .where({ _openid: callerOpenid })
-      .count()
-    if (adminCheck.total === 0) {
-      return { success: false, message: '权限不足，仅管理员可操作' }
-    }
 
     // ── 软删除（移入回收站）──
     if (action === 'delete') {
@@ -106,7 +98,7 @@ exports.main = async (event, context) => {
         db.collection('resources').doc(id).update({
           data: {
             deletedAt: db.serverDate(),
-            deletedBy: callerOpenid,
+            deletedBy: operatorId,
             status: 'offline'  // 同时下架，避免回收站期间仍可见
           }
         })
@@ -142,10 +134,12 @@ exports.main = async (event, context) => {
       if (!resourceId) {
         return { success: false, message: '缺少资源ID' }
       }
+      // 用 remove 把字段彻底抹掉，而不是置 null：
+      // 前端列表用 deletedAt.exists(false) 过滤回收站，置 null 会让恢复后的资源仍然被滤掉
       await db.collection('resources').doc(resourceId).update({
         data: {
-          deletedAt: null,
-          deletedBy: '',
+          deletedAt: _.remove(),
+          deletedBy: _.remove(),
           status: 'published'  // 恢复后重新上架
         }
       })
@@ -185,3 +179,7 @@ exports.main = async (event, context) => {
     }
   }
 }
+
+// 鉴权统一交给 withAdmin：Web 后台走 adminToken，小程序端管理员走 openid。
+// 旧实现的「没有 OPENID 就直接返回未登录」会让 Web 后台永远无法删除素材。
+exports.main = withAdmin(handleRequest)
