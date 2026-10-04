@@ -174,6 +174,10 @@ yes | node_modules/.bin/tcb fn deploy testAiConnection -e missonce-99-1gfaff6n00
 | `8641204` | 文档：全量审查报告、增量复审报告、后台 UI 原型                                            |
 | `8a64f75` | 安全：P0-1/3/4/6 四个 P0 鉴权漏洞修复 + 密钥轮换 + `QuotesPage` 错误提示                          |
 | `a14872e` | 安全：P0-2 保留并修复验证码登录（authUid 锚点 + 绑定入口）、P0-5 SSRF 白名单、P0-7 分享码鉴权 + 修 P1-2 Token 校验失效 + 前端绑定 UI/构建 |
+| `555417c` | 修复：`adminAuth` 兼容 `adminToken` 字段（绑定/解绑/安全状态恒报「缺少登录态」） |
+| `0135066` | 修复：后台无法删除素材（`deleteResources` 只认 OPENID）+ 联系配置不可用（`manageContactConfig` 旧式鉴权）+ 列表未过滤软删除 |
+| `7ee8032` | 修复：登录页独立于后台外壳（登出不跳转、未登录仍显示侧栏）+ 登录支持 `?redirect=` |
+| `777aa8c` | 修复：`<Transition mode="out-in">` 遇多根节点页面后路由视图永久卡死（登录后须刷新才有内容）+ 登录态失效兜底跳转 |
 
 > 注意：`cloudbaserc.json` 已从 `.gitignore` 排除（含 envId / appId / 签名密钥），**不入库**。  
 > 换机器或从仓库全新克隆后，需要本地重建该文件才能部署。
@@ -227,6 +231,58 @@ const token = event.token || event.adminToken || ''   // 两个字段都兼容
 > 前端无需重新构建，刷新页面即可。
 
 > 遗留隐患（未改动以控制部署面）：`withAdmin.js`（20 份副本）的 `verifyCaller` 同样只认 `event.adminToken`。当前前端调用点统一注入该字段，功能正常；若日后有调用方改用 `token`，会复现同类「鉴权不通过」。
+
+### 补充修复：路由视图在某次切换后永久卡死 ——「登录后要刷新一次才有内容」（同日 14:20 上线）
+
+**现象**：账号登录进后台后，切换几个菜单后内容区全空（侧栏、URL 都正常），只有 F5 刷新才恢复——刷新后一切正常，于是看起来像「必须刷新一次」。
+
+**根因：`<Transition mode="out-in">` + 多根节点页面**。`AppInner` 里是：
+
+```html
+<router-view v-slot="{ Component }">
+  <transition name="page-fade" mode="out-in">
+    <component :is="Component" />   <!-- ← 页面根组件直接作为过渡子节点 -->
+  </transition>
+</router-view>
+```
+
+`<Transition mode="out-in">` 要求其子节点**只能有一个根元素**。而 `ResourcesPage.vue` 的模板有两个根节点（列表容器 + `ResourceEditModal` 编辑弹窗）：
+
+```html
+<template>
+  <div class="space-y-8">…列表与筛选…</div>
+  <ResourceEditModal v-model:visible="showEditModal" … />   <!-- 第二个根 -->
+</template>
+```
+
+离开该页时过渡拿不到可动画的单一根元素，**leave 钩子永不结束 → `out-in` 一直等待 → 之后所有路由都进不来**，内容区永久为空（该警告只在 dev 环境输出，生产包被剥掉，所以控制台什么都不显示）。
+
+用 `@vue/compiler-sfc` 扫描全量页面确认：34 个页面里**只有 `ResourcesPage.vue` 是多根节点**，和实测「最后一次正常渲染的是资源管理，之后全废」完全吻合。
+
+**修复**（`AppInner.vue`）：
+
+```html
+<router-view v-slot="{ Component, route: viewRoute }">
+  <transition name="page-fade" mode="out-in">
+    <!-- 无论页面自身是否多根，过渡作用的永远是这一层 -->
+    <div :key="viewRoute.path" class="page-fade-wrap">
+      <component :is="Component" />
+    </div>
+  </transition>
+</router-view>
+```
+
+另加一处兜底：登录态在**外壳已渲染之后**失效（token 过期、被强制登出）时，不再卡在「正在校验登录态…」占位，而是 `router.replace('/login?redirect=…')`。
+
+**排查方法与证据**（没动任何生产数据，也不需要管理员密码）：
+1. 搭最小复现（复制 App.vue / AppInner 结构 + 单根页 + 多根页），稳定重现，Vue 报 `Component inside <Transition> renders non-element root node`
+2. Playwright 直连线上 `https://missonce.cc`，在传输层伪造 CloudBase 云函数返回（`POST …tcb-api.tencentcloudapi.com/web`，响应需包成 `{ data: { response_data: "<业务 JSON>" } }`）完成「登录」，再逐个菜单点击测量内容区文本长度
+   - 修复前：29 个菜单中 18 个内容区长度 0（从「用户管理」开始全废）
+   - 修复后：29 个全部正常渲染，且内容与路由一致（复测 `/categories-tags → /notifications → /points-config → /daily-picks` 往返均无残留旧页面）
+
+**已重新构建部署**：CloudBase 托管（109 文件）+ 自有服务器（备份 `missonce.bak-20261004-141643`），入口 `main-B0zBIz1d.js`，三端点已验证。
+
+> **给未来的排错提示**：任何 `<router-view v-slot>` 套 `<transition mode="out-in">` 的写法，里层**必须**包一个单根容器，否则只要出现一个多根节点页面就会整体失效；这类问题用 System prompt 级别的复现 + 浏览器实测最快定位。
 
 ### 仍需人工操作
 1. **绑定启用验证码登录**：用账号密码登录后台 → 顶栏盾牌图标「**账号安全**」→ 发送验证码并启用（写入 `authUid`），之后验证码登录即生效（账号密码登录不受影响）
