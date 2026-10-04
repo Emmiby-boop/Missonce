@@ -14,12 +14,13 @@
 | 增量改动新引入的缺陷              | 发现 2 个，**已在本次复审中修复并验证通过**（见第二节）             |
 | Mini admin 三个 `.vue` 修复 | **已上线**（本地 dist 与线上入口一致 `main-VTks0koY.js`） |
 | 小程序端改动（触感震动 / SVG 图标）   | **未发版**，需开发者工具上传                            |
-| 本轮修复的全部云函数              | **未部署**，需手动 `tcb fn deploy`（9 个）                 |
+| 本轮修复的全部云函数 + Mini admin    | **已全部部署上线**（2026-10-04：9 个云函数 + CloudBase 托管 + 自有服务器 missonce.cc） |
 
-> 📌 **后续进展（同日更新）**：7 个 P0 **全部完成代码修复并提交**。  
+> 📌 **后续进展**：7 个 P0 **全部完成代码修复、提交并已部署上线**（2026-10-04）。  
 > - `8a64f75`：P0-1 / P0-3（含密钥轮换）/ P0-4 / P0-6  
 > - `a14872e`：P0-2（保留并修复验证码登录）/ P0-5（SSRF）/ P0-7（分享码越权）+ 顺带修复 P1-2 Token 校验失效  
-> 全部**尚未部署**。验证码登录在后端改为只认可信 `authUid` 锚点，并新增 `bindPhoneLogin` 绑定入口（前端登录页已有会话时可启用）。详见第六节。
+> 部署后经 invoke 实测：代理签名 `PROXY_SIGN_SECRET` 两端一致（非 `MISCONFIGURED`）；`getHomeTabs` 返回 `fixed_recommend`/`fixed_latest` 主键；`withAdmin` 加固的 4 个函数均正确拒绝未授权调用。  
+> **仍需你操作**：部署 `adminAuth` 后，用账号密码登录后台 → 登录页点「绑定手机号登录」写入 `authUid`，历史管理员验证码登录才会启用（账号密码登录不受影响）。
 
 ## 一、旧报告 P0 修复状态核验（初版结论：7/7 未修复）
 
@@ -179,14 +180,23 @@ yes | node_modules/.bin/tcb fn deploy testAiConnection -e missonce-99-1gfaff6n00
 
 ---
 
-## 六、建议的下一步
+## 六、部署结果（2026-10-04 已完成）
 
-1. **部署（全部待上线）**：上面 9 个云函数（注意 `proxyDownload`/`getProxySign` 必须同批、`PROXY_SIGN_SECRET` 需随 `cloudbaserc.json` 下发、部署后验证真实下载）；Mini admin 需重新构建部署以带上绑定 UI 与 `QuotesPage` 改动
-2. **绑定启用验证码登录**：部署 `adminAuth` 后，用账号密码登录后台 → 登录页点「绑定手机号登录」写入 `authUid`；历史管理员未绑定期间验证码登录暂不可用，账号密码登录不受影响
-3. **遗留**：`withAdmin.js` 副本已扩散到 20 份，建议收敛为共享依赖；`home_tabs` 历史重复 Tab 需后台手动清理（保留 `fixed_recommend`/`fixed_latest`）；小程序端触感震动 + SVG 图标仍未发版
-3. **本周**：补 P1-1（13 个云函数的 `withAdmin` 是 fail-open）
-4. **下次迭代**：把散布在 18 个目录下的 `withAdmin.js` 副本收敛成一个共享依赖。  
-   本次为让 `adConfigManager` / `aiGenerateText` 能独立部署，只能再复制两份（现已 18 份），  
-   这个扩散模式本身就很脆弱，建议尽快改成 CloudBase 层共享层
-5. **小程序发版**：触感反馈与 `menu-haptic.svg` 图标仍在本地，需开发者工具上传
+### 云函数（9 个，env `missonce-99-1gfaff6n002f6ac1`）
+`tcb fn deploy` 全部成功。其中 `getHomeTabs`/`adminAuth`/`testAiConnection`/`proxyDownload` 初轮因**云端与 `cloudbaserc.json` 运行时不一致**导致配置更新失败（含 `PROXY_SIGN_SECRET` 未注入），已将这 4 个函数的运行时改回与云端一致后重部署，配置才成功应用。  
+**invoke 实测结论**：
+- `getProxySign` / `proxyDownload` 返回 `UNAUTHORIZED`（无微信登录态被拒，生产小程序云调用自带 OPENID 不受影响）→ 证明 `PROXY_SIGN_SECRET` 已注入且非 `MISCONFIGURED`
+- `getHomeTabs` 返回 `fixed_recommend` / `fixed_latest` 确定性主键（修复生效）
+- `adConfigManager` / `aiGenerateText` / `testAiConnection` / `shareCode`(adminList) 均返回 `UNAUTHORIZED`（withAdmin 生效）；`shareCode`(encode) 公开动作正常返回业务错误（exclude 排除正确）
+
+### Mini admin 托管
+- CloudBase 静态托管：110 文件，**部署地址** https://missonce-99-1gfaff6n002f6ac1-1318542519.tcloudbaseapp.com
+- 自有服务器 `95.41.29.150`：`/www/wwwroot/missonce/`（域名 `missonce.cc` / `www.missonce.cc`），备份 `missonce.bak-20261004-114112`，覆盖解压后新入口 `main-C19L_dGg.js`，宝塔锁定的 `.user.ini` 与 `.well-known` 均保留
+- 三个端点 curl 实测均返回 `main-C19L_dGg.js` ✅
+
+### 仍需人工操作
+1. **绑定启用验证码登录**：用账号密码登录后台 → 登录页点「绑定手机号登录」写入 `authUid`，历史管理员验证码登录才会启用（账号密码登录不受影响）
+2. **真实下载验证**：在微信小程序内实测一次代理下载（抖音等），确认签名链路端到端可用（CLI 无 OPENID 无法模拟，需真机）
+3. **小程序发版**：触感反馈与 `menu-haptic.svg` 图标仍在本地，需开发者工具上传
+4. **遗留**：`home_tabs` 历史重复 tag Tab 需后台手动清理（保留 `fixed_recommend`/`fixed_latest`）；`withAdmin.js` 副本已扩散到 20 份，建议收敛为共享依赖
 
