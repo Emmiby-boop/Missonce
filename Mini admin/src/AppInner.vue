@@ -18,9 +18,15 @@
           />
           <main class="flex-1 px-6 pb-16 pt-8 lg:px-10">
             <div class="content-container mx-auto w-full">
-              <router-view v-slot="{ Component }">
+              <router-view v-slot="{ Component, route: viewRoute }">
                 <transition name="page-fade" mode="out-in">
-                  <component :is="Component" />
+                  <!-- 必须包一层单一元素：<Transition mode="out-in"> 要求子节点只有一个根元素。
+                       部分页面是多根节点（如 ResourcesPage 同时渲染列表 + 编辑弹窗），
+                       直接放进 Transition 会让 leave 永不结束，此后所有路由都渲染不出来，
+                       只能刷新页面才能恢复 —— 这就是「登录后要刷新一次才有内容」的根因。 -->
+                  <div :key="viewRoute.path" class="page-fade-wrap">
+                    <component :is="Component" />
+                  </div>
                 </transition>
               </router-view>
             </div>
@@ -118,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { NModal, NInput, NButton, NSpace, NTag, useMessage } from 'naive-ui'
 import AdminSidebar from './components/AdminSidebar.vue'
@@ -192,6 +198,14 @@ const handlePasswordSubmit = async () => {
 const loading = ref(false)
 // user 直接从 authStore 派生（响应式），登录后 store 更新会自动反映到 UI
 const user = computed(() => authStore.admin)
+
+// 兜底：外壳已经渲染上去之后登录态失效（token 过期、被强制登出等），
+// 不能停在「正在校验登录态…」的占位上，直接送回登录页并记住来源路径
+watch(user, (v) => {
+  if (!v) {
+    router.replace({ path: '/login', query: { redirect: route.fullPath } })
+  }
+})
 
 // ---- 账号安全弹窗 ----
 const showSecurityModal = ref(false)
