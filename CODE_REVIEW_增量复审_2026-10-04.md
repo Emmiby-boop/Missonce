@@ -20,7 +20,7 @@
 > - `8a64f75`：P0-1 / P0-3（含密钥轮换）/ P0-4 / P0-6  
 > - `a14872e`：P0-2（保留并修复验证码登录）/ P0-5（SSRF）/ P0-7（分享码越权）+ 顺带修复 P1-2 Token 校验失效  
 > 部署后经 invoke 实测：代理签名 `PROXY_SIGN_SECRET` 两端一致（非 `MISCONFIGURED`）；`getHomeTabs` 返回 `fixed_recommend`/`fixed_latest` 主键；`withAdmin` 加固的 4 个函数均正确拒绝未授权调用。  
-> **仍需你操作**：部署 `adminAuth` 后，用账号密码登录后台 → 登录页点「绑定手机号登录」写入 `authUid`，历史管理员验证码登录才会启用（账号密码登录不受影响）。
+> **仍需你操作**：部署 `adminAuth` 后，用账号密码登录后台 → 点顶栏盾牌图标「**账号安全**」→ 发送验证码并启用（写入 `authUid`），之后验证码登录即生效（账号密码登录不受影响）。
 
 ## 一、旧报告 P0 修复状态核验（初版结论：7/7 未修复）
 
@@ -161,7 +161,7 @@ yes | node_modules/.bin/tcb fn deploy testAiConnection -e missonce-99-1gfaff6n00
 > 新增的 `withAdmin.js` 副本已放进 `adConfigManager/`、`aiGenerateText/`、`shareCode/`、`testAiConnection/` 目录，  
 > 部署时会随包上传（云函数无法跨目录 require，只能各带一份）。  
 > 部署后验证 AI 命名：上传一张不填标题的图 → 触发 `analyzeResource` → 资源标题应变语义中文名（而非 `20261003-223612-xxxx.gif`）。  
-> 部署 `adminAuth` 后，请用已有账号密码登录一次，再在登录页点「绑定手机号登录」完成 `authUid` 写入；  
+> 部署 `adminAuth` 后，请用已有账号密码登录一次，再点顶栏「账号安全」完成 `authUid` 写入；  
 > 否则历史管理员的验证码登录会因 `authUid` 尚未绑定而暂时不可用（账号密码登录不受影响）。
 
 ---
@@ -194,8 +194,14 @@ yes | node_modules/.bin/tcb fn deploy testAiConnection -e missonce-99-1gfaff6n00
 - 自有服务器 `95.41.29.150`：`/www/wwwroot/missonce/`（域名 `missonce.cc` / `www.missonce.cc`），备份 `missonce.bak-20261004-114112`，覆盖解压后新入口 `main-C19L_dGg.js`，宝塔锁定的 `.user.ini` 与 `.well-known` 均保留
 - 三个端点 curl 实测均返回 `main-C19L_dGg.js` ✅
 
+### 补充修复：绑定入口不可见（同日 12:05 上线）
+用户反馈「账号密码登录后找不到启用验证码登录的入口」。根因：绑定入口此前只放在**登录页**，且仅当「已有会话又停留在登录页」才显示，账号密码登录成功后即跳转后台，用户无从发现。
+- 新增 `adminAuth.securityStatus` 动作（需 token，返回手机号与启用状态）
+- `AdminTopbar` 新增「账号安全」盾牌入口（登录后始终可见）；`AppInner` 新增账号安全弹窗（发送验证码→启用 / 停用）
+- 已重新构建并部署：`adminAuth` 云函数 + CloudBase 托管(109 文件) + 自有服务器（备份 `missonce.bak-20261004-120547`），三端点新入口 `main-7p23CVzG.js` ✅
+
 ### 仍需人工操作
-1. **绑定启用验证码登录**：用账号密码登录后台 → 登录页点「绑定手机号登录」写入 `authUid`，历史管理员验证码登录才会启用（账号密码登录不受影响）
+1. **绑定启用验证码登录**：用账号密码登录后台 → 顶栏盾牌图标「**账号安全**」→ 发送验证码并启用（写入 `authUid`），之后验证码登录即生效（账号密码登录不受影响）
 2. **真实下载验证**：在微信小程序内实测一次代理下载（抖音等），确认签名链路端到端可用（CLI 无 OPENID 无法模拟，需真机）
 3. **小程序发版**：触感反馈与 `menu-haptic.svg` 图标仍在本地，需开发者工具上传
 4. **遗留**：`home_tabs` 历史重复 tag Tab 需后台手动清理（保留 `fixed_recommend`/`fixed_latest`）；`withAdmin.js` 副本已扩散到 20 份，建议收敛为共享依赖
