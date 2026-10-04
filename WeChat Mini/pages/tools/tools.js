@@ -12,12 +12,26 @@ const TOOLS_CONFIG_CACHE_KEY = 'tools_config_cache'
 const TOOLS_CONFIG_CACHE_TTL = 10 * 60 * 1000
 
 // 🔥 默认工具列表（后台未配置或网络失败时降级使用）
+// 布局约定：sort 最小的一项若为 primary 绿色 → 渲染为整行主推大卡；
+//           其余 square = 半宽方卡（两列），wide = 整行宽卡；
+//           辣度值（id=points / linkUrl=/subpackages/points/points）固定为数据卡。
 const DEFAULT_TOOLS = [
-  { id: 'avatar-diy', title: '头像DIY', desc: '边框/滤镜/文字', icon: '/images/tool-diy.svg', linkType: 'page', linkUrl: '/subpackages/avatar-diy/avatar-diy', size: 'square', color: 'primary', visible: true, sort: 0 },
-  { id: 'watermark', title: '去水印', desc: '视频/图片一键去除', icon: '/images/tool-watermark.svg', linkType: 'miniProgram', linkUrl: 'wxbd304fe2186156e4', miniProgramPath: '', size: 'square', color: 'secondary', visible: true, sort: 1 },
-  { id: 'inspiration', title: '灵感文案', desc: '激发创作火花', icon: '/images/quick-inspiration.svg', linkType: 'page', linkUrl: '/subpackages/inspiration-writer/inspiration-writer', size: 'wide', color: 'tertiary', visible: true, sort: 2 },
+  { id: 'avatar-diy', title: '头像DIY', desc: '加边框·调滤镜·写字，30秒出图', icon: '/images/tool-diy.svg', linkType: 'page', linkUrl: '/subpackages/avatar-diy/avatar-diy', size: 'square', color: 'primary', visible: true, sort: 0 },
+  { id: 'watermark', title: '去水印', desc: '视频/图片', icon: '/images/tool-watermark.svg', linkType: 'miniProgram', linkUrl: 'wxbd304fe2186156e4', miniProgramPath: '', size: 'square', color: 'secondary', visible: true, sort: 1 },
+  { id: 'inspiration', title: '灵感文案', desc: 'AI 帮你写', icon: '/images/quick-inspiration.svg', linkType: 'page', linkUrl: '/subpackages/inspiration-writer/inspiration-writer', size: 'square', color: 'tertiary', visible: true, sort: 2 },
   { id: 'points', title: '辣度值', desc: '查看辣度值·兑换好物', icon: '/images/icon-diamond.svg', linkType: 'page', linkUrl: '/subpackages/points/points', size: 'wide', color: 'quaternary', visible: true, sort: 3 }
 ]
+
+// 辣度值中心判定（与后台配置的 id / linkUrl 对齐）
+const POINTS_TOOL_IDS = ['points', 'tool_points']
+const POINTS_TOOL_PATH = '/subpackages/points/points'
+const STREAK_CYCLE = 7
+
+// 千分位格式化（1,280）
+function formatThousands(n) {
+  const num = Number(n) || 0
+  return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
 
 // 🔥 预设图标列表（后台配置时可选，路径相对于小程序根目录）
 const PRESET_ICONS = [
@@ -49,10 +63,15 @@ Page({
     isCheckedIn: false,
     checkInDays: 0,
     points: 0,
+    // 签到卡片展示态
+    checkInReward: 10,
+    checkInPercent: 0,
+    progressTitle: '开始你的连续签到',
+    progressSub: '连续 7 天领专属好礼',
+    pointsText: '0',
     // 工具列表（从后台配置加载，降级到 DEFAULT_TOOLS）
     toolsList: [],
-    // 辣度值中心工具的动态描述（显示当前辣度值）
-    pointsToolDesc: '查看辣度值·兑换好物'
+    toolsCount: 0
   },
 
   onLoad() {
@@ -153,19 +172,48 @@ Page({
     }
   },
 
-  // 应用工具列表到 data，并更新辣度值中心描述
+  // 应用工具列表到 data，并按后台配置推导每个工具的排版形态
+  // variant: featured（整行主推大卡）/ stat（辣度值数据卡）/ wide（整行宽卡）/ square（半宽方卡）
   _applyToolsList(tools) {
-    // 动态更新辣度值中心工具的描述（显示当前辣度值）
-    const toolsWithStats = tools.map(t => {
-      if (t.id === 'points' || t.linkUrl === '/subpackages/points/points') {
-        return {
-          ...t,
-          desc: this.data.isLoggedIn ? `当前 ${this.data.points} 辣度值` : (t.desc || '查看辣度值·兑换好物')
-        }
+    const list = (tools || []).map((t, index) => {
+      const isPoints = POINTS_TOOL_IDS.indexOf(t.id) > -1 || t.linkUrl === POINTS_TOOL_PATH
+
+      let variant
+      if (isPoints) {
+        variant = 'stat'
+      } else if (t.size === 'wide') {
+        variant = 'wide'
+      } else {
+        // 列表首项且为品牌绿 → 升级为整行主推大卡（与设计稿一致，不依赖后台额外配置）
+        variant = (index === 0 && t.color === 'primary') ? 'featured' : 'square'
       }
-      return t
+
+      return {
+        ...t,
+        variant,
+        initial: (t.title || '工').slice(0, 1)
+      }
     })
-    this.setData({ toolsList: toolsWithStats })
+
+    // 半宽方卡两列排布：若某一段连续方卡为奇数个，把最后一个升级为整行，避免右侧留空
+    let runStart = -1
+    const flushRun = (endExclusive) => {
+      if (runStart < 0) return
+      if ((endExclusive - runStart) % 2 === 1) {
+        list[endExclusive - 1].variant = 'wide'
+      }
+      runStart = -1
+    }
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].variant === 'square') {
+        if (runStart < 0) runStart = i
+      } else {
+        flushRun(i)
+      }
+    }
+    flushRun(list.length)
+
+    this.setData({ toolsList: list, toolsCount: list.length })
   },
 
   // ===== 签到 + 积分 =====
@@ -175,16 +223,47 @@ Page({
     if (isLoggedIn) {
       this.checkTodayCheckIn()
     } else {
-      this.setData({
+      this._syncCheckInView({
         isCheckedIn: false,
         checkInDays: 0,
         points: 0
       })
-      // 未登录时也更新工具列表（积分中心显示默认描述）
-      if (this.data.toolsList.length > 0) {
-        this._applyToolsList(this.data.toolsList)
-      }
     }
+  },
+
+  // 统一收敛签到卡片的展示数据（进度环 / 文案 / 辣度值格式化）
+  _syncCheckInView({ isCheckedIn, checkInDays, points }) {
+    const days = Number(checkInDays) || 0
+    const pct = Math.max(0, Math.min(100, Math.round((days / STREAK_CYCLE) * 100)))
+
+    let progressTitle
+    let progressSub
+    if (!this.data.isLoggedIn) {
+      progressTitle = '登录后开始签到'
+      progressSub = '每天签到都能领取辣度值'
+    } else if (isCheckedIn) {
+      progressTitle = `已连续签到 ${days} 天`
+      progressSub = '明天记得再来，连续签到不断档'
+    } else if (days <= 0) {
+      progressTitle = '开始你的连续签到'
+      progressSub = `连续 ${STREAK_CYCLE} 天解锁专属头像框`
+    } else if (days < STREAK_CYCLE) {
+      progressTitle = `连续签到 ${days} 天`
+      progressSub = `再签 ${STREAK_CYCLE - days} 天解锁专属头像框`
+    } else {
+      progressTitle = `连续签到 ${days} 天`
+      progressSub = '继续签到累积更多辣度值'
+    }
+
+    this.setData({
+      isCheckedIn: !!isCheckedIn,
+      checkInDays: days,
+      points: Number(points) || 0,
+      checkInPercent: pct,
+      progressTitle,
+      progressSub,
+      pointsText: formatThousands(points)
+    })
   },
 
   async checkTodayCheckIn() {
@@ -192,15 +271,7 @@ Page({
     const cached = getStorage(CHECKIN_CACHE_KEY)
     if (cached && (Date.now() - cached.timestamp < CHECKIN_CACHE_TTL)) {
       const data = cached.data
-      this.setData({
-        isCheckedIn: data.isCheckedIn,
-        checkInDays: data.checkInDays,
-        points: data.points
-      })
-      // 同步更新积分中心描述
-      if (this.data.toolsList.length > 0) {
-        this._applyToolsList(this.data.toolsList)
-      }
+      this._syncCheckInView(data)
       // 后台静默刷新（不阻塞 UI）
       this._refreshCheckInBackground()
       return
@@ -214,15 +285,7 @@ Page({
       })
       if (res.result.success) {
         const data = res.result.data
-        this.setData({
-          isCheckedIn: data.isCheckedIn,
-          checkInDays: data.checkInDays,
-          points: data.points
-        })
-        // 同步更新积分中心描述
-        if (this.data.toolsList.length > 0) {
-          this._applyToolsList(this.data.toolsList)
-        }
+        this._syncCheckInView(data)
         // 写入缓存
         setStorage(CHECKIN_CACHE_KEY, { data, timestamp: Date.now() })
       }
@@ -240,14 +303,7 @@ Page({
       })
       if (res.result.success) {
         const data = res.result.data
-        this.setData({
-          isCheckedIn: data.isCheckedIn,
-          checkInDays: data.checkInDays,
-          points: data.points
-        })
-        if (this.data.toolsList.length > 0) {
-          this._applyToolsList(this.data.toolsList)
-        }
+        this._syncCheckInView(data)
         setStorage(CHECKIN_CACHE_KEY, { data, timestamp: Date.now() })
       }
     } catch (e) {
@@ -272,19 +328,16 @@ Page({
 
       if (res.result.success) {
         const data = res.result.data
-        this.setData({
+        this._syncCheckInView({
           isCheckedIn: true,
           checkInDays: data.checkInDays,
           points: data.points
         })
-        // 🔥 签到成功后更新缓存 + 工具列表
+        // 🔥 签到成功后更新缓存
         setStorage(CHECKIN_CACHE_KEY, {
           data: { isCheckedIn: true, checkInDays: data.checkInDays, points: data.points },
           timestamp: Date.now()
         })
-        if (this.data.toolsList.length > 0) {
-          this._applyToolsList(this.data.toolsList)
-        }
         let message = `签到成功 +${data.pointsReward}辣度值`
         if (data.bonusPoints > 0) {
           message = `连续${data.checkInDays}天！+${data.totalReward}辣度值`
