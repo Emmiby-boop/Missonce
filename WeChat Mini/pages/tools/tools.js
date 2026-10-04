@@ -33,22 +33,6 @@ function formatThousands(n) {
   return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
-// 🔥 预设图标列表（后台配置时可选，路径相对于小程序根目录）
-const PRESET_ICONS = [
-  { label: 'DIY', value: '/images/tool-diy.svg' },
-  { label: '去水印', value: '/images/tool-watermark.svg' },
-  { label: '头像框', value: '/images/tool-frame.svg' },
-  { label: '滤镜', value: '/images/tool-color.svg' },
-  { label: '裁剪', value: '/images/tool-crop.svg' },
-  { label: '灵感', value: '/images/quick-inspiration.svg' },
-  { label: '每日', value: '/images/quick-daily.svg' },
-  { label: '小店', value: '/images/quick-store.svg' },
-  { label: '钻石/辣度值', value: '/images/icon-diamond.svg' },
-  { label: '相机', value: '/images/icon-camera.svg' },
-  { label: '热门', value: '/images/icon-hot.svg' },
-  { label: '通知', value: '/images/icon-bell.svg' }
-]
-
 Page({
   // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
   onTabItemTap() {
@@ -95,6 +79,8 @@ Page({
     this._refreshToolsConfigInBackground()
     // 延迟触发插屏广告，不阻塞页面切换
     setTimeout(() => {
+      // 🔥 已离开本页（onHide）就不再触发插屏广告，避免广告弹在其他页面
+      if (this._isHiding) return
       try {
         const _mod = require('../../utils/interstitialAdManager.js')
         const interstitialAdManager = _mod.default || _mod
@@ -123,6 +109,9 @@ Page({
       this._applyToolsList(cached.tools)
       return
     }
+
+    // 无缓存：先用默认列表把工具区铺满（避免首屏空白），网络回来后再覆盖为线上配置
+    this._applyToolsList(DEFAULT_TOOLS.filter(t => t.visible !== false))
 
     // L2：网络加载
     this._fetchToolsConfig()
@@ -338,9 +327,12 @@ Page({
           data: { isCheckedIn: true, checkInDays: data.checkInDays, points: data.points },
           timestamp: Date.now()
         })
-        let message = `签到成功 +${data.pointsReward}辣度值`
-        if (data.bonusPoints > 0) {
-          message = `连续${data.checkInDays}天！+${data.totalReward}辣度值`
+        // 🔥 兜底：云函数没返回奖励字段时不要显示 "+undefined"
+        const baseReward = Number(data.pointsReward) || this.data.checkInReward
+        let message = `签到成功 +${baseReward}辣度值`
+        if (Number(data.bonusPoints) > 0) {
+          const total = Number(data.totalReward) || (baseReward + Number(data.bonusPoints))
+          message = `连续${data.checkInDays}天！+${total}辣度值`
         }
         wx.showToast({ title: message, icon: 'success', duration: 2000 })
       } else {
@@ -361,13 +353,25 @@ Page({
 
     const { linkType, linkUrl, miniProgramPath, title } = tool
 
+    // 🔥 兜底：后台新增项漏配 linkUrl / linkType 时不要「点了没反应」
+    if (!linkUrl) {
+      wx.showToast({ title: '该工具暂未开放', icon: 'none' })
+      return
+    }
+
     if (linkType === 'page') {
       // 内部页面
       wx.navigateTo({
         url: linkUrl,
         fail: (err) => {
-          console.error('[tools] 跳转失败:', err)
-          wx.showToast({ title: '页面不存在', icon: 'none' })
+          // tabBar 页面不能用 navigateTo，降级 switchTab（常见于后台把首页/专题页配成工具入口）
+          wx.switchTab({
+            url: linkUrl,
+            fail: () => {
+              console.error('[tools] 跳转失败:', err)
+              wx.showToast({ title: '页面不存在', icon: 'none' })
+            }
+          })
         }
       })
     } else if (linkType === 'miniProgram') {
@@ -396,6 +400,10 @@ Page({
           wx.showToast({ title: '网页打开失败', icon: 'none' })
         }
       })
+    } else {
+      // 未知/未配置的 linkType
+      console.warn('[tools] 未支持的 linkType:', linkType, tool)
+      wx.showToast({ title: '该工具暂未开放', icon: 'none' })
     }
   },
 

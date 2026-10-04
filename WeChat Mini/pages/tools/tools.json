@@ -1,8 +1,7 @@
 {
   "navigationStyle": "custom",
   "usingComponents": {
-    "ad-unit": "/components/ad-unit/ad-unit",
-    "spicy-icon": "/components/spicy-icon/spicy-icon"
+    "ad-unit": "/components/ad-unit/ad-unit"
   },
   "backgroundTextStyle": "dark"
 }

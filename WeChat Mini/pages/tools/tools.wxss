@@ -226,6 +226,11 @@ page {
   justify-content: center;
   gap: 14rpx;
   box-sizing: border-box;
+  transition: opacity 0.15s ease;
+}
+
+.checkin-btn:active {
+  opacity: 0.75;
 }
 
 .btn-text {
@@ -340,7 +345,7 @@ page {
   flex-shrink: 0;
 }
 
-/* 图标盒 */
+/* 图标盒（默认浅绿底，后台配了未知 color 值也不会变成无底色的「隐形图标」） */
 .tool-ic {
   width: 92rpx;
   height: 92rpx;
@@ -350,6 +355,12 @@ page {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  background: var(--tint-green);
+}
+
+/* 默认把任意颜色的图标统一染成品牌绿：白描边图标放浅底上会完全看不见 */
+.tool-ic .tool-ic-img {
+  filter: brightness(0) saturate(100%) invert(52%) sepia(85%) saturate(1700%) hue-rotate(100deg);
 }
 
 .tool-ic-img {
@@ -357,16 +368,15 @@ page {
   height: 46rpx;
 }
 
+/* 默认品牌绿（浅底可见）；实心绿图标盒内的文字再覆盖为白色 */
 .tool-ic-txt {
   font-size: 34rpx;
   font-weight: 700;
-  color: #fff;
+  color: var(--primary-color);
 }
 
-/* 浅底图标盒里的文字图标改用主题色，保证可见 */
-.tool-ic--primary .tool-ic-txt,
-.tool-ic--secondary .tool-ic-txt {
-  color: var(--primary-color);
+.tool-ic--ghost .tool-ic-txt {
+  color: #fff;
 }
 
 .tool-ic--tertiary .tool-ic-txt {
@@ -381,20 +391,15 @@ page {
   color: #DB2777;
 }
 
-/* 浅色图标盒（白描边图标会被 CSS filter 统一染成主题色，保证任意图标都能显示） */
-.tool-ic--primary,
-.tool-ic--secondary {
-  background: var(--tint-green);
-}
-
-.tool-ic--primary .tool-ic-img,
-.tool-ic--secondary .tool-ic-img {
-  /* white → #07C160（与 --primary-color 一致） */
-  filter: brightness(0) saturate(100%) invert(52%) sepia(85%) saturate(1700%) hue-rotate(100deg);
-}
-
+/* 自带彩色填充的图标（紫/橙/粉）保持本色，不参与染色 */
 .tool-ic--tertiary {
   background: var(--tint-purple);
+}
+
+.tool-ic--tertiary .tool-ic-img,
+.tool-ic--quaternary .tool-ic-img,
+.tool-ic--store .tool-ic-img {
+  filter: none;
 }
 
 .tool-ic--quaternary {
@@ -498,6 +503,8 @@ page {
 .stat-ic .tool-ic-img {
   width: 40rpx;
   height: 40rpx;
+  /* 辣度值金币图标自带金色，保持本色，不走品牌绿染色 */
+  filter: none;
 }
 
 .stat-ic .tool-ic-txt {
