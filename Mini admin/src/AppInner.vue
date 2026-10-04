@@ -1,29 +1,35 @@
 <template>
   <div class="min-h-screen" :class="isDark ? 'theme-dark' : 'theme-light'">
-    <div class="app-shell">
-      <AdminSidebar :is-dark="isDark" :is-open="isSidebarOpen" @close="$emit('closeSidebar')" />
-      <div class="flex flex-1 flex-col w-0 min-w-0">
-        <AdminTopbar
-          :user="user"
-          :loading="loading"
-          :is-dark="isDark"
-          @refresh="handleRefresh"
-          @logout="handleLogout"
-          @toggle-theme="$emit('toggleTheme')"
-          @toggle-sidebar="$emit('toggleSidebar')"
-          @change-password="openPasswordModal"
-          @account-security="openSecurityModal"
-        />
-        <main class="flex-1 px-6 pb-16 pt-8 lg:px-10">
-          <div class="content-container mx-auto w-full">
-            <router-view v-slot="{ Component }">
-              <transition name="page-fade" mode="out-in">
-                <component :is="Component" />
-              </transition>
-            </router-view>
-          </div>
-        </main>
+    <!-- 拿不到登录态就不渲染后台外壳：避免出现「已退出却仍显示侧栏功能区」 -->
+    <template v-if="user">
+      <div class="app-shell">
+        <AdminSidebar :is-dark="isDark" :is-open="isSidebarOpen" @close="$emit('closeSidebar')" />
+        <div class="flex flex-1 flex-col w-0 min-w-0">
+          <AdminTopbar
+            :user="user"
+            :loading="loading"
+            :is-dark="isDark"
+            @refresh="handleRefresh"
+            @logout="handleLogout"
+            @toggle-theme="$emit('toggleTheme')"
+            @toggle-sidebar="$emit('toggleSidebar')"
+            @change-password="openPasswordModal"
+            @account-security="openSecurityModal"
+          />
+          <main class="flex-1 px-6 pb-16 pt-8 lg:px-10">
+            <div class="content-container mx-auto w-full">
+              <router-view v-slot="{ Component }">
+                <transition name="page-fade" mode="out-in">
+                  <component :is="Component" />
+                </transition>
+              </router-view>
+            </div>
+          </main>
+        </div>
       </div>
+    </template>
+    <div v-else class="app-shell-boot">
+      <span>{{ logoutPending ? '正在退出…' : '正在校验登录态…' }}</span>
     </div>
 
     <!-- 修改密码弹窗 -->
@@ -305,13 +311,18 @@ const handleRefresh = async () => {
   await refreshLogin()
 }
 
+// user 为空且正在退出时，占位文案切为「正在退出…」
+const logoutPending = ref(false)
+
 const handleLogout = async () => {
   loading.value = true
+  logoutPending.value = true
   try {
     await authStore.logout()
-    router.push('/login')
+    router.replace({ path: '/login' })
   } finally {
     loading.value = false
+    logoutPending.value = false
   }
 }
 
@@ -330,6 +341,17 @@ onMounted(async () => {
 /* 内容最大宽度限制 — 超宽屏不再拉扯 */
 .content-container {
   max-width: 1440px;
+}
+
+/* 无登录态 / 正在退出时的占位 */
+.app-shell-boot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: var(--text-sub, #8a8f98);
+  font-size: 14px;
+  background: var(--bg-body);
 }
 
 /* 路由切换：纯 opacity 淡入，避免左右滑动误导 */

@@ -161,7 +161,7 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {
   loginWithPhoneCode,
   sendPhoneCode,
@@ -173,6 +173,9 @@ import ClickSpark from '../components/animations/ClickSpark.vue'
 import StarBorder from '../components/animations/StarBorder.vue'
 
 const router = useRouter();
+const route = useRoute();
+// 被路由守卫拦下来时会带上 ?redirect=原始路径，登录后回到原页面而不是丢回首页
+const redirectTarget = () => (route.query.redirect as string) || "/";
 const authStore = useAuthStore();
 
 // Login Method State
@@ -285,7 +288,7 @@ const handleLogin = async () => {
   loading.value = true;
   try {
     await loginWithPhoneCode(phone.value, code.value);
-    router.push("/");
+    router.replace(redirectTarget());
   } catch (error: any) {
     console.error("登录失败", error);
     showToast("登录失败：" + error.message, "error");
@@ -304,7 +307,7 @@ const handleAccountLogin = async () => {
   try {
     const result = await authStore.login(username.value, password.value);
     if (result.success) {
-      router.push("/");
+      router.replace(redirectTarget());
     } else {
       showToast(result.message || "登录失败", "error");
     }
