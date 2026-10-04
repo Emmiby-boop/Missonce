@@ -150,7 +150,7 @@ defineEmits(['refresh', 'logout', 'toggleTheme', 'toggleSidebar', 'changePasswor
 }
 
 .user-label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-sub);
@@ -160,7 +160,7 @@ defineEmits(['refresh', 'logout', 'toggleTheme', 'toggleSidebar', 'changePasswor
 }
 
 .user-value {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-main);
   line-height: 1;

@@ -177,8 +177,8 @@ defineEmits(['close']);
 
 <style scoped>
 .sidebar {
-  width: 248px;
-  padding: 24px 16px;
+  width: 276px;
+  padding: 24px 18px;
   border-right: 1px solid var(--border-color);
   background: var(--bg-card);
   display: flex;
@@ -211,7 +211,7 @@ defineEmits(['close']);
     top: 0;
     height: 100vh;
     transform: none !important;
-    width: 248px;
+    width: 276px;
     flex-shrink: 0;
   }
 }
@@ -225,9 +225,9 @@ defineEmits(['close']);
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,19 +239,19 @@ defineEmits(['close']);
 .brand-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-main);
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
 .brand-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-sub);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* 导航 */
@@ -275,13 +275,15 @@ defineEmits(['close']);
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 10px 13px;
+  border-radius: 10px;
   color: var(--text-sub);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
   transition: all 0.18s ease;
 }
 
@@ -300,11 +302,11 @@ defineEmits(['close']);
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: -16px;
+  left: -18px;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 60%;
+  height: 58%;
   background: var(--primary);
   border-radius: 0 2px 2px 0;
 }
@@ -315,6 +317,13 @@ defineEmits(['close']);
   justify-content: center;
   flex-shrink: 0;
   opacity: 0.65;
+}
+
+/* 图标是 v-html 注入的内联 SVG，需要 :deep 才能改尺寸/描边 */
+.nav-icon :deep(svg) {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.9;
 }
 
 .nav-item:hover .nav-icon {
@@ -330,12 +339,13 @@ defineEmits(['close']);
 }
 
 .nav-badge {
-  font-size: 10px;
-  padding: 1px 6px;
+  font-size: 11px;
+  padding: 2px 7px;
   border-radius: 99px;
   background: var(--primary);
   color: #fff;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 /* 分组标题 */
@@ -344,8 +354,8 @@ defineEmits(['close']);
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 10px 12px 6px;
-  margin-top: 4px;
+  padding: 14px 13px 7px;
+  margin-top: 6px;
   background: none;
   border: none;
   cursor: pointer;
@@ -361,17 +371,17 @@ defineEmits(['close']);
 }
 
 .nav-group-title {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: var(--text-sub);
-  opacity: 0.55;
+  opacity: 0.62;
 }
 
 .nav-group-arrow {
   color: var(--text-sub);
-  opacity: 0.4;
+  opacity: 0.45;
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -383,6 +393,6 @@ defineEmits(['close']);
 .nav-group-items {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 </style>
