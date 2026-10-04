@@ -343,7 +343,13 @@ function isCallerPhoneVerified(context) {
 exports.main = async (event, context) => {
   const wxContext = cloud.getWXContext()
   const callerOpenid = wxContext.OPENID
-  const { action, token, adminId, username, password, phone } = event
+  const { action, adminId, username, password, phone } = event
+  // 令牌字段兼容：
+  //  - 前端 callCloudFunction 统一注入 adminToken（供 withAdmin 使用）
+  //  - fetchAdminProfile 走 verifyToken 时用的是 token
+  // 历史实现只读 event.token，导致 bindPhoneLogin / securityStatus / unbindPhoneLogin
+  // 拿到 undefined 并恒定返回「缺少登录态，请先用账号密码登录」——即使已登录。
+  const token = event.token || event.adminToken || ''
   console.log('[adminAuth] received action:', action)
 
   if (action === 'generateToken') {

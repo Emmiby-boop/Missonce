@@ -200,6 +200,34 @@ yes | node_modules/.bin/tcb fn deploy testAiConnection -e missonce-99-1gfaff6n00
 - `AdminTopbar` 新增「账号安全」盾牌入口（登录后始终可见）；`AppInner` 新增账号安全弹窗（发送验证码→启用 / 停用）
 - 已重新构建并部署：`adminAuth` 云函数 + CloudBase 托管(109 文件) + 自有服务器（备份 `missonce.bak-20261004-120547`），三端点新入口 `main-7p23CVzG.js` ✅
 
+### 补充修复：令牌字段名不匹配导致「启用验证码登录」恒提示缺登录态（同日 12:20 上线）
+
+用户反馈：账号密码登录成功、短信验证码也能正常收到，但点「启用」仍报 `启用失败：缺少登录态，请先用账号密码登录`。
+
+**根因（字段名不一致）**：前端 `callCloudFunction` / `callFunctionWithAuth` 统一注入的令牌字段是 **`adminToken`**（供 `withAdmin` 使用），而 `adminAuth` 主 handler 只解构了 `event.token`：
+
+```js
+const { action, token, ... } = event   // ← event.adminToken 被忽略，token 恒为 undefined
+```
+
+受影响动作：`bindPhoneLogin` / `unbindPhoneLogin` / `securityStatus`（点「启用」报错的直接原因）。
+`verifyToken` 之所以一直正常，是因为 `fetchAdminProfile` 是**显式**以 `{ action: 'verifyToken', token: sessionToken }` 调用的，恰好命中了 `token` 字段——这个「一半能用、一半不能用」的错位把问题掩盖了。
+
+**修复**（`adminAuth/index.js`）：
+
+```js
+const { action, adminId, username, password, phone } = event
+const token = event.token || event.adminToken || ''   // 两个字段都兼容
+```
+
+**验证**：重部署 `adminAuth`（Nodejs20.19）后 invoke 实测——
+- 不带令牌：`{"success":false,"message":"缺少登录态，请先用账号密码登录"}`（预期）
+- 带 `adminToken` 字段（伪造值）：`{"success":false,"reason":"TOKEN_SIGNATURE_MISMATCH"}` → **证明 `adminToken` 已被正确读取**，不再落在「缺少登录态」分支
+
+> 前端无需重新构建，刷新页面即可。
+
+> 遗留隐患（未改动以控制部署面）：`withAdmin.js`（20 份副本）的 `verifyCaller` 同样只认 `event.adminToken`。当前前端调用点统一注入该字段，功能正常；若日后有调用方改用 `token`，会复现同类「鉴权不通过」。
+
 ### 仍需人工操作
 1. **绑定启用验证码登录**：用账号密码登录后台 → 顶栏盾牌图标「**账号安全**」→ 发送验证码并启用（写入 `authUid`），之后验证码登录即生效（账号密码登录不受影响）
 2. **真实下载验证**：在微信小程序内实测一次代理下载（抖音等），确认签名链路端到端可用（CLI 无 OPENID 无法模拟，需真机）
