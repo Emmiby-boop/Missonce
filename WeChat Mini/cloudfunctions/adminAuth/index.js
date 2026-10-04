@@ -692,6 +692,31 @@ exports.main = async (event, context) => {
     }
   }
 
+  /**
+   * 查询当前管理员的账号安全状态（供后台「账号安全」面板展示）
+   * 需要有效 admin token；仅返回该管理员自身的绑定状态，不泄露 authUid 原文。
+   */
+  if (action === 'securityStatus') {
+    if (!token) {
+      return { success: false, message: '缺少登录态，请先用账号密码登录' }
+    }
+    const statusRes = await verifyAndGetAdmin(token)
+    if (!statusRes.valid) {
+      return { success: false, message: getFailMessage(statusRes.reason), reason: statusRes.reason }
+    }
+    const a = statusRes.admin
+    return {
+      success: true,
+      data: {
+        username: a.username || '',
+        phone: a.phone || '',
+        role: a.role || 'admin',
+        codeLoginEnabled: !!a.authUid,
+        bindTime: a.authUidBindTime || null
+      }
+    }
+  }
+
   if (action === 'changePassword') {
     const { oldPassword, newPassword } = event
     if (!username || !oldPassword || !newPassword) {

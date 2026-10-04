@@ -263,6 +263,17 @@ export const unbindPhoneLogin = async () => {
   return callCloudFunction('adminAuth', { action: 'unbindPhoneLogin' });
 };
 
+/**
+ * 查询当前管理员的账号安全状态（验证码登录是否已启用）
+ * 供后台「账号安全」面板展示，需有效 adminToken（callCloudFunction 会自动注入）
+ */
+export const getSecurityStatus = async (): Promise<{
+  success: boolean;
+  data?: { username: string; phone: string; role: string; codeLoginEnabled: boolean; bindTime: string | null };
+}> => {
+  return callCloudFunction('adminAuth', { action: 'securityStatus' });
+};
+
 export const loginWithPhoneCode = async (phone: string, code: string) => {
   const authData = pendingAuthData as { verifyOtp?: (params: Record<string, unknown>) => Promise<unknown> } | null;
   if (!authData || !authData.verifyOtp) {
