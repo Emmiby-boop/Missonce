@@ -259,15 +259,15 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
 import { app, db, _, ensureAuthUser, callCloudFunction, callFunctionWithAuth } from "../utils/cloudbase";
-import { useMessage, useDialog } from "naive-ui";
+import { useMessage } from "naive-ui";
 const message = useMessage();
-const dialog = useDialog();
 import ResourceUploader from "../components/ResourceUploader.vue";
 import ResourceBatchOps from "../components/ResourceBatchOps.vue";
 import ResourceEditModal from "../components/ResourceEditModal.vue";
 import ClickSpark from "../components/animations/ClickSpark.vue";
 import { logger } from "../utils/logger";
 import { resourceService, categoryService, tagService } from "../services/cloudBaseService";
+import { confirmDialog, confirmDeleteDialog } from "../composables/useDialog";
 
 /** CloudBase DB command 带有 in 方法（SDK 类型声明不完整） */
 const cmd = _ as unknown as { in: (values: unknown[]) => unknown; gte: (v: unknown) => unknown; lte: (v: unknown) => unknown; and: (...args: unknown[]) => unknown };
@@ -292,12 +292,7 @@ const toggleSelect = (id: string) => {
 };
 
 const triggerAIAnalysis = async (item: any) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要对 "${item.title}" 重新进行 AI 识别吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定要对 "${item.title}" 重新进行 AI 识别吗？`);
   if (!confirmed) return;
 
   try {
@@ -337,12 +332,7 @@ const filters = reactive({
 });
 
 const approveAllPending = async () => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: "确定要将所有【待审】状态的资源更改为【已发布】吗？",
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog("确定要将所有【待审】状态的资源更改为【已发布】吗？");
   if (!confirmed) return;
 
   try {
@@ -424,11 +414,13 @@ const buildWhere = () => {
 };
 
 const fetchList = async () => {
+  // 整个函数包进 try/finally：任何一步抛错（鉴权、查询、临时链接）都必须复位 listLoading，
+  // 否则骨架屏永远不消失、分页按钮永久置灰（表现为「页面假死，刷新才恢复」）。
   listLoading.value = true;
-  await ensureAuthUser();
-  selectedResources.value = []; // Clear selection on refresh
-  const where = buildWhere();
   try {
+    await ensureAuthUser();
+    selectedResources.value = []; // Clear selection on refresh
+    const where = buildWhere();
     const { data: listData, total: count } = await resourceService.list<any>({
       where,
       orderBy: "createdAt",
@@ -438,27 +430,26 @@ const fetchList = async () => {
     });
     total.value = count;
     list.value = listData;
+
+    const fileIDs = list.value
+      .map((item) => item.coverUrl || item.originUrl)
+      .filter(Boolean);
+    if (fileIDs.length) {
+      const tempRes = await app.getTempFileURL({
+        fileList: fileIDs.map((fileID) => ({ fileID, maxAge: 3600 })),
+      });
+      const fileList = tempRes?.fileList || [];
+      const urlMap = new Map(
+        fileList.map((file: any) => [file.fileID, file.tempFileURL])
+      );
+      list.value = list.value.map((item) => ({
+        ...item,
+        previewUrl: urlMap.get(item.coverUrl || item.originUrl) || "",
+      }));
+    }
   } finally {
     listLoading.value = false;
   }
-
-  const fileIDs = list.value
-    .map((item) => item.coverUrl || item.originUrl)
-    .filter(Boolean);
-  if (fileIDs.length) {
-    const tempRes = await app.getTempFileURL({
-      fileList: fileIDs.map((fileID) => ({ fileID, maxAge: 3600 })),
-    });
-    const fileList = tempRes?.fileList || [];
-    const urlMap = new Map(
-      fileList.map((file: any) => [file.fileID, file.tempFileURL])
-    );
-    list.value = list.value.map((item) => ({
-      ...item,
-      previewUrl: urlMap.get(item.coverUrl || item.originUrl) || "",
-    }));
-  }
-
 };
 
 const applyFilters = async () => {
@@ -505,12 +496,7 @@ const editResource = (item: any) => {
 };
 
 const removeResource = async (id: string) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确定要删除这个资源吗？\n\n这将同时删除云存储中的文件！',
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDeleteDialog('确定要删除这个资源吗？\n\n这将同时删除云存储中的文件！');
   if (!confirmed) return;
 
   try {

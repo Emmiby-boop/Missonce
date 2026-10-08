@@ -47,11 +47,11 @@
 import { computed, ref } from "vue";
 import { NDropdown } from "naive-ui";
 import { db, serverDate, callFunctionWithAuth } from "../utils/cloudbase";
-import { useMessage, useDialog } from 'naive-ui';
+import { useMessage } from 'naive-ui';
 import { logger } from '../utils/logger';
+import { confirmDialog } from "../composables/useDialog";
 
 const message = useMessage();
-const dialog = useDialog();
 
 interface ResourceItem {
   _id: string;
@@ -99,12 +99,7 @@ const batchUpdateStatus = async (status: string) => {
   if (selectedResources.value.length === 0) return;
 
   const statusLabel = status === 'published' ? '已发布' : status === 'offline' ? '已下线' : '草稿';
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要将选中的 ${selectedResources.value.length} 个资源设置为「${statusLabel}」吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定要将选中的 ${selectedResources.value.length} 个资源设置为「${statusLabel}」吗？`);
   if (!confirmed) return;
 
   try {
@@ -165,12 +160,7 @@ const batchAddTags = async () => {
 const batchDelete = async () => {
   if (selectedResources.value.length === 0) return;
 
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要删除选中的 ${selectedResources.value.length} 个资源吗？\n\n此操作不可恢复！`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定要删除选中的 ${selectedResources.value.length} 个资源吗？\n\n此操作不可恢复！`);
   if (!confirmed) return;
 
   try {
@@ -200,35 +190,60 @@ const batchDelete = async () => {
 
 const batchAnalyzeAI = async () => {
   if (selectedResources.value.length === 0) return;
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要对选中的 ${selectedResources.value.length} 个资源重新进行 AI 识别吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定要对选中的 ${selectedResources.value.length} 个资源重新进行 AI 识别吗？`);
   if (!confirmed) return;
 
-  try {
-    selectedResources.value.forEach(id => {
-        const item = props.list.find(i => i._id === id);
-        if (item) item.aiStatus = 'pending';
+  // 并发限流：云函数是同步长任务（AI 识别最长 60s），一次性并发几十个会占满
+  // 浏览器同域连接池，后面的 fetchList 数据库请求排不上队 → 骨架屏卡死整页假死。
+  // 这里用小并发队列（3 个一批）串行消化，避免拖垮页面其他请求。
+  const CONCURRENCY = 3;
+  const ids = [...selectedResources.value];
+  const total = ids.length;
+  let done = 0;
+  let failed = 0;
 
-        callFunctionWithAuth('analyzeResource', { id }).catch(err => {
-             if (err.message && (err.message.includes('TIMEOUT') || err.message.includes('TIME_LIMIT'))) {
-                logger.log('批量触发请求已发送 (前端超时忽略)', id);
-             } else {
-                logger.error(err);
-             }
-        });
-    });
+  // 乐观更新：先把选中项标记为识别中
+  ids.forEach(id => {
+    const item = props.list.find(i => i._id === id);
+    if (item) item.aiStatus = 'pending';
+  });
 
-    message.success(`已触发 ${selectedResources.value.length} 个任务，请稍后刷新查看结果。`);
-    selectedResources.value = [];
+  message.info(`已开始批量识别 ${total} 个任务（并发 3），请勿关闭页面`);
 
-    setTimeout(() => emit('refresh'), 3000);
+  const runOne = async (id: string) => {
+    try {
+      await callFunctionWithAuth('analyzeResource', { id });
+      // withAdmin 校验失败等业务错误会 resolve 出 {code,...}，同样视为失败
+    } catch (err: any) {
+      // 前端 5 分钟超时但云函数仍在跑的，不算失败
+      if (err?.message && (err.message.includes('TIMEOUT') || err.message.includes('TIME_LIMIT'))) {
+        logger.log('批量触发请求已发送 (前端超时忽略)', id);
+      } else {
+        failed++;
+        logger.error('AI 识别任务失败:', id, err);
+      }
+    } finally {
+      done++;
+    }
+  };
 
-  } catch (err: any) {
-    logger.error("批量触发流程错误", err);
+  // 小并发队列：workers 各自领任务依次执行，直到队列清空
+  const queue = [...ids];
+  const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const id = queue.shift();
+      if (!id) break;
+      await runOne(id);
+    }
+  });
+  await Promise.all(workers);
+
+  selectedResources.value = [];
+  if (failed > 0) {
+    message.warning(`批量识别完成：成功 ${done - failed}/${total}，失败 ${failed} 个，详见控制台`);
+  } else {
+    message.success(`批量识别完成（${total}/${total}），正在刷新列表`);
   }
+  emit('refresh');
 };
 </script>
