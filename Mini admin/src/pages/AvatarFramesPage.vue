@@ -96,11 +96,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { callCloudFunction, app } from '../utils/cloudbase'
+import { confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const frames = ref([])
 const loading = ref(true)
@@ -190,12 +190,7 @@ async function handleFileChange(e) {
 }
 
 async function deleteFrame(item) {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定删除"${item.name}"吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定删除"${item.name}"吗？`)
   if (!confirmed) return
   try {
     await callCloudFunction('manageAvatarFrames', { action: 'delete', id: item._id })
@@ -207,12 +202,7 @@ async function deleteFrame(item) {
 }
 
 async function batchDelete() {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定删除选中的 ${selectedFrames.value.length} 个头像框吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定删除选中的 ${selectedFrames.value.length} 个头像框吗？`)
   if (!confirmed) return
   try {
     await callCloudFunction('manageAvatarFrames', {

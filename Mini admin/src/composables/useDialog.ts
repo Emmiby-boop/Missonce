@@ -54,3 +54,46 @@ export function useFeedback() {
 
 // 兼容旧的 useDialog 导出（用于不在 NaiveUI 上下文中的地方）
 export { useDialog as useOldDialog }
+
+/**
+ * 模块级 dialog 实例注册表
+ *
+ * 为什么需要它：naive-ui 的 dialog.warning() 返回 DialogReactive（同步对象，恒为 truthy），
+ * 不是 Promise —— `const ok = await dialog.warning(...)` 会在弹窗弹出的瞬间就继续往下执行，
+ * 用户点「取消」也会照样执行（包括批量删除这类危险操作）。
+ * 这里在 App.vue 挂载时注册全局 dialog 实例，业务代码直接 import confirmDialog 即可，
+ * 无需在各组件 setup 里 useDialog()。
+ */
+let _dialogInstance: ReturnType<typeof useDialog> | null = null
+
+export const registerDialogInstance = (dialog: ReturnType<typeof useDialog>) => {
+  _dialogInstance = dialog
+}
+
+export const confirmDialog = (
+  content: string,
+  title = '提示',
+  type: 'warning' | 'error' | 'info' = 'warning'
+): Promise<boolean> => {
+  if (!_dialogInstance) {
+    // 兜底：实例还没注册（理论上不会发生，App.vue onMounted 即注册）
+    console.warn('[confirmDialog] dialog 实例未注册，默认拒绝执行')
+    return Promise.resolve(false)
+  }
+  return new Promise<boolean>((resolve) => {
+    _dialogInstance[type]({
+      title,
+      content,
+      positiveText: '确定',
+      negativeText: '取消',
+      onPositiveClick: () => resolve(true),
+      onNegativeClick: () => resolve(false),
+      onMaskClick: () => resolve(false),
+      onClose: () => resolve(false),
+    })
+  })
+}
+
+export const confirmDeleteDialog = (content = '此操作不可恢复，确定要删除吗？') => {
+  return confirmDialog(content, '删除提示', 'error')
+}

@@ -173,8 +173,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { NModal, NInput, NSelect, NSwitch, NButton, NSpin, NSpace, useMessage, useDialog } from 'naive-ui'
+import { NModal, NInput, NSelect, NSwitch, NButton, NSpin, NSpace, useMessage } from 'naive-ui'
 import { app, callFunctionWithAuth } from '../utils/cloudbase'
+import { confirmDeleteDialog } from '../composables/useDialog'
 import {
   PlusIcon,
   PencilIcon,
@@ -184,7 +185,6 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const message = useMessage()
-const dialog = useDialog()
 
 interface ContactConfig {
   _id?: string
@@ -339,12 +339,7 @@ async function handleSubmit() {
 }
 
 async function handleDelete(config: ContactConfig) {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要删除"${config.name}"吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定要删除"${config.name}"吗？`)
   if (!confirmed) return
 
   try {

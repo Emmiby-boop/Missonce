@@ -234,11 +234,11 @@ import { ref, onMounted } from 'vue'
 import { db, callFunctionWithAuth, callCloudFunction } from '../utils/cloudbase'
 import { quoteService } from '../services/cloudBaseService'
 import { aiConfigService } from '../services/aiConfigService'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { logger } from '../utils/logger'
+import { confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const loading = ref(false)
 const quotes = ref<any[]>([])
@@ -506,12 +506,7 @@ const toggleStatus = async (quote: any) => {
 }
 
 const deleteQuote = async (quote: any) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确定要删除这条文案吗？',
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog('确定要删除这条文案吗？')
   if (!confirmed) return
 
   try {

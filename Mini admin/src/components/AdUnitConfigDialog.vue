@@ -117,10 +117,10 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { callCloudFunction } from '../utils/cloudbase'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+import { confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const props = defineProps({
   visible: { type: Boolean, default: false }
@@ -190,12 +190,7 @@ async function handleSubmit(){
 }
 
 async function remove(u){
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确认删除该配置？',
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog('确认删除该配置？')
   if (!confirmed) return
   const res = await callCloudFunction('adConfigManager', { action: 'adUnit:delete', id: u._id })
   if(res?.success){ await load(); message.success('已删除') } else { message.error(res?.msg || '删除失败') }

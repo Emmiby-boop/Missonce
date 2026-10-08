@@ -254,10 +254,10 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import draggable from "vuedraggable";
 import { callCloudFunction } from "../utils/cloudbase";
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+import { confirmDialog, confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const tools = ref<any[]>([]);
 const loading = ref(false);
@@ -462,12 +462,7 @@ const saveTool = async () => {
 };
 
 const deleteTool = async (item: any) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定删除「${item.title}」工具吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定删除「${item.title}」工具吗？`)
   if (!confirmed) return
   try {
     tools.value = tools.value.filter(t => t.id !== item.id);
@@ -485,12 +480,7 @@ const deleteTool = async (item: any) => {
 };
 
 const initDefaultTools = async () => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: "初始化默认配置？将创建头像DIY、去水印、灵感文案、积分中心 4 个默认工具。",
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDialog("初始化默认配置？将创建头像DIY、去水印、灵感文案、积分中心 4 个默认工具。")
   if (!confirmed) return
   const defaultTools = [
     { id: 'tool_avatar_diy', title: '头像DIY', desc: '边框/滤镜/文字', icon: '/images/tool-diy.svg', linkType: 'page', linkUrl: '/subpackages/avatar-diy/avatar-diy', size: 'square', color: 'primary', visible: true, sort: 0 },

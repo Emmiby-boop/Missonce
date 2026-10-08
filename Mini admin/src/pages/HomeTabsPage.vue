@@ -219,10 +219,10 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import draggable from "vuedraggable";
 import { callCloudFunction } from "../utils/cloudbase";
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+import { confirmDialog, confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const tabs = ref<any[]>([]);
 const loading = ref(false);
@@ -402,12 +402,7 @@ const saveTab = async () => {
 };
 
 const deleteTab = async (item: any) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定删除「${item.title}」Tab 吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定删除「${item.title}」Tab 吗？`)
   if (!confirmed) return
   try {
     await callCloudFunction("manageHomeTabs", { action: "delete", id: tabId(item) });
@@ -419,12 +414,7 @@ const deleteTab = async (item: any) => {
 };
 
 const initDefaultTabs = async () => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: "初始化默认配置？将创建「推荐」和「最新」两个固定 Tab。",
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDialog("初始化默认配置？将创建「推荐」和「最新」两个固定 Tab。")
   if (!confirmed) return
   try {
     const res = await callCloudFunction("manageHomeTabs", { action: "initDefault" });

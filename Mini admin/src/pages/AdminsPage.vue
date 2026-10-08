@@ -141,10 +141,10 @@ import { ref, onMounted, computed } from 'vue'
 import { db, callCloudFunction } from '../utils/cloudbase'
 import { useAuthStore } from '../stores/auth'
 import { logAudit } from '../utils/audit'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+import { confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const authStore = useAuthStore()
 
@@ -262,12 +262,7 @@ const saveAdmin = async () => {
 }
 
 const deleteAdmin = async (admin: any) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要删除管理员 "${admin.username}" 吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定要删除管理员 "${admin.username}" 吗？`)
   if (!confirmed) return
 
   try {

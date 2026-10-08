@@ -138,16 +138,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { useDialog } from 'naive-ui'
 import { useCustomProvidersStore } from '../stores/customProviders'
 import type { CustomProvider, ModelOption } from '../constants/aiProviders'
+import { confirmDeleteDialog } from '../composables/useDialog'
 
 type MessageType = 'success' | 'error'
 const emit = defineEmits<{
   notify: [payload: { msg: string; type: MessageType }]
 }>()
 
-const dialog = useDialog()
 const store = useCustomProvidersStore()
 
 const showModal = ref(false)
@@ -257,12 +256,7 @@ const save = async () => {
 }
 
 const removeProvider = async (provider: CustomProvider) => {
-  const confirmed = await dialog.warning({
-    title: '删除确认',
-    content: `确定要删除厂商「${provider.name}」吗？正在使用此厂商的模型配置需要手动切换。`,
-    positiveText: '删除',
-    negativeText: '取消'
-  })
+  const confirmed = await confirmDeleteDialog(`确定要删除厂商「${provider.name}」吗？正在使用此厂商的模型配置需要手动切换。`)
   if (!confirmed) return
   try {
     await store.remove(provider.id)

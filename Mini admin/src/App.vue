@@ -27,8 +27,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, NLoadingBarProvider, NModalProvider } from 'naive-ui'
+import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, NLoadingBarProvider, NModalProvider, useDialog } from 'naive-ui'
 import { lightThemeOverrides, darkThemeOverrides } from './plugins/naive'
+import { registerDialogInstance } from './composables/useDialog'
 import AppInner from './AppInner.vue'
 
 // 无需后台外壳的公开页
@@ -75,6 +76,8 @@ const toggleSidebar = () => {
 
 onMounted(() => {
   applyThemeClass()
+  // 注册全局 dialog 实例：confirmDialog() 需要它（详见 composables/useDialog.ts）
+  registerDialogInstance(useDialog())
 })
 
 watch(isDark, () => {

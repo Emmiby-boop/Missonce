@@ -383,16 +383,16 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useMessage, useDialog } from "naive-ui";
+import { useMessage } from "naive-ui";
 import { db, app, callCloudFunction, callFunctionWithAuth } from "../utils/cloudbase";
 import ResourcePicker from "../components/ResourcePicker.vue";
 import ImageCropper from "../components/ImageCropper.vue";
 import LayoutCanvas from "../components/LayoutCanvas.vue";
 import LayoutResourcePicker from "../components/LayoutResourcePicker.vue";
 import type { LayoutModule, GridModule, LayoutData, TopicConfig, ModuleType, ResourceMap, ResourceItem, LayoutVersion, TempFileUrlItem } from "../types";
+import { confirmDialog } from "../composables/useDialog";
 
 const message = useMessage();
-const dialog = useDialog();
 
 const route = useRoute();
 const router = useRouter();
@@ -795,12 +795,7 @@ const clearCover = () => {
 };
 
 const applyTemplate = async (tpl: string) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: "应用模板将覆盖当前配置，确定吗？",
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog("应用模板将覆盖当前配置，确定吗？");
   if (!confirmed) return;
 
   // Clear current modules
@@ -915,12 +910,7 @@ const saveLayout = async () => {
 };
 
 const rollback = async (version: LayoutVersion) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定回滚到 ${formatDate(version.createdAt)} 的版本吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定回滚到 ${formatDate(version.createdAt)} 的版本吗？`);
   if (!confirmed) return;
 
   try {

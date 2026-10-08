@@ -126,11 +126,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { callCloudFunction } from '../utils/cloudbase'
+import { confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 // Stats
 const stats = ref<any>(null)
@@ -171,12 +171,7 @@ async function loadList(page = 1) {
 }
 
 async function deleteCode(item: any) {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定删除分享码 ${item.code} 吗？`,
-    positiveText: '确定',
-    negativeText: '取消'
-  })
+  const confirmed = await confirmDeleteDialog(`确定删除分享码 ${item.code} 吗？`)
   if (!confirmed) return
   try {
     await callCloudFunction('shareCode', { action: 'adminDelete', id: item._id })

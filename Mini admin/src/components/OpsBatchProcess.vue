@@ -103,12 +103,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useMessage, useDialog } from 'naive-ui';
+import { useMessage } from 'naive-ui';
 import { db, callFunctionWithAuth } from '../utils/cloudbase';
 import type { ImageUrlSource } from './OpsImageLoader.vue';
+import { confirmDialog, confirmDeleteDialog } from '../composables/useDialog';
 
 const message = useMessage();
-const dialog = useDialog();
 
 interface LowQualityResource extends ImageUrlSource {
   _id: string;
@@ -209,12 +209,7 @@ const batchUnpublish = async () => {
   const targetIds = getTargetIds();
   if (targetIds.length === 0) return;
 
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要下架选中的 ${targetIds.length} 个资源吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定要下架选中的 ${targetIds.length} 个资源吗？`);
   if (!confirmed) return;
 
   batchOperating.value = true;
@@ -241,12 +236,7 @@ const batchDelete = async () => {
   const targetIds = getTargetIds();
   if (targetIds.length === 0) return;
 
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要删除选中的 ${targetIds.length} 个资源吗？此操作不可恢复！`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDeleteDialog(`确定要删除选中的 ${targetIds.length} 个资源吗？此操作不可恢复！`);
   if (!confirmed) return;
 
   batchOperating.value = true;

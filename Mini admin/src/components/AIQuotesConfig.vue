@@ -264,13 +264,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useDialog } from 'naive-ui';
 import { callCloudFunction, callFunctionWithAuth } from '../utils/cloudbase';
 import { type ProviderId as WriterProviderId, textModels } from '../constants/aiProviders';
 import { useCustomProvidersStore } from '../stores/customProviders';
 import { aiConfigService } from '../services/aiConfigService';
+import { confirmDialog, confirmDeleteDialog } from '../composables/useDialog';
 
-const dialog = useDialog();
 const customProvidersStore = useCustomProvidersStore();
 
 // ======== Types ========
@@ -301,13 +300,6 @@ interface PosterQuote {
   _id?: string;
   text: string;
   createdAt?: number;
-}
-
-interface DbAddResult {
-  _id?: string;
-  id?: string;
-  code?: number;
-  message?: string;
 }
 
 interface GenerateQuotesResult {
@@ -446,12 +438,7 @@ const fetchData = async (): Promise<void> => {
 };
 
 const resetWriterPrompt = async (): Promise<void> => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确定要恢复默认的文案系统提示词吗？',
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog('确定要恢复默认的文案系统提示词吗？');
   if (!confirmed) return;
   writerConfig.value.SYSTEM_PROMPT = DEFAULT_WRITER_PROMPT;
 };
@@ -598,12 +585,7 @@ const savePosterQuote = async (q: PosterQuote): Promise<void> => {
 };
 
 const deletePosterQuote = async (id: string | undefined, index: number): Promise<void> => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确定删除这条语录？',
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDeleteDialog('确定删除这条语录？');
   if (!confirmed) return;
   try {
     if (id) await aiConfigService.deletePosterQuote(id);

@@ -289,14 +289,14 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, reactive, ref, shallowRef, computed } from "vue";
 import { app, callFunctionWithAuth } from "../utils/cloudbase";
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { useCache } from "../composables/useCache";
 import AnimatedList from "../components/animations/AnimatedList.vue";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import "@wangeditor/editor/dist/css/style.css";
+import { confirmDialog, confirmDeleteDialog } from '../composables/useDialog'
 
 const message = useMessage()
-const dialog = useDialog()
 
 const { get: getCache, set: setCache, clear: clearCache } = useCache<any[]>('notifications_cache');
 
@@ -614,12 +614,7 @@ const batchToggleStatus = async () => {
   if (selectedNotifications.value.length === 0) return;
   
   const newStatus = hasActiveSelected.value ? 'inactive' : 'active';
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要将选中的 ${selectedNotifications.value.length} 个公告${newStatus === 'active' ? '启用' : '停用'}吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDialog(`确定要将选中的 ${selectedNotifications.value.length} 个公告${newStatus === 'active' ? '启用' : '停用'}吗？`)
   if (!confirmed) return
 
   try {
@@ -647,12 +642,7 @@ const batchToggleStatus = async () => {
 const batchDelete = async () => {
   if (selectedNotifications.value.length === 0) return;
   
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要删除选中的 ${selectedNotifications.value.length} 个公告吗？此操作不可恢复。`,
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog(`确定要删除选中的 ${selectedNotifications.value.length} 个公告吗？此操作不可恢复。`)
   if (!confirmed) return
 
   try {
@@ -821,12 +811,7 @@ const saveNotification = async () => {
 };
 
 const removeNotification = async (id: string) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: "确定要删除这个公告吗？",
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog("确定要删除这个公告吗？")
   if (!confirmed) return
   
   try {

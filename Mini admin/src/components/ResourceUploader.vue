@@ -63,11 +63,11 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { app, db, callFunctionWithAuth } from "../utils/cloudbase";
-import { useMessage, useDialog } from 'naive-ui';
+import { useMessage } from 'naive-ui';
 import { logger } from '../utils/logger';
+import { confirmDialog } from '../composables/useDialog';
 
 const message = useMessage();
-const dialog = useDialog();
 
 interface Category {
   _id: string;
@@ -144,12 +144,7 @@ const handleUpload = async () => {
 
       if (checkRes.total > 0) {
         console.warn(`文件已存在，跳过上传: ${file.name}`);
-        const confirmed = await dialog.warning({
-          title: '提示',
-          content: `文件 "${file.name}" 已存在。\n是否继续上传？\n(取消则跳过此文件)`,
-          positiveText: '确定',
-          negativeText: '取消',
-        });
+        const confirmed = await confirmDialog(`文件 "${file.name}" 已存在。\n是否继续上传？\n(取消则跳过此文件)`);
         if (!confirmed) continue;
       }
 

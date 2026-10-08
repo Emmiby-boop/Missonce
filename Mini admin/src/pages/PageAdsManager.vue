@@ -334,9 +334,9 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { callCloudFunction } from '../utils/cloudbase'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+import { confirmDeleteDialog } from '../composables/useDialog'
 const message = useMessage()
-const dialog = useDialog()
 import AdPositionDialog from '../components/AdPositionDialog.vue'
 import AdUnitConfigDialog from '../components/AdUnitConfigDialog.vue'
 import { logger } from '../utils/logger';
@@ -702,12 +702,7 @@ async function batchToggle(enable) {
 }
 
 async function remove(item) {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确定删除这个广告位吗？',
-    positiveText: '确定',
-    negativeText: '取消',
-  })
+  const confirmed = await confirmDeleteDialog('确定删除这个广告位吗？')
   if (!confirmed) return
   try {
     const res = await callCloudFunction('adConfigManager', {

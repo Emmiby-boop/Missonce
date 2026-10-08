@@ -72,14 +72,14 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { callCloudFunction } from "../utils/cloudbase";
-import { useMessage, useDialog } from 'naive-ui';
+import { useMessage } from 'naive-ui';
 import { useCache } from '../composables/useCache';
 import type { TopicItem, TopicLinkType } from '../types';
 import TopicEditor from '../components/TopicEditor.vue';
 import TopicSorter from '../components/TopicSorter.vue';
+import { confirmDialog, confirmDeleteDialog } from '../composables/useDialog';
 
 const message = useMessage();
-const dialog = useDialog();
 
 const { set: setCache, clear: clearCache } = useCache<TopicItem[]>('topics_cache');
 
@@ -154,12 +154,7 @@ const batchToggleStatus = async () => {
   if (selectedTopics.value.length === 0) return;
 
   const newStatus = hasActiveSelected.value ? 'inactive' : 'active';
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要将选中的 ${selectedTopics.value.length} 个专题${newStatus === 'active' ? '启用' : '停用'}吗？`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDialog(`确定要将选中的 ${selectedTopics.value.length} 个专题${newStatus === 'active' ? '启用' : '停用'}吗？`);
   if (!confirmed) return;
 
   try {
@@ -181,12 +176,7 @@ const batchToggleStatus = async () => {
 const batchDelete = async () => {
   if (selectedTopics.value.length === 0) return;
 
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: `确定要删除选中的 ${selectedTopics.value.length} 个专题吗？此操作不可恢复。`,
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDeleteDialog(`确定要删除选中的 ${selectedTopics.value.length} 个专题吗？此操作不可恢复。`);
   if (!confirmed) return;
 
   const removedIds = [...selectedTopics.value];

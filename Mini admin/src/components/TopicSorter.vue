@@ -150,13 +150,13 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable';
 import { callCloudFunction } from '../utils/cloudbase';
-import { useMessage, useDialog } from 'naive-ui';
+import { useMessage } from 'naive-ui';
 import { useCache } from '../composables/useCache';
 import { logger } from '../utils/logger';
 import type { TopicItem } from '../types';
+import { confirmDeleteDialog } from '../composables/useDialog';
 
 const message = useMessage();
-const dialog = useDialog();
 
 defineProps<{
   loading: boolean;
@@ -265,12 +265,7 @@ const setBadge = async (item: TopicItem) => {
 };
 
 const deleteTopic = async (id: string) => {
-  const confirmed = await dialog.warning({
-    title: '提示',
-    content: '确定要删除这个专题吗？此操作不可恢复。',
-    positiveText: '确定',
-    negativeText: '取消',
-  });
+  const confirmed = await confirmDeleteDialog('确定要删除这个专题吗？此操作不可恢复。');
   if (!confirmed) return;
 
   try {
