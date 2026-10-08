@@ -251,8 +251,12 @@ exports.main = withAdmin(async (event, context, admin) => {
       updatedAt: db.serverDate()
     };
     
-    if (aiResult.colors && Array.isArray(aiResult.colors)) {
-      updateData.colors = aiResult.colors;
+    // AI 返回字段兼容：提示词要求识别主色调，模型实际返回 main_colors（也有模型返回 colors）
+    const aiColors = Array.isArray(aiResult.colors) ? aiResult.colors
+      : Array.isArray(aiResult.main_colors) ? aiResult.main_colors
+      : null;
+    if (aiColors) {
+      updateData.colors = aiColors;
     }
 
     // AI 自动命名：仅当用户未手动命名时才用 AI 标题覆盖。
@@ -280,12 +284,12 @@ exports.main = withAdmin(async (event, context, admin) => {
       if (aiTitle.length > 30) aiTitle = aiTitle.slice(0, 30); // 限长，防止脏数据
       if (aiTitle) {
         updateData.title = aiTitle;
-        addLog('AI 自动命名:', aiTitle);
+        console.log('AI 自动命名:', aiTitle);
       }
     } else if (aiTitleRaw && titledByUser) {
-      addLog('用户已手动命名，保留原标题:', currentTitle);
+      console.log('用户已手动命名，保留原标题:', currentTitle);
     } else {
-      addLog('AI 未返回 title，保留原标题:', currentTitle);
+      console.log('AI 未返回 title，保留原标题:', currentTitle);
     }
     
     // 自动修正主分类
