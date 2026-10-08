@@ -1,0 +1,15 @@
+{
+  "name": "manageAiConfig",
+  "version": "1.0.0",
+  "description": "AI 配置（sys_config / api_keys / poster_quotes）后台读写",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  },
+  "keywords": [
+    "ai",
+    "config"
+  ],
+  "author": "",
+  "license": "MIT"
+}

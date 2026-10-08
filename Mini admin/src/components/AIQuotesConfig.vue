@@ -265,9 +265,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useDialog } from 'naive-ui';
-import { db, callCloudFunction, callFunctionWithAuth } from '../utils/cloudbase';
+import { callCloudFunction, callFunctionWithAuth } from '../utils/cloudbase';
 import { type ProviderId as WriterProviderId, textModels } from '../constants/aiProviders';
 import { useCustomProvidersStore } from '../stores/customProviders';
+import { aiConfigService } from '../services/aiConfigService';
 
 const dialog = useDialog();
 const customProvidersStore = useCustomProvidersStore();
@@ -394,8 +395,7 @@ const fetchData = async (): Promise<void> => {
   try {
     // 确保自定义厂商已加载（必须 await，否则下拉列表不完整）
     await customProvidersStore.load().catch(() => {});
-    const writerRes = await db.collection('sys_config').doc('ai_writer_config').get().catch(() => null);
-    const writerData = writerRes?.data ? (Array.isArray(writerRes.data) ? writerRes.data[0] : writerRes.data) : null;
+    const writerData = await aiConfigService.getConfig('ai_writer_config');
 
     if (!writerData) {
       writerDocExists.value = false;
@@ -438,8 +438,8 @@ const fetchData = async (): Promise<void> => {
 
   // 单独加载海报语录（独立集合）
   try {
-    const res = await db.collection('poster_quotes').limit(200).get();
-    posterQuotes.value = (res.data || []) as PosterQuote[];
+    const list = await aiConfigService.listPosterQuotes();
+    posterQuotes.value = list as PosterQuote[];
   } catch (e) {
     console.error('[AIQuotesConfig] 海报语录加载失败:', e);
   }
@@ -501,14 +501,9 @@ const saveWriterConfig = async (): Promise<void> => {
       scenes: writerScenes.value || []
     };
 
-    if (writerDocExists.value) {
-      // 增量更新，不影响 featuredQuotes 等其他字段
-      await db.collection('sys_config').doc('ai_writer_config').update(docData);
-    } else {
-      // 首次保存，创建文档
-      await db.collection('sys_config').doc('ai_writer_config').set(docData);
-      writerDocExists.value = true;
-    }
+    // upsert：云函数内部按「存在则 update、不存在则创建」处理
+    await aiConfigService.setConfig('ai_writer_config', docData);
+    writerDocExists.value = true;
     showMessage('文案配置保存成功！', 'success');
     // 保存成功后重新拉取数据，确保状态同步
     await fetchData();
@@ -569,7 +564,7 @@ const saveFeaturedQuotes = async (): Promise<void> => {
   saving.value = true;
   message.value = '';
   try {
-    await db.collection('sys_config').doc('ai_writer_config').update({
+    await aiConfigService.setConfig('ai_writer_config', {
       featuredQuotes: featuredQuotes.value
     });
     showMessage('文案库保存成功！', 'success');
@@ -589,12 +584,11 @@ const savePosterQuote = async (q: PosterQuote): Promise<void> => {
   if (!q.text.trim()) return;
   savingPoster.value = true;
   try {
-    if (q._id) {
-      await db.collection('poster_quotes').doc(q._id).update({ data: { text: q.text.trim() } });
-    } else {
-      const res = await db.collection('poster_quotes').add({ data: { text: q.text.trim(), createdAt: Date.now() } }) as unknown as DbAddResult;
-      if (res._id) q._id = res._id;
-    }
+    // ⚠️ 旧代码这里误用了小程序端的 update({ data }) 写法，Web SDK 会把 data 当字段名写进去；
+    //    并且 add({ data }) 同理 —— 创建的文档结构是 { data: { text } } 而非 { text }。
+    //    现在统一走云函数。
+    const res = await aiConfigService.savePosterQuote(q.text.trim(), q._id);
+    if (!q._id && res?.data?.id) q._id = String(res.data.id);
     showMessage('语录已保存', 'success');
   } catch (e) {
     showMessage('保存失败: ' + (e as Error).message, 'error');
@@ -612,7 +606,7 @@ const deletePosterQuote = async (id: string | undefined, index: number): Promise
   });
   if (!confirmed) return;
   try {
-    if (id) await db.collection('poster_quotes').doc(id).remove();
+    if (id) await aiConfigService.deletePosterQuote(id);
     posterQuotes.value.splice(index, 1);
     showMessage('已删除', 'success');
   } catch (e) {
@@ -642,14 +636,9 @@ const saveGeneratedQuotes = async (): Promise<void> => {
   if (generatedQuotes.value.length === 0) return;
   savingPoster.value = true;
   try {
-    for (const text of generatedQuotes.value) {
-      if (text.trim()) {
-        await db.collection('poster_quotes').add({ data: { text: text.trim(), createdAt: Date.now() } });
-      }
-    }
+    await aiConfigService.addPosterQuotes(generatedQuotes.value);
     // 重新加载
-    const res = await db.collection('poster_quotes').limit(200).get();
-    posterQuotes.value = (res.data || []) as PosterQuote[];
+    posterQuotes.value = (await aiConfigService.listPosterQuotes()) as PosterQuote[];
     generatedQuotes.value = [];
     showMessage('全部保存成功！', 'success');
   } catch (e) {

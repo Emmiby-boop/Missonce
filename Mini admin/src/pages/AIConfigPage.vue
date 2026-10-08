@@ -138,7 +138,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { db } from '../utils/cloudbase';
+import { aiConfigService } from '../services/aiConfigService';
 import QuotesPage from './QuotesPage.vue';
 import AIKeyManager from '../components/AIKeyManager.vue';
 import AIQuotesConfig from '../components/AIQuotesConfig.vue';
@@ -212,18 +212,16 @@ const currentTabStatus = computed(() => {
 const fetchStatusData = async (): Promise<void> => {
   statusLoading.value = true;
   try {
-    const [aiRes, keysRes, catRes, tagRes, writerRes, posterRes] = await Promise.all([
-      db.collection('sys_config').doc('ai_config').get().catch(() => null),
-      db.collection('api_keys').limit(100).get().catch(() => null),
-      db.collection('sys_config').doc('categories_whitelist').get().catch(() => null),
-      db.collection('sys_config').doc('tags_whitelist').get().catch(() => null),
-      db.collection('sys_config').doc('ai_writer_config').get().catch(() => null),
-      db.collection('poster_quotes').limit(1).count().catch(() => null),
+    // 统一走 manageAiConfig 云函数：sys_config / api_keys / poster_quotes 的文档没有 _openid，
+    // 前端直连受安全规则限制（set 报 duplicate key、update 返回 updated:0），必须管理端权限读写
+    const [configs, keys, posterTotalRaw] = await Promise.all([
+      aiConfigService.getConfigs(['ai_config', 'ai_writer_config', 'categories_whitelist', 'tags_whitelist']),
+      aiConfigService.listApiKeys(),
+      aiConfigService.countPosterQuotes(),
     ]);
 
     // 1. 模型配置
-    const aiData = aiRes?.data;
-    const aiCfg = aiData ? (Array.isArray(aiData) ? aiData[0] : aiData) : null;
+    const aiCfg = configs.ai_config as Record<string, any> | null;
     const hasModel = !!(aiCfg && (aiCfg as any).MODEL);
     const hasKey = !!(aiCfg && (aiCfg as any).API_KEY);
     const aiProvider = (aiCfg && (aiCfg as any).PROVIDER) || '';
@@ -245,8 +243,7 @@ const fetchStatusData = async (): Promise<void> => {
     ];
 
     // 2. API Key
-    const keysData = (keysRes?.data ?? []) as any[];
-    const keyCount = Array.isArray(keysData) ? keysData.length : 0;
+    const keyCount = Array.isArray(keys) ? keys.length : 0;
     statusItems.value.push({
       label: 'API Key 管理',
       detail: keyCount > 0 ? `已配置 ${keyCount} 个 Key` : '暂无 Key',
@@ -256,13 +253,11 @@ const fetchStatusData = async (): Promise<void> => {
     });
 
     // 3. 标签白名单
-    const catData = catRes?.data;
-    const catDoc = catData ? (Array.isArray(catData) ? catData[0] : catData) : null;
-    const catCount = catDoc && Array.isArray((catDoc as WhitelistDoc).categories) ? (catDoc as WhitelistDoc).categories!.length : 0;
+    const catDoc = configs.categories_whitelist as WhitelistDoc | null;
+    const catCount = catDoc && Array.isArray(catDoc.categories) ? catDoc.categories!.length : 0;
 
-    const tagData = tagRes?.data;
-    const tagDoc = tagData ? (Array.isArray(tagData) ? tagData[0] : tagData) : null;
-    const tagCount = tagDoc && Array.isArray((tagDoc as WhitelistDoc).tags) ? (tagDoc as WhitelistDoc).tags!.length : 0;
+    const tagDoc = configs.tags_whitelist as WhitelistDoc | null;
+    const tagCount = tagDoc && Array.isArray(tagDoc.tags) ? tagDoc.tags!.length : 0;
 
     statusItems.value.push({
       label: '标签白名单',
@@ -273,8 +268,7 @@ const fetchStatusData = async (): Promise<void> => {
     });
 
     // 4. 文案配置
-    const writerData = writerRes?.data;
-    const writerCfg = writerData ? (Array.isArray(writerData) ? writerData[0] : writerData) : null;
+    const writerCfg = configs.ai_writer_config as Record<string, any> | null;
     const hasWriterModel = !!(writerCfg && (writerCfg as any).MODEL);
     const writerProvider = (writerCfg && (writerCfg as any).PROVIDER) || '';
     const writerProviderLabel = writerProvider === 'volcengine' ? '火山方舟'
@@ -293,7 +287,7 @@ const fetchStatusData = async (): Promise<void> => {
     });
 
     // 5. 海报语录
-    const posterTotal = posterRes?.total ?? 0;
+    const posterTotal = Number(posterTotalRaw) || 0;
     statusItems.value.push({
       label: '海报语录',
       detail: posterTotal > 0 ? `${posterTotal} 条语录` : '暂无语录',
@@ -330,27 +324,16 @@ const onChildNotify = (payload: { msg: string; type: MessageType }): void => {
 const fetchData = async (): Promise<void> => {
   loading.value = true;
   try {
-    const [catRes, tagRes] = await Promise.all([
-      db.collection('sys_config').doc('categories_whitelist').get().catch(() => null),
-      db.collection('sys_config').doc('tags_whitelist').get().catch(() => null),
-    ]);
+    const configs = await aiConfigService.getConfigs(['categories_whitelist', 'tags_whitelist']);
 
-    const catData = catRes?.data;
-    const catDoc = catData ? (Array.isArray(catData) ? catData[0] : catData) : null;
-    if (catDoc) {
-      const doc = catDoc as WhitelistDoc;
-      if (Array.isArray(doc.categories)) {
-        categoriesStr.value = doc.categories.join(', ');
-      }
+    const catDoc = configs.categories_whitelist as WhitelistDoc | null;
+    if (catDoc && Array.isArray(catDoc.categories)) {
+      categoriesStr.value = catDoc.categories.join(', ');
     }
 
-    const tagData = tagRes?.data;
-    const tagDoc = tagData ? (Array.isArray(tagData) ? tagData[0] : tagData) : null;
-    if (tagDoc) {
-      const doc = tagDoc as WhitelistDoc;
-      if (Array.isArray(doc.tags)) {
-        tagsStr.value = doc.tags.join(', ');
-      }
+    const tagDoc = configs.tags_whitelist as WhitelistDoc | null;
+    if (tagDoc && Array.isArray(tagDoc.tags)) {
+      tagsStr.value = tagDoc.tags.join(', ');
     }
   } catch (error) {
     console.error('[AIConfigPage] Fetch whitelist data failed', error);
@@ -362,7 +345,7 @@ const fetchData = async (): Promise<void> => {
 const saveCategories = async (): Promise<void> => {
   saving.value = true;
   try {
-    await db.collection('sys_config').doc('categories_whitelist').set({
+    await aiConfigService.setConfig('categories_whitelist', {
       categories: previewCategories.value
     });
     showMessage('分类保存成功！', 'success');
@@ -377,7 +360,7 @@ const saveCategories = async (): Promise<void> => {
 const saveTags = async (): Promise<void> => {
   saving.value = true;
   try {
-    await db.collection('sys_config').doc('tags_whitelist').set({
+    await aiConfigService.setConfig('tags_whitelist', {
       tags: previewTags.value
     });
     showMessage('标签保存成功！', 'success');

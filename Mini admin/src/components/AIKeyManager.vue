@@ -260,9 +260,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useDialog } from 'naive-ui';
-import { db, serverDate, callFunctionWithAuth } from '../utils/cloudbase';
+import { callFunctionWithAuth } from '../utils/cloudbase';
 import { type ProviderId, BUILTIN_PROVIDERS, visionModels, getProviderConsoleUrl } from '../constants/aiProviders';
 import { useCustomProvidersStore } from '../stores/customProviders';
+import { aiConfigService } from '../services/aiConfigService';
 
 const dialog = useDialog();
 const customProvidersStore = useCustomProvidersStore();
@@ -459,16 +460,13 @@ const showMessage = (msg: string, type: MessageType): void => {
 const fetchData = async (): Promise<void> => {
   loading.value = true;
   try {
-    // 并行加载：AI 配置、API Keys
-    const [aiRes, keysRes] = await Promise.all([
-      db.collection('sys_config').doc('ai_config').get().catch(() => null),
-      db.collection('api_keys').orderBy('createdAt', 'desc').get().catch(() => null),
+    // 并行加载：AI 配置、API Keys（走 manageAiConfig 云函数，前端直连受安全规则限制无法写入）
+    const [aiConfig, keysData] = await Promise.all([
+      aiConfigService.getConfig('ai_config'),
+      aiConfigService.listApiKeys(),
     ]);
     // 确保自定义厂商已加载（必须 await 完成，否则反向匹配会失败）
     await customProvidersStore.load().catch(() => {});
-
-    const aiData = aiRes?.data;
-    const aiConfig = aiData ? (Array.isArray(aiData) ? aiData[0] : aiData) : null;
 
     if (aiConfig) {
       const cfg = aiConfig as AiConfigDoc;
@@ -498,7 +496,6 @@ const fetchData = async (): Promise<void> => {
       resetPrompt();
     }
 
-    const keysData = (keysRes?.data ?? []) as Array<Record<string, unknown>>;
     if (Array.isArray(keysData) && keysData.length > 0) {
       apiKeys.value = keysData.filter(Boolean).map((k): ApiKey => ({
         _id: String(k._id ?? k.id ?? ''),
@@ -530,13 +527,12 @@ const saveAIConfig = async (): Promise<void> => {
   saving.value = true;
   message.value = '';
   try {
-    await db.collection('sys_config').doc('ai_config').set({
+    await aiConfigService.setConfig('ai_config', {
       API_KEY: config.value.API_KEY || '',
       MODEL: config.value.MODEL || '',
       API_URL: config.value.API_URL || '',
       SYSTEM_PROMPT: config.value.SYSTEM_PROMPT || '',
-      PROVIDER: selectedProvider.value || '',
-      updatedAt: new Date()
+      PROVIDER: selectedProvider.value || ''
     });
     showMessage('保存成功！', 'success');
     // 保存成功后重新拉取数据，确保状态同步
@@ -605,7 +601,7 @@ const deleteKey = async (id: string): Promise<void> => {
   });
   if (!confirmed) return;
   try {
-    await db.collection('api_keys').doc(id).remove();
+    await aiConfigService.deleteApiKey(id);
     apiKeys.value = apiKeys.value.filter(k => k._id !== id);
     showMessage('删除成功', 'success');
   } catch (error) {
@@ -637,12 +633,12 @@ const saveKey = async (): Promise<void> => {
       provider: keyForm.value.provider,
       key: keyForm.value.key,
       notes: keyForm.value.notes,
-      updatedAt: serverDate()
+      updatedAt: new Date()
     };
 
     if (editingKey.value) {
       const editId = editingKey.value._id;
-      await db.collection('api_keys').doc(editId).set(keyData);
+      await aiConfigService.saveApiKey(keyData as unknown as Record<string, unknown>, editId);
       const idx = apiKeys.value.findIndex(k => k._id === editId);
       if (idx !== -1) {
         apiKeys.value[idx] = {
@@ -653,11 +649,8 @@ const saveKey = async (): Promise<void> => {
       }
       showMessage('更新成功', 'success');
     } else {
-      const res = await db.collection('api_keys').add({
-        ...keyData,
-        createdAt: serverDate()
-      }) as unknown as DbAddResult;
-      const newId = res.id || res._id || '';
+      const res = await aiConfigService.saveApiKey(keyData as unknown as Record<string, unknown>);
+      const newId = String(res?.data?.id || '');
       apiKeys.value.unshift({
         ...keyData,
         _id: newId,

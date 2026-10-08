@@ -233,6 +233,7 @@
 import { ref, onMounted } from 'vue'
 import { db, callFunctionWithAuth, callCloudFunction } from '../utils/cloudbase'
 import { quoteService } from '../services/cloudBaseService'
+import { aiConfigService } from '../services/aiConfigService'
 import { useMessage, useDialog } from 'naive-ui'
 import { logger } from '../utils/logger'
 
@@ -408,12 +409,12 @@ const toggleAIGenerator = () => {
 
 const loadPromptConfig = async () => {
   try {
-    // 使用直接 db 调用：sys_config 集合无对应 Service，且使用 set() upsert 语义
-    const res = await db.collection('sys_config').doc('quotes_prompt_config').get()
-    if (res.data) {
+    // 走 manageAiConfig 云函数：sys_config 文档无 _openid，前端直连 set() 会报 duplicate key
+    const cfg = await aiConfigService.getConfig('quotes_prompt_config')
+    if (cfg) {
       promptConfig.value = {
-        generalPrompt: res.data.generalPrompt || promptConfig.value.generalPrompt,
-        categoryPrompts: res.data.categoryPrompts || {}
+        generalPrompt: (cfg.generalPrompt as string) || promptConfig.value.generalPrompt,
+        categoryPrompts: (cfg.categoryPrompts as Record<string, string>) || {}
       }
     }
   } catch (err) {
@@ -424,11 +425,9 @@ const loadPromptConfig = async () => {
 const savePromptConfig = async () => {
   savingConfig.value = true
   try {
-    // 使用直接 db 调用：sys_config 集合无对应 Service，且使用 set() upsert 语义
-    await db.collection('sys_config').doc('quotes_prompt_config').set({
+    await aiConfigService.setConfig('quotes_prompt_config', {
       generalPrompt: promptConfig.value.generalPrompt,
-      categoryPrompts: promptConfig.value.categoryPrompts,
-      updatedAt: new Date()
+      categoryPrompts: promptConfig.value.categoryPrompts
     })
     message.success('提示词配置已保存')
   } catch (err) {
