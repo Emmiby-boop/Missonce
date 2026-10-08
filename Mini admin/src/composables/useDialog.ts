@@ -75,10 +75,11 @@ export const confirmDialog = (
   title = '提示',
   type: 'warning' | 'error' | 'info' = 'warning'
 ): Promise<boolean> => {
+  // 兜底：实例还没注册（理论上不会发生，DialogRegistrar 在 App 挂载时即注册）。
+  // 用原生 confirm 兜底而不是静默拒绝，避免「点按钮没反应」的体验。
   if (!_dialogInstance) {
-    // 兜底：实例还没注册（理论上不会发生，App.vue onMounted 即注册）
-    console.warn('[confirmDialog] dialog 实例未注册，默认拒绝执行')
-    return Promise.resolve(false)
+    console.warn(`[confirmDialog] dialog 实例未注册，使用原生 confirm 兜底：${title}`)
+    return Promise.resolve(window.confirm(`${title}\n\n${content}`))
   }
   return new Promise<boolean>((resolve) => {
     _dialogInstance[type]({

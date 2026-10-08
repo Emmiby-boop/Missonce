@@ -4,6 +4,9 @@
       <NMessageProvider>
         <NDialogProvider>
           <NModalProvider>
+            <!-- 全局 dialog 实例注册：必须放在 NDialogProvider 的后代里，
+                 useDialog() 才能 inject 到实例（App.vue 自身在 Provider 外，拿不到） -->
+            <DialogRegistrar />
             <!-- 登录/注册是全屏独立页：不能套后台外壳，否则登录框会被塞进右侧内容区 -->
             <router-view v-if="isAuthRoute" />
             <!-- 其余页面走后台外壳（侧栏 + 顶栏） -->
@@ -27,9 +30,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, NLoadingBarProvider, NModalProvider, useDialog } from 'naive-ui'
+import { darkTheme, NConfigProvider, NMessageProvider, NDialogProvider, NLoadingBarProvider, NModalProvider } from 'naive-ui'
 import { lightThemeOverrides, darkThemeOverrides } from './plugins/naive'
-import { registerDialogInstance } from './composables/useDialog'
+import DialogRegistrar from './components/DialogRegistrar.vue'
 import AppInner from './AppInner.vue'
 
 // 无需后台外壳的公开页
@@ -76,8 +79,6 @@ const toggleSidebar = () => {
 
 onMounted(() => {
   applyThemeClass()
-  // 注册全局 dialog 实例：confirmDialog() 需要它（详见 composables/useDialog.ts）
-  registerDialogInstance(useDialog())
 })
 
 watch(isDark, () => {
