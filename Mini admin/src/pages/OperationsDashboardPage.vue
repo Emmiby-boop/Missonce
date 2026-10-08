@@ -697,9 +697,12 @@ const loadDashboardDirect = async () => {
     const [totalUsers, totalResources, eventsData, hotResData, activeUsersCount, categoryData] = await Promise.all([
       userService.count(),
       resourceService.count(),
+      // list() 返回 { data, total } 对象，不是数组——旧代码直接当数组用导致
+      // 「直接查询看板失败: y.forEach is not a function」
       eventService.list<any>({ limit: 100 }),
       resourceService.list<any>({ orderBy: 'hotScore', orderDir: 'desc', limit: BATCH_SIZE }),
-      userService.count({ lastLoginAt: db.command.gte(sevenDaysAgo) }),
+      // gte 需要 number 时间戳，传 Date 对象在部分 SDK 版本下会被序列化成非法查询
+      userService.count({ lastLoginAt: db.command.gte(sevenDaysAgo.getTime()) }),
       resourceService.list<any>({ limit: 100 })
     ]);
 
@@ -717,7 +720,7 @@ const loadDashboardDirect = async () => {
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
 
-      dateLabels.push(dayStart.toISOString().split('T')[0]);
+      dateLabels.push(dayStart.toISOString().split('T')[0] || '');
 
       // PV count for this day
       const pvPromise = eventService.count({
@@ -750,14 +753,14 @@ const loadDashboardDirect = async () => {
     }));
 
     const categoryCount = new Map();
-    categoryData.forEach((r: any) => {
+    (categoryData?.data || []).forEach((r: any) => {
       const cats = r.categories || [r.category].filter(Boolean);
       cats.forEach((cat: string) => {
         categoryCount.set(cat, (categoryCount.get(cat) || 0) + 1);
       });
     });
 
-    let hotResources = hotResData.map((item: any) => ({
+    let hotResources = (hotResData?.data || []).map((item: any) => ({
       id: item._id,
       ...item,
       viewCount: item.views || item.viewCount || 0
@@ -785,7 +788,7 @@ const loadDashboardDirect = async () => {
         totalUsers,
         activeUsers: activeUsersCount,
         totalResources,
-        totalViews: eventsData.length
+        totalViews: (eventsData?.data || []).length
       },
       trends,
       hotResources,
