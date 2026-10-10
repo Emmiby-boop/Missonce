@@ -437,7 +437,52 @@ page {
   font-size: 22rpx;
   color: #94a3b8;
   margin-top: 4rpx;
-  margin-bottom: 16rpx;
+}
+
+/* 现金购买价（虚拟支付开通后显示） */
+.tier-cash {
+  display: block;
+  font-size: 22rpx;
+  color: #f59e0b;
+  font-weight: 500;
+  margin-top: 6rpx;
+  margin-bottom: 10rpx;
+}
+
+.sec-title-sub {
+  font-size: 22rpx;
+  color: #94a3b8;
+  margin-left: 12rpx;
+}
+
+/* 支付方式选择弹窗按钮 */
+.cash-btn {
+  display: block;
+  width: 100%;
+  margin-top: 20rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  line-height: 2.4;
+}
+
+.cash-btn-primary {
+  background: #07c160;
+  color: #fff;
+  font-weight: 600;
+}
+
+.cash-btn-primary[disabled] {
+  background: #a7e9c4;
+  color: #fff;
+}
+
+.cash-btn-ghost {
+  background: #f1f5f9;
+  color: #1f2a44;
+}
+
+.cash-btn-ghost[disabled] {
+  color: #94a3b8;
 }
 
 .tier-btn {

@@ -49,7 +49,12 @@ Page({
       price: 0
     },
     watchAdPoints: 20,
-    watchAdDailyLimit: 15
+    watchAdDailyLimit: 15,
+    // ── 虚拟支付（现金购买会员）──
+    cashProducts: [],
+    cashBuying: false,
+    showCashModal: false,
+    cashModalProduct: null
   },
 
   onLoad() {
@@ -64,6 +69,7 @@ Page({
     this.loadRecords()
     this.loadInviteInfo()
     this.loadExchangeOptions()
+    this.loadCashProducts()
   },
 
   onShow() {
@@ -419,5 +425,190 @@ Page({
     const minutes = String(date.getMinutes()).padStart(2, '0')
 
     return `${year}-${month}-${day} ${hours}:${minutes}`
+  },
+
+  // ═══════════ 虚拟支付：现金购买会员 ═══════════
+
+  async loadCashProducts() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'virtualPay',
+        data: { action: 'getProducts' }
+      })
+      if (res.result && res.result.success) {
+        const products = res.result.data || []
+        const byLevel = {}
+        products.forEach(p => { byLevel[p.level] = p })
+        this.setData({
+          cashProducts: products,
+          cashWeeklyYuan: byLevel.weekly ? byLevel.weekly.priceYuan : '',
+          cashMonthlyYuan: byLevel.monthly ? byLevel.monthly.priceYuan : '',
+          cashQuarterlyYuan: byLevel.quarterly ? byLevel.quarterly.priceYuan : '',
+          cashYearlyYuan: byLevel.yearly ? byLevel.yearly.priceYuan : '',
+          cashLifetimeYuan: byLevel.lifetime ? byLevel.lifetime.priceYuan : ''
+        })
+      }
+    } catch (e) {
+      // 未配置虚拟支付时静默降级：现金购买入口不展示（cashProducts 为空 → wx:if 隐藏）
+      console.log('[cashPay] 虚拟支付未启用')
+    }
+  },
+
+  /** 找到会员等级对应的现金商品 */
+  getCashProduct(level) {
+    return (this.data.cashProducts || []).find(p => p.level === level) || null
+  },
+
+  /**
+   * 卡片点击：有现金价 → 弹选择（现金/辣度值）；无现金价 → 直接辣度值兑换
+   */
+  onTierTap(e) {
+    const level = e.currentTarget.dataset.level
+    const cash = this.getCashProduct(level)
+    if (cash && !this.data.cashBuying) {
+      this.setData({ showCashModal: true, cashModalProduct: cash })
+      return
+    }
+    // 无现金商品，走原积分兑换（或支付中禁止操作）
+    this.exchangeMember(e)
+  },
+
+  closeCashModal() {
+    if (this.data.cashBuying) return // 支付进行中不允许关
+    this.setData({ showCashModal: false, cashModalProduct: null })
+  },
+
+  /** 弹窗里选「辣度值兑换」：关弹窗后走原兑换流程 */
+  exchangeMemberByModal(e) {
+    if (this.data.cashBuying) return
+    this.setData({ showCashModal: false, cashModalProduct: null })
+    this.exchangeMember(e)
+  },
+
+  /** 弹窗里选「现金购买」 */
+  async buyWithCash() {
+    const product = this.data.cashModalProduct
+    if (!product || this.data.cashBuying) return
+
+    // iOS 版本校验（虚拟支付要求微信 ≥ 8.0.68）
+    if (!this.checkIosPayVersion()) return
+
+    // 基础库校验（wx.requestVirtualPayment 需 ≥ 2.19.2）
+    if (!this.canUseVirtualPayment()) {
+      wx.showModal({
+        title: '暂不支持',
+        content: '当前微信版本过低，无法使用现金支付。请升级微信后重试，或使用辣度值兑换。',
+        showCancel: false
+      })
+      return
+    }
+
+    this.setData({ cashBuying: true })
+    try {
+      // 1. wx.login 拿 code（云函数用它换 session_key 计算用户态签名）
+      const codeRes = await new Promise((resolve, reject) => {
+        wx.login({ success: resolve, fail: reject })
+      })
+      if (!codeRes.code) throw new Error('获取登录凭证失败')
+
+      // 2. 下单
+      const orderRes = await wx.cloud.callFunction({
+        name: 'virtualPay',
+        data: { action: 'createOrder', productId: product.productId, code: codeRes.code }
+      })
+      const order = orderRes.result
+      if (!order || !order.success) {
+        throw new Error((order && order.error) || '下单失败')
+      }
+
+      // 3. 拉起支付
+      const payData = order.data
+      await new Promise((resolve, reject) => {
+        wx.requestVirtualPayment({
+          signData: payData.signData,
+          paySig: payData.paySig,
+          signature: payData.signature,
+          mode: payData.mode,
+          success: resolve,
+          fail: (err) => {
+            // -2 = 用户取消，不算错误
+            if (err && err.errCode === -2) return resolve({ cancelled: true })
+            reject(new Error((err && err.errMsg) || '支付失败'))
+          }
+        })
+      })
+
+      // 4. 支付成功（success 回调可能丢失，这里只做查询兜底，真正的发货以服务端推送为准）
+      let delivered = false
+      for (let i = 0; i < 3; i++) {
+        await new Promise(r => setTimeout(r, 1500))
+        try {
+          const q = await wx.cloud.callFunction({
+            name: 'virtualPay',
+            data: { action: 'queryOrder', outTradeNo: payData.outTradeNo }
+          })
+          if (q.result && q.result.success && q.result.data.status === 'delivered') {
+            delivered = true
+            break
+          }
+        } catch (e) { /* 重试 */ }
+      }
+
+      this.setData({ showCashModal: false, cashModalProduct: null })
+      if (delivered) {
+        wx.showToast({ title: '开通成功', icon: 'success' })
+      } else {
+        // 支付成功但发货确认延迟，提示稍后自动到账（服务端推送兜底）
+        wx.showModal({
+          title: '支付成功',
+          content: '会员权益将在几秒内自动到账，可下拉刷新查看。如有疑问请联系客服。',
+          showCancel: false
+        })
+      }
+      this.loadUserInfo()
+    } catch (e) {
+      console.error('[cashPay] 购买失败:', e)
+      const msg = (e && e.message) || '支付失败'
+      wx.showToast({ title: msg.indexOf('cancel') > -1 ? '已取消支付' : msg, icon: 'none' })
+    } finally {
+      this.setData({ cashBuying: false })
+    }
+  },
+
+  /** iOS 微信版本 ≥ 8.0.68 */
+  checkIosPayVersion() {
+    try {
+      const sys = wx.getSystemInfoSync()
+      if (sys.platform !== 'ios') return true
+      const cur = (sys.version || '').split('.').map(Number)
+      const base = [8, 0, 68]
+      for (let i = 0; i < 3; i++) {
+        if ((cur[i] || 0) > base[i]) return true
+        if ((cur[i] || 0) < base[i]) break
+      }
+      wx.showModal({
+        title: '提示',
+        content: '请将微信更新至最新版后再使用现金支付',
+        showCancel: false
+      })
+      return false
+    } catch (e) {
+      return true
+    }
+  },
+
+  /** 基础库 ≥ 2.19.2 */
+  canUseVirtualPayment() {
+    try {
+      const sdk = (wx.getSystemInfoSync().SDKVersion || '0').split('.').map(Number)
+      const base = [2, 19, 2]
+      for (let i = 0; i < 3; i++) {
+        if ((sdk[i] || 0) > base[i]) return true
+        if ((sdk[i] || 0) < base[i]) return false
+      }
+      return true
+    } catch (e) {
+      return wx.canIUse && wx.canIUse('requestVirtualPayment')
+    }
   }
 })

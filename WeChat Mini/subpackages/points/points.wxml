@@ -174,63 +174,69 @@
   <!-- ⑥ 会员兑换 -->
   <view class="sec-head" id="vip-section">
     <text class="sec-title">会员兑换</text>
+    <text wx:if="{{cashProducts.length > 0}}" class="sec-title-sub">现金购买 或 辣度值兑换</text>
   </view>
 
   <scroll-view class="tier-scroll" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="tier-row">
       <!-- 周卡 -->
-      <view class="tier" bindtap="exchangeMember" data-level="weekly">
+      <view class="tier" bindtap="onTierTap" data-level="weekly">
         <text class="tier-badge tier-badge-w">周卡</text>
         <text class="tier-name">7 天</text>
         <text class="tier-price">{{memberPrices.weekly}}</text>
         <text class="tier-unit">辣度值</text>
-        <view class="tier-btn {{points < memberPrices.weekly ? 'tier-btn-off' : ''}}">
-          <text>{{points < memberPrices.weekly ? '辣度值不足' : '兑换'}}</text>
+        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashWeeklyYuan}}</text>
+        <view class="tier-btn {{points < memberPrices.weekly && !cashProducts.length ? 'tier-btn-off' : ''}}">
+          <text>{{points < memberPrices.weekly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
       </view>
 
       <!-- 月卡（推荐） -->
-      <view class="tier tier-rec" bindtap="exchangeMember" data-level="monthly">
+      <view class="tier tier-rec" bindtap="onTierTap" data-level="monthly">
         <view class="tier-rec-tag">推荐</view>
         <text class="tier-badge tier-badge-m">月卡</text>
         <text class="tier-name">30 天</text>
         <text class="tier-price">{{memberPrices.monthly}}</text>
         <text class="tier-unit">辣度值</text>
+        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashMonthlyYuan}}</text>
         <view class="tier-btn tier-btn-on">
-          <text>{{points < memberPrices.monthly ? '辣度值不足' : '兑换'}}</text>
+          <text>{{points < memberPrices.monthly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
       </view>
 
       <!-- 季卡 -->
-      <view class="tier" bindtap="exchangeMember" data-level="quarterly">
+      <view class="tier" bindtap="onTierTap" data-level="quarterly">
         <text class="tier-badge tier-badge-q">季卡</text>
         <text class="tier-name">90 天</text>
         <text class="tier-price">{{memberPrices.quarterly}}</text>
         <text class="tier-unit">辣度值</text>
-        <view class="tier-btn {{points < memberPrices.quarterly ? 'tier-btn-off' : ''}}">
-          <text>{{points < memberPrices.quarterly ? '辣度值不足' : '兑换'}}</text>
+        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashQuarterlyYuan}}</text>
+        <view class="tier-btn {{points < memberPrices.quarterly && !cashProducts.length ? 'tier-btn-off' : ''}}">
+          <text>{{points < memberPrices.quarterly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
       </view>
 
       <!-- 年卡 -->
-      <view class="tier" bindtap="exchangeMember" data-level="yearly">
+      <view class="tier" bindtap="onTierTap" data-level="yearly">
         <text class="tier-badge tier-badge-y">年卡</text>
         <text class="tier-name">365 天</text>
         <text class="tier-price">{{memberPrices.yearly}}</text>
         <text class="tier-unit">辣度值</text>
-        <view class="tier-btn {{points < memberPrices.yearly ? 'tier-btn-off' : ''}}">
-          <text>{{points < memberPrices.yearly ? '辣度值不足' : '兑换'}}</text>
+        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashYearlyYuan}}</text>
+        <view class="tier-btn {{points < memberPrices.yearly && !cashProducts.length ? 'tier-btn-off' : ''}}">
+          <text>{{points < memberPrices.yearly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
       </view>
 
       <!-- 终身 -->
-      <view class="tier tier-gold" bindtap="exchangeMember" data-level="lifetime">
+      <view class="tier tier-gold" bindtap="onTierTap" data-level="lifetime">
         <text class="tier-badge tier-badge-l">终身</text>
         <text class="tier-name">永久</text>
         <text class="tier-price">{{memberPrices.lifetime}}</text>
         <text class="tier-unit">辣度值</text>
-        <view class="tier-btn {{points < memberPrices.lifetime ? 'tier-btn-off' : ''}}">
-          <text>{{points < memberPrices.lifetime ? '辣度值不足' : '兑换'}}</text>
+        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashLifetimeYuan}}</text>
+        <view class="tier-btn {{points < memberPrices.lifetime && !cashProducts.length ? 'tier-btn-off' : ''}}">
+          <text>{{points < memberPrices.lifetime && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
       </view>
     </view>
@@ -323,6 +329,29 @@
 
   <button class="invite-btn" open-type="share">邀请好友</button>
   <view class="modal-close" bindtap="closeInviteModal">
+    <text>✕</text>
+  </view>
+</view>
+
+<!-- 支付方式选择弹窗（现金购买会员） -->
+<view class="modal-mask" wx:if="{{showCashModal}}" bindtap="closeCashModal"></view>
+<view class="modal cash-modal" wx:if="{{showCashModal}}">
+  <view class="modal-top">
+    <text class="modal-title">{{cashModalProduct.name}}</text>
+    <text class="modal-sub">选择支付方式</text>
+  </view>
+
+  <!-- 现金购买（虚拟支付） -->
+  <button class="cash-btn cash-btn-primary" bindtap="buyWithCash" disabled="{{cashBuying}}">
+    {{cashBuying ? '支付中...' : '现金购买 ¥' + cashModalProduct.priceYuan}}
+  </button>
+
+  <!-- 辣度值兑换 -->
+  <button class="cash-btn cash-btn-ghost" bindtap="exchangeMemberByModal" data-level="{{cashModalProduct.level}}" disabled="{{cashBuying}}">
+    辣度值兑换（{{memberPrices[cashModalProduct.level]}} 辣度值）
+  </button>
+
+  <view class="modal-close" bindtap="closeCashModal">
     <text>✕</text>
   </view>
 </view>
