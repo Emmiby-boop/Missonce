@@ -74,19 +74,63 @@ function calcSignature(postBody, sessionKey) {
   return crypto.createHmac('sha256', sessionKey).update(postBody, 'utf8').digest('hex')
 }
 
-// ─── sessionKey 获取：前端传 code，服务端 code2Session ───
-
+// ─── sessionKey 获取：前端传 code，直调 jscode2session ───
+/**
+ * ⚠️ 云函数里**没有** openapi 的 code2Session 接口。
+ * `cloud.openapi.auth.code2Session` / `cloud.openapi.login.code2Session`
+ * 都会报 `-604100 API not found`（云开发设计上不暴露 session_key，
+ * 官方社区原话：「云开发本身可以免鉴权获取到 openid/unionid，也无需多此一举」）。
+ *
+ * 虚拟支付的 signature = HMAC-SHA256(session_key, signData) 必须有 session_key，
+ * 只能按官方指引直调服务端接口 `sns/jscode2session`，需要小程序 AppSecret。
+ *
+ * AppSecret 走云函数环境变量 WECHAT_APP_SECRET，不写进代码。
+ */
 async function getSessionKeyByCode(code, appid) {
   const wxContext = cloud.getWXContext()
-  const sess = await cloud.openapi.auth.code2Session({
-    js_code: code,
-    grant_type: 'authorization_code',
-    appid: appid || wxContext.APPID
-  })
-  if (!sess || !sess.session_key) {
-    throw new Error('code2Session 未返回 session_key')
+  const appId = appid || wxContext.APPID
+  const appSecret = process.env.WECHAT_APP_SECRET
+
+  if (!appSecret) {
+    const err = new Error(
+      '未配置小程序 AppSecret：请在云开发控制台 → 云函数 → 环境变量中添加 WECHAT_APP_SECRET'
+    )
+    err.code = 'VP_NO_APP_SECRET'
+    throw err
   }
-  return sess
+
+  const url = 'https://api.weixin.qq.com/sns/jscode2session'
+    + '?appid=' + encodeURIComponent(appId)
+    + '&secret=' + encodeURIComponent(appSecret)
+    + '&js_code=' + encodeURIComponent(code)
+    + '&grant_type=authorization_code'
+
+  const raw = await new Promise((resolve, reject) => {
+    const req = https.request(url, { method: 'GET', timeout: 10000 }, (res) => {
+      let buf = ''
+      res.on('data', (c) => buf += c)
+      res.on('end', () => resolve(buf))
+    })
+    req.on('timeout', () => { req.destroy(); reject(new Error('jscode2session 超时')) })
+    req.on('error', reject)
+    req.end()
+  })
+
+  let data
+  try {
+    data = JSON.parse(raw)
+  } catch (e) {
+    throw new Error('jscode2session 响应解析失败: ' + String(raw).slice(0, 200))
+  }
+
+  if (data.errcode) {
+    // 40029 code 无效 / 45011 频率限制 / 40125 AppSecret 错误
+    const err = new Error('jscode2session 失败: ' + (data.errmsg || data.errcode) + ' (errcode: ' + data.errcode + ')')
+    err.code = 'VP_CODE2SESSION_FAIL'
+    throw err
+  }
+  if (!data.session_key) throw new Error('jscode2session 未返回 session_key')
+  return data
 }
 
 // ─── outTradeNo 生成（8-32 位，唯一，不以下划线开头） ──
