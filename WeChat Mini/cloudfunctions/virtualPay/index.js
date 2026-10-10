@@ -141,6 +141,46 @@ function genOutTradeNo() {
   return 'T' + ts + rnd // 19 位
 }
 
+// ─── 订单集合自愈 ────────────────────────────────────
+// CloudBase 里集合必须显式创建，首次部署新环境时容易漏建，表现为
+// `collection.add:fail -502005 DATABASE_COLLECTION_NOT_EXIST`。
+// 这里在首次遇到该错误时自动补建并重试一次，避免线上支付直接不可用。
+const ORDERS_COLLECTION = 'virtual_pay_orders'
+const NOT_EXIST_RE = /-502005|DATABASE_COLLECTION_NOT_EXIST|Db or Table not exist|ResourceNotFound/i
+
+let _collectionEnsured = false
+
+async function ensureOrdersCollection() {
+  if (_collectionEnsured) return true
+  try {
+    await db.createCollection(ORDERS_COLLECTION)
+    _collectionEnsured = true
+    return true
+  } catch (e) {
+    const msg = String(e && (e.message || e.errMsg || e))
+    // 已存在同样视为就绪
+    if (/exist|already/i.test(msg)) {
+      _collectionEnsured = true
+      return true
+    }
+    console.error('[virtualPay] 创建订单集合失败:', msg)
+    return false
+  }
+}
+
+/** 订单集合写入/查询的统一入口：集合不存在时自愈一次 */
+async function ordersCollection() {
+  const col = db.collection(ORDERS_COLLECTION)
+  try {
+    await col.limit(1).get()
+    _collectionEnsured = true
+  } catch (e) {
+    if (!NOT_EXIST_RE.test(String(e && (e.message || e.errMsg || e)))) throw e
+    await ensureOrdersCollection()
+  }
+  return db.collection(ORDERS_COLLECTION)
+}
+
 // ─── 首购判定 ────────────────────────────────────
 // 判定口径：该用户在 virtual_pay_orders 里没有任何已支付/已发货的现金订单。
 // 只看现金订单，不看 member_records —— 用辣度值兑换过的用户，
@@ -149,7 +189,8 @@ const PAID_STATUS = ['paid', 'delivered']
 
 async function hasPaidCashOrder(openid) {
   try {
-    const res = await db.collection('virtual_pay_orders')
+    const col = await ordersCollection()
+    const res = await col
       .where({ _openid: openid, status: _.in(PAID_STATUS) })
       .limit(1)
       .get()
@@ -208,7 +249,8 @@ async function deliverMember(openid, level, productName, orderId) {
   if (days === undefined) throw new Error('无效会员等级: ' + level)
 
   // 幂等：先查订单是否已发货（virtualPayNotify 与 queryOrder 兜底可能并发到达）
-  const orderRes = await db.collection('virtual_pay_orders')
+  const ordersCol = await ordersCollection()
+  const orderRes = await ordersCol
     .where({ outTradeNo: orderId }).limit(1).get()
   const order = orderRes.data[0]
   if (!order) throw new Error('订单不存在: ' + orderId)
@@ -274,7 +316,8 @@ async function deliverMember(openid, level, productName, orderId) {
   })
 
   // 订单标记已发货
-  await db.collection('virtual_pay_orders').doc(order._id).update({
+  const deliverCol = await ordersCollection()
+  await deliverCol.doc(order._id).update({
     data: {
       status: 'delivered',
       deliveredAt: new Date()
@@ -389,7 +432,8 @@ exports.main = async (event, context) => {
       const signature = calcSignature(signData, sessionKey)
 
       // 订单入库
-      await db.collection('virtual_pay_orders').add({
+      const ordersColForAdd = await ordersCollection()
+      await ordersColForAdd.add({
         data: {
           _openid: openid,
           outTradeNo,
@@ -425,7 +469,8 @@ exports.main = async (event, context) => {
       const outTradeNo = event.outTradeNo
       if (!outTradeNo) return { success: false, error: '缺少 outTradeNo' }
 
-      const orderRes = await db.collection('virtual_pay_orders')
+      const ordersColQ = await ordersCollection()
+      const orderRes = await ordersColQ
         .where({ _openid: openid, outTradeNo }).limit(1).get()
       const order = orderRes.data[0]
       if (!order) return { success: false, error: '订单不存在' }
@@ -457,7 +502,8 @@ exports.main = async (event, context) => {
         || queryRes.status === 'PAID' || queryRes.order_status === 2 // 兼容多种返回结构
       if (paid && order.status !== 'delivered') {
         // 先标记 paid
-        await db.collection('virtual_pay_orders').doc(order._id).update({
+        const paidCol = await ordersCollection()
+        await paidCol.doc(order._id).update({
           data: { status: 'paid', paidAt: new Date(), wxOrderId: queryRes.order && queryRes.order.order_id || order.wxOrderId }
         })
         await deliverMember(openid, order.level, order.productName, outTradeNo)
@@ -470,7 +516,8 @@ exports.main = async (event, context) => {
     // ── 我的订单列表（前端展示） ──
     if (action === 'myOrders') {
       if (!openid) return { success: false, error: '未获取到用户身份' }
-      const res = await db.collection('virtual_pay_orders')
+      const myCol = await ordersCollection()
+      const res = await myCol
         .where({ _openid: openid })
         .orderBy('createdAt', 'desc')
         .limit(20)
@@ -518,12 +565,34 @@ exports.main = async (event, context) => {
         .filter(Boolean)
         .sort((a, b) => (order[a.level] ?? 99) - (order[b.level] ?? 99))
 
-      return { success: true, data: list }
+      return {
+        success: true,
+        data: list,
+        // 首购判定上下文（真机自检用：CLI/无 openid 时 isFirstPurchase 必然 false）
+        debug: {
+          hasOpenid: !!openid,
+          isFirst,
+          firstEnabled,
+          tiers: Object.keys(tiers)
+        }
+      }
     }
 
     return { success: false, error: '无效的 action: ' + action }
   } catch (e) {
     console.error('[virtualPay] 错误:', e)
+    const rawMsg = String((e && (e.message || e.errMsg)) || e)
+    // 集合缺失是运维类问题，给出可读提示而不是把 -502005 抛给前端
+    if (NOT_EXIST_RE.test(rawMsg)) {
+      const ok = await ensureOrdersCollection()
+      return {
+        success: false,
+        code: ok ? 'VP_ORDERS_COLLECTION_ERROR' : 'VP_ORDERS_COLLECTION_MISSING',
+        error: ok
+          ? '订单存储异常，请稍后重试'
+          : '订单存储未初始化，请联系客服'
+      }
+    }
     return { success: false, error: e.message, code: e.code || undefined }
   }
 }

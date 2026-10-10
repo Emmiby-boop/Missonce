@@ -1,5 +1,12 @@
 {
   "navigationBarTitleText": "微信小店",
   "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black"
+  "navigationBarTextStyle": "black",
+  "plugins": {
+    "store-product": {
+      "version": "1.0.9",
+      "provider": "wx-wxa-secommerce-store"
+    }
+  },
+  "usingComponents": {}
 }

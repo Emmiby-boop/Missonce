@@ -1,7 +1,9 @@
 import { STORE_APPID, STORE_PRODUCT_IDS } from '../../config/constants'
 
-const app = getApp()
 const db = wx.cloud.database()
+
+// store-product 是微信小店官方插件（plugin://wx-wxa-secommerce-store），
+// 已在 store.json 的 plugins 段声明。漏掉声明真机上整页渲染失败。
 
 Page({
   data: {
