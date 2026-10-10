@@ -1,0 +1,276 @@
+<!-- 辣度值页 · 2026-10-10 从会员中心拆分
+     职责单一：我的积分 —— 攒与花。购买会员请去会员页。 -->
+<view class="sp-page">
+
+  <!-- 导航栏 -->
+  <view class="nav" style="padding-top: {{statusBarHeight}}px;">
+    <view class="nav-inner" style="height: {{navBarHeight}}px;">
+      <view class="nav-back" bindtap="goBack">
+        <image class="nav-back-img" src="/images/preview-back.svg" mode="aspectFit" />
+      </view>
+      <text class="nav-title">我的辣度值</text>
+      <view class="nav-help" bindtap="toggleRules">?</view>
+    </view>
+  </view>
+  <!-- fixed 导航栏必须占位，否则正文会被压到栏下 -->
+  <view style="height: {{statusBarHeight + navBarHeight}}px;"></view>
+
+  <!-- ① 余额卡 -->
+  <view class="balance">
+    <view class="balance-deco"></view>
+    <text class="balance-label">当前辣度值</text>
+    <view class="balance-row">
+      <text class="balance-num">{{points}}</text>
+    </view>
+    <view class="balance-foot">
+      <text class="balance-total">累计获得 {{totalPoints}}</text>
+      <text class="balance-member" wx:if="{{isMember}}">会员生效中 · 兑换不再重复扣费</text>
+    </view>
+  </view>
+
+  <!-- ② 签到条（压缩成一行，借鉴壁纸二：签到不该占满首屏）
+       圆点状态由 js 的 buildCheckInDots() 派生：0=未达成 1=已完成 2=今天待签
+       —— 不在 wxml 里做 %7 取模，那在连续 7/14/21 天时有边界 bug -->
+  <view class="checkin {{isCheckedIn ? 'is-checked' : ''}}" bindtap="handleCheckIn">
+    <view class="checkin-left">
+      <text class="checkin-title">{{isCheckedIn ? '今日已签到' : '每日签到'}}</text>
+      <text class="checkin-desc">{{isCheckedIn ? ('连续 ' + checkInStreak + ' 天') : ('+' + checkInReward + ' 辣度值')}}</text>
+    </view>
+    <view class="checkin-dots">
+      <view class="checkin-dot {{item === 1 ? 'is-done' : ''}} {{item === 2 ? 'is-today' : ''}}"
+            wx:for="{{checkInDots}}" wx:key="index"></view>
+    </view>
+    <view class="checkin-btn {{isCheckedIn ? 'is-done' : ''}}">
+      <text>{{isCheckedIn ? '已完成' : '签到'}}</text>
+    </view>
+  </view>
+
+  <!-- ③ 赚辣度值 -->
+  <view class="sec-head" id="earn-section">
+    <text class="sec-title">赚辣度值</text>
+    <text class="sec-title-sub">每日更新</text>
+  </view>
+
+  <view class="actions">
+    <button class="act-row act-row-btn" open-type="share" hover-class="none">
+      <view class="act-icon act-icon-share">
+        <image class="act-icon-img" src="/images/icon-points-share.svg" mode="aspectFit" />
+      </view>
+      <view class="act-info">
+        <text class="act-name">分享给好友</text>
+        <text class="act-desc">每日最多 {{shareDailyLimit}} 次</text>
+      </view>
+      <text class="act-pts">+{{shareReward}}</text>
+    </button>
+
+    <view class="act-row" bindtap="inviteFriend">
+      <view class="act-icon act-icon-invite">
+        <image class="act-icon-img" src="/images/icon-points-invite.svg" mode="aspectFit" />
+      </view>
+      <view class="act-info">
+        <text class="act-name">邀请好友</text>
+        <text class="act-desc">好友完成 3 次动作即得</text>
+      </view>
+      <text class="act-pts">+{{inviteReward}}</text>
+    </view>
+
+    <view class="act-row" bindtap="watchAdForPoints">
+      <view class="act-icon act-icon-video">
+        <image class="act-icon-img" src="/images/icon-points-video.svg" mode="aspectFit" />
+      </view>
+      <view class="act-info">
+        <text class="act-name">观看视频</text>
+        <text class="act-desc">每日最多 {{watchAdDailyLimit}} 次</text>
+      </view>
+      <text class="act-pts">+{{watchAdPoints}}</text>
+    </view>
+  </view>
+
+  <!-- 激励视频广告组件（隐藏，show-button=false）-->
+  <view class="ad-hidden">
+    <ad-unit kind="rewarded"
+             id="rewardAdComp"
+             page-path="/subpackages/spicy/spicy"
+             reward-cloud-name="userPoints"
+             reward-cloud-action="rewardAdWatch"
+             reward-points="{{watchAdPoints}}"
+             button-text="观看激励视频获取辣度值"
+             show-button="{{false}}"
+             bind:rewarded="onRewardedFinished"></ad-unit>
+  </view>
+
+  <!-- ④ 兑换 -->
+  <view class="sec-head" id="exchange-section">
+    <text class="sec-title">兑换</text>
+    <text class="sec-title-sub">攒够了就来换</text>
+  </view>
+
+  <view class="ex-mem" wx:if="{{exchangeOptions && exchangeOptions.members.length}}">
+    <text class="ex-group-title">会员权益</text>
+    <view class="ex-row"
+          wx:for="{{exchangeOptions.members}}"
+          wx:key="level"
+          bindtap="onPickExchange"
+          data-type="member"
+          data-key="{{item.level}}">
+      <view class="ex-main">
+        <text class="ex-name">{{item.name}}</text>
+        <text class="ex-desc" wx:if="{{item.days}}">{{item.days}} 天</text>
+        <text class="ex-desc" wx:else>永久有效</text>
+      </view>
+      <view class="ex-right">
+        <text class="ex-price">{{item.points}}</text>
+        <text class="ex-unit">辣度值</text>
+        <text class="ex-btn {{points < item.points ? 'ex-btn-off' : ''}}">
+          {{points < item.points ? '积分不足' : '兑换'}}
+        </text>
+      </view>
+    </view>
+  </view>
+
+  <view class="ex-dl" wx:if="{{exchangeOptions && exchangeOptions.downloads.length}}">
+    <text class="ex-group-title">下载次数</text>
+    <view class="ex-row"
+          wx:for="{{exchangeOptions.downloads}}"
+          wx:key="count"
+          bindtap="onPickExchange"
+          data-type="download"
+          data-key="{{item.count}}">
+      <view class="ex-main">
+        <text class="ex-name">{{item.name}}</text>
+        <text class="ex-desc" wx:if="{{item.bonus}}">{{item.bonus}}</text>
+        <text class="ex-desc" wx:else>下载时抵扣</text>
+      </view>
+      <view class="ex-right">
+        <text class="ex-price">{{item.points}}</text>
+        <text class="ex-unit">辣度值</text>
+        <text class="ex-btn {{points < item.points ? 'ex-btn-off' : ''}}">
+          {{points < item.points ? '积分不足' : '兑换'}}
+        </text>
+      </view>
+    </view>
+  </view>
+
+  <view class="ex-empty" wx:if="{{exchangeOptions && !exchangeOptions.members.length && !exchangeOptions.downloads.length}}">
+    <text class="ex-empty-t">暂无可兑换项目</text>
+  </view>
+
+  <!-- ⑤ 流水记录 -->
+  <view class="sec-head">
+    <text class="sec-title">明细</text>
+    <text class="sec-title-sub">最近 {{records.length}} 条</text>
+  </view>
+
+  <view class="records">
+    <view class="rec-loading" wx:if="{{loading}}">
+      <view class="spinner"></view>
+    </view>
+
+    <view class="rec-empty" wx:elif="{{!records.length}}">
+      <text class="rec-empty-t">还没有记录</text>
+      <text class="rec-empty-s">签到或看视频就能获得第一个辣度值</text>
+    </view>
+
+    <view class="rec-row" wx:else wx:for="{{records}}" wx:key="_id">
+      <view class="rec-dot {{item.type === 'checkIn' ? 'rec-dot-check' : (item.amount > 0 ? 'rec-dot-in' : 'rec-dot-out')}}"></view>
+      <view class="rec-main">
+        <text class="rec-desc">{{item.description}}</text>
+        <text class="rec-time">{{item.timeText}}</text>
+      </view>
+      <text class="rec-amt {{item.amount > 0 ? 'rec-amt-in' : 'rec-amt-out'}}">
+        {{item.amount > 0 ? '+' : ''}}{{item.amount}}
+      </text>
+    </view>
+
+    <view class="rec-more" wx:if="{{records.length && hasMore}}" bindtap="loadMore">
+      <text>{{loadingMore ? '加载中...' : '加载更多'}}</text>
+    </view>
+    <view class="rec-more rec-more-end" wx:elif="{{records.length && !hasMore}}">
+      <text>没有更多了</text>
+    </view>
+  </view>
+
+  <!-- ⑥ 规则 -->
+  <view class="sec-head" id="spicy-rules">
+    <text class="sec-title">辣度值规则</text>
+  </view>
+
+  <view class="rules">
+    <view class="rule">
+      <text class="rule-title">怎么获得</text>
+      <text class="rule-line">· 每日签到 +{{checkInReward}}，连续签到有额外奖励</text>
+      <text class="rule-line">· 分享给好友 +{{shareReward}}，每日最多 {{shareDailyLimit}} 次</text>
+      <text class="rule-line">· 观看激励视频 +{{watchAdPoints}}，每日最多 {{watchAdDailyLimit}} 次</text>
+      <text class="rule-line">· 邀请好友 +{{inviteReward}}，好友完成 3 次动作后到账</text>
+    </view>
+    <view class="rule">
+      <text class="rule-title">怎么使用</text>
+      <text class="rule-line">· 兑换会员（下方兑换区），权益与现金购买完全一致</text>
+      <text class="rule-line">· 兑换下载次数，下载时自动抵扣</text>
+      <text class="rule-line">· 兑换长周期会员更划算，每 1000辣度值可换天数随周期递增</text>
+    </view>
+    <view class="rule rule-warn">
+      <text class="rule-title">注意事项</text>
+      <text class="rule-line">· 辣度值仅限本人账号使用，不可交易、不可提现、不可转让</text>
+      <text class="rule-line">· 兑换后不支持退还辣度值，请谨慎选择</text>
+      <text class="rule-line">· 发现作弊行为（刷量、脚本等）将取消奖励并扣除积分</text>
+    </view>
+  </view>
+
+  <view class="page-tail"></view>
+</view>
+
+<!-- 邀请好友弹窗 -->
+<view class="mask" wx:if="{{showInviteModal}}" bindtap="closeInviteModal"></view>
+<view class="sheet" wx:if="{{showInviteModal}}">
+  <view class="sheet-head">
+    <text class="sheet-title">邀请好友</text>
+    <text class="sheet-sub">成功邀请 1 人立得 {{inviteReward}} 辣度值</text>
+  </view>
+  <view class="inv-stats">
+    <view class="inv-stat">
+      <text class="inv-num">{{inviteInfo.todayInvites}}</text>
+      <text class="inv-label">今日邀请</text>
+    </view>
+    <view class="inv-stat">
+      <text class="inv-num">{{inviteInfo.totalInvites}}</text>
+      <text class="inv-label">累计邀请</text>
+    </view>
+    <view class="inv-stat">
+      <text class="inv-num">{{inviteInfo.validInvites}}</text>
+      <text class="inv-label">已得奖励</text>
+    </view>
+  </view>
+  <view class="inv-rules" wx:if="{{inviteInfo.rules.length}}">
+    <text class="inv-rule" wx:for="{{inviteInfo.rules}}" wx:key="index">{{item}}</text>
+  </view>
+  <button class="sheet-btn" open-type="share" hover-class="none">
+    <text>分享邀请链接</text>
+  </button>
+  <view class="sheet-close" bindtap="closeInviteModal"><text>✕</text></view>
+</view>
+
+<!-- 兑换确认弹窗 -->
+<view class="mask" wx:if="{{exchangePick}}" bindtap="closeExchange"></view>
+<view class="dialog" wx:if="{{exchangePick}}">
+  <view class="dlg-top">
+    <text class="dlg-title">确认兑换</text>
+    <text class="dlg-sub">{{exchangePick.title}}</text>
+  </view>
+  <view class="dlg-info">
+    <text class="dlg-info-line">{{exchangePick.desc}}</text>
+    <view class="dlg-cost">
+      <text class="dlg-cost-label">需消耗</text>
+      <text class="dlg-cost-num">{{exchangePick.price}}</text>
+      <text class="dlg-cost-unit">辣度值</text>
+    </view>
+    <view class="dlg-rest">
+      <text>兑换后剩余 {{points - exchangePick.price}} 辣度值</text>
+    </view>
+  </view>
+  <view class="dlg-btns">
+    <view class="dlg-btn dlg-btn-ghost" bindtap="closeExchange">再想想</view>
+    <view class="dlg-btn dlg-btn-primary" bindtap="confirmExchange" wx:if="{{!exchanging}}">确认兑换</view>
+    <view class="dlg-btn dlg-btn-primary dlg-btn-off" wx:else>兑换中...</view>
+  </view>
+</view>

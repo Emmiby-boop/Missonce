@@ -82,13 +82,17 @@ Page({
     cashFirstYuan: '',
 
     // Menu Configuration - 浅色渐变背景搭配白色描边图标
+    // ⚠️ key 是 onMenuItemTap 的分发依据（改造前用的是 switch(title) 字符串匹配，
+    //    改标题就会静默失效）。新增菜单项必须给 key。
+    // ⚠️ 会员中心与我的辣度值已拆分为两个页面（subpackages/points 与 subpackages/spicy），
+    //    改造前两者都跳同一个页points，desc 还一个是空串。
     menuItems: [
       { title: '会员中心', iconPath: '/images/menu-vip.svg', color: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', desc: '开通享特权', key: 'memberCenter' },
-      { title: '我的辣度值', iconPath: '/images/menu-points.svg', color: 'linear-gradient(135deg, #fed7aa, #fdba74)', desc: '', key: 'points' },
-      { title: '联系我们', iconPath: '/images/menu-contact.svg', color: 'linear-gradient(135deg, #bbf7d0, #86efac)', desc: '客服与反馈' },
-      { title: '推荐给好友', iconPath: '/images/menu-share.svg', color: 'linear-gradient(135deg, #bfdbfe, #93c5fd)', desc: '分享给好友', isShare: true },
-      { title: '清除缓存', iconPath: '/images/menu-clear.svg', color: 'linear-gradient(135deg, #fef3c7, #fde68a)', desc: '释放存储空间' },
-      { title: '关于我们', iconPath: '/images/menu-about.svg', color: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', desc: '版本与介绍' }
+      { title: '我的辣度值', iconPath: '/images/menu-points.svg', color: 'linear-gradient(135deg, #fed7aa, #fdba74)', desc: '签到·分享·看视频', key: 'spicy' },
+      { title: '联系我们', iconPath: '/images/menu-contact.svg', color: 'linear-gradient(135deg, #bbf7d0, #86efac)', desc: '客服与反馈', key: 'contact' },
+      { title: '推荐给好友', iconPath: '/images/menu-share.svg', color: 'linear-gradient(135deg, #bfdbfe, #93c5fd)', desc: '分享给好友', key: 'share', isShare: true },
+      { title: '清除缓存', iconPath: '/images/menu-clear.svg', color: 'linear-gradient(135deg, #fef3c7, #fde68a)', desc: '释放存储空间', key: 'clearCache' },
+      { title: '关于我们', iconPath: '/images/menu-about.svg', color: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', desc: '版本与介绍', key: 'about' }
     ]
   },
 
@@ -202,6 +206,13 @@ Page({
     // 此时不能被 30 秒节流挡住，否则卡位仍显示「未开通」。
     if (isLoggedIn && this._leftForPoints) {
       this._leftForPoints = false
+      this.loadMemberInfo()
+    }
+
+    // 🔥 从辣度值页返回同理：可能刚签到 / 兑换完，余额要立刻更新
+    // （菜单项与积分入口都直接显示 {{points}}）
+    if (isLoggedIn && this._leftForSpicy) {
+      this._leftForSpicy = false
       this.loadMemberInfo()
     }
   },
@@ -716,36 +727,55 @@ Page({
   // 菜单处理逻辑
   // ---------------------------------------------------------
 
+  /**
+ * 菜单点击分发
+ * ⚠️ 2026-10-10 改造：原来用 switch(title) 字符串匹配，改标题就静默失效；
+ *   menuItems 里的 key 字段当时是死字段。现改为按 key 分发（见 menuItems 注释）。
+ */
   onMenuItemTap(e) {
-    const title = e.currentTarget.dataset.title
-    switch (title) {
-      case '会员中心':
+    const key = e.currentTarget.dataset.key
+    switch (key) {
+      case 'memberCenter':
         this.goPointsPage()
         break
 
-      case '我的辣度值':
-        this.goPointsPage()
+      case 'spicy':
+        this.goSpicyPage()
         break
 
-      case '联系我们':
+      case 'contact':
         this.handleContact()
         break
 
-      case '清除缓存':
+      case 'clearCache':
         this.handleClearCache()
         break
-      case '关于我们':
+
+      case 'about':
         this.handleAbout()
         break
       default:
+        console.warn('[profile] 未知菜单项 key:', key)
         break
     }
   },
 
-  /** 跳转会员中心（subpackages/points/points 兼会员中心与辣度值） */
+  /** 跳转会员中心（subpackages/points/points） */
   goPointsPage() {
     this._leftForPoints = true
-    wx.navigateTo({ url: '/subpackages/points/points' })
+    wx.navigateTo({
+      url: '/subpackages/points/points',
+      fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' })
+    })
+  },
+
+  /** 跳转辣度值页（subpackages/spicy/spicy，2026-10-10 从会员中心拆分） */
+  goSpicyPage() {
+    this._leftForSpicy = true
+    wx.navigateTo({
+      url: '/subpackages/spicy/spicy',
+      fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' })
+    })
   },
 
   /** 顶部会员卡位点击 → 会员中心 */
@@ -1013,12 +1043,7 @@ Page({
   // ---------------------------------------------------------
   // 收藏功能逻辑
   // ---------------------------------------------------------
-
-  openLikes() {
-    wx.navigateTo({
-      url: '/subpackages/resource-list/resource-list?type=likes&title=我的点赞'
-    })
-  },
+  // 注：原 openLikes() 已删（wxml 零绑定的死方法，且与 openFavorites 职责重复）
 
   openFavorites() {
     if (!this.data.userInfo) {
@@ -1306,6 +1331,11 @@ Page({
   },
 
   onShareAppMessage() {
+    // 分享奖励发放 —— 2026-10-10 修 bug：
+    // 此前「我的」页分享不触发 recordShareReward，用户分享拿不到辣度值。
+    const { recordShareReward } = require('../../utils/shareReward.js')
+    setTimeout(() => recordShareReward(), 500)
+
     const userInfo = getStorage('userInfo')
     const inviterParam = userInfo && userInfo.openid ? '?inviter=' + userInfo.openid : ''
     return {
@@ -1316,6 +1346,10 @@ Page({
   },
 
   onShareTimeline() {
+    // 朋友圈分享同样发放奖励
+    const { recordShareReward } = require('../../utils/shareReward.js')
+    setTimeout(() => recordShareReward(), 500)
+
     const userInfo = getStorage('userInfo')
     const inviterParam = userInfo && userInfo.openid ? 'inviter=' + userInfo.openid : ''
     return {

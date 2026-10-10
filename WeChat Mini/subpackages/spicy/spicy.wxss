@@ -1,0 +1,833 @@
+/* ============================================================
+   辣度值页· 微信绿主题
+   配色全部走 app.wxss → config/tokens.wxss 的 CSS 变量，暗色自动跟随
+   ============================================================ */
+
+page {
+  background: var(--bg-color);
+}
+
+.sp-page {
+  min-height: 100vh;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+}
+
+/* ============================================================
+   导航栏
+   ============================================================ */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: var(--card-bg);
+  box-shadow: 0 1rpx 0 rgba(7, 193, 96, 0.10);
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 8px;
+}
+
+.nav-back {
+  width: 44px; height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+}
+
+.nav-back-img {
+  width: 22px; height: 22px;
+}
+
+.nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.nav-help {
+  width: 36rpx; height: 36rpx;
+  margin-left: auto;
+  margin-right: 6rpx;
+  line-height: 34rpx;
+  text-align: center;
+  border-radius: 50%;
+  border: 2rpx solid var(--text-sub);
+  font-size: 24rpx;
+  color: var(--text-sub);
+}
+
+/* 导航占位由 wxml 里的 <view style="height:{{statusBarHeight + navBarHeight}}px"> 提供 */
+
+/* ============================================================
+   ① 余额卡
+   ============================================================ */
+.balance {
+  position: relative;
+  overflow: hidden;
+  margin: 16rpx 24rpx 0;
+  padding: 40rpx 32rpx 32rpx;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, #0f3d24 0%, #12603a 45%, #07C160 100%);
+  box-shadow: 0 8rpx 28rpx rgba(7, 193, 96, 0.22);
+}
+
+.balance-deco {
+  position: absolute;
+  right: -70rpx;
+  top: -90rpx;
+  width: 240rpx; height: 240rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.balance-label {
+  position: relative;
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.balance-row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  margin-top: 8rpx;
+}
+
+.balance-num {
+  font-family: var(--font-num);
+  font-size: 96rpx;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  letter-spacing: -2rpx;
+  /* 大数字防溢出 */
+  word-break: break-all;
+}
+
+.balance-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 14rpx;
+}
+
+.balance-total {
+  font-size: 23rpx;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.balance-member {
+  margin-left: 16rpx;
+  padding: 3rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ============================================================
+   ② 签到条（一行，约 108rpx）
+   借鉴壁纸二 2026-10-06 的教训：签到不该占据首屏大块空间。
+   ============================================================ */
+.checkin {
+  display: flex;
+  align-items: center;
+  margin: 24rpx 24rpx 0;
+  padding: 22rpx 24rpx;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+  transition: transform 0.2s ease;
+}
+
+.checkin:active {
+  transform: scale(0.985);
+}
+
+/* 已签到 →降饱和表达「这是状态，不是召唤」 */
+.checkin.is-checked {
+  background: var(--plate-bg);
+  border-color: transparent;
+}
+
+.checkin-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.checkin-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.checkin-desc {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.checkin-dots {
+  display: flex;
+  align-items: center;
+  margin: 0 20rpx;
+}
+
+.checkin-dot {
+  width: 12rpx; height: 12rpx;
+  border-radius: 50%;
+  margin: 0 4rpx;
+  background: var(--border-color);
+}
+
+/* 今天待签 → 空心描边，视觉上「等你点」 */
+.checkin-dot.is-today {
+  width: 16rpx; height: 16rpx;
+  background: transparent;
+  border: 2rpx solid var(--primary-color);
+}
+
+.checkin-dot.is-done {
+  background: var(--primary-color);
+}
+
+.checkin-btn {
+  flex-shrink: 0;
+  min-width: 104rpx;
+  height: 56rpx;
+  line-height: 54rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+  border: 2rpx solid transparent;
+}
+
+/* 已完成 / 未登录时降为描边态，防止与主按钮抢视觉 */
+.checkin-btn.is-done {
+  background: transparent;
+  border-color: var(--border-color);
+  color: var(--text-sub);
+}
+
+/* ============================================================
+   区块标题
+   ============================================================ */
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  margin: 40rpx 24rpx 16rpx;
+}
+
+.sec-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.sec-title-sub {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+/* ============================================================
+   ③ 赚辣度值
+   ============================================================ */
+.actions {
+  padding: 0 24rpx;
+}
+
+.act-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  padding: 24rpx;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+}
+
+/* <button open-type="share"> 需重置浏览器默认样式 */
+.act-row-btn {
+  width: 100%;
+  margin: 0 0 16rpx;
+  text-align: left;
+  line-height: normal;
+  font-family: inherit;
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+  box-sizing: border-box;
+}
+
+.act-row-btn::after {
+  border: none;
+}
+
+.act-icon {
+  flex-shrink: 0;
+  width: 80rpx; height: 80rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.act-icon-share {
+  background: rgba(59, 130, 246, 0.10);
+}
+.act-icon-invite {
+  background: rgba(168, 85, 247, 0.10);
+}
+.act-icon-video {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.act-icon-img {
+  width: 40rpx; height: 40rpx;
+}
+
+.act-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.act-name {
+  font-size: 29rpx;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.act-desc {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.act-pts {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-family: var(--font-num);
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* 激励视频组件隐藏但必须存在于 DOM 中 */
+.ad-hidden {
+  position: fixed;
+  left: -9999rpx;
+  top: -9999rpx;
+  width: 1rpx;
+  height: 1rpx;
+  overflow: hidden;
+}
+
+/* ============================================================
+   ④ 兑换
+   ============================================================ */
+.ex-mem,
+.ex-dl {
+  margin: 0 24rpx;
+}
+
+.ex-dl {
+  margin-top: 20rpx;
+}
+
+.ex-group-title {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 24rpx;
+  color: var(--text-sub);
+}
+
+.ex-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+  padding: 22rpx 24rpx;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+}
+
+.ex-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ex-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.ex-desc {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--text-sub);
+}
+
+.ex-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  margin-left: 16rpx;
+}
+
+.ex-price {
+  font-family: var(--font-num);
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ex-unit {
+  margin-left: 6rpx;
+  font-size: 21rpx;
+  color: var(--text-sub);
+}
+
+.ex-btn {
+  margin-left: 18rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 23rpx;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ex-btn-off {
+  background: var(--plate-bg);
+  color: var(--text-sub);
+}
+
+.ex-empty {
+  margin: 0 24rpx;
+  padding: 48rpx 0;
+  text-align: center;
+}
+
+.ex-empty-t {
+  font-size: 26rpx;
+  color: var(--text-sub);
+}
+
+/* ============================================================
+   ⑤ 明细
+   ============================================================ */
+.records {
+  margin: 0 24rpx;
+  padding: 8rpx 24rpx;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+}
+
+.rec-loading {
+  padding: 48rpx 0;
+  text-align: center;
+}
+
+.spinner {
+  width: 40rpx; height: 40rpx;
+  margin: 0 auto;
+  border: 4rpx solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.rec-empty {
+  padding: 56rpx 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.rec-empty-t {
+  font-size: 27rpx;
+  color: var(--text-sub);
+}
+
+.rec-empty-s {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.rec-row {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 0;
+}
+
+.rec-row + .rec-row {
+  border-top: 1rpx solid var(--border-color);
+}
+
+.rec-dot {
+  flex-shrink: 0;
+  width: 14rpx; height: 14rpx;
+  border-radius: 50%;
+  margin-right: 18rpx;
+}
+
+.rec-dot-check { background: #a855f7; }
+.rec-dot-in { background: var(--primary-color); }
+.rec-dot-out { background: #ef4444; }
+
+.rec-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rec-desc {
+  font-size: 26rpx;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.rec-time {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--text-sub);
+}
+
+.rec-amt {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-family: var(--font-num);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.rec-amt-in { color: var(--primary-color); }
+.rec-amt-out { color: #ef4444; }
+
+.rec-more {
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--primary-color);
+}
+
+.rec-more-end {
+  color: var(--text-sub);
+}
+
+/* ============================================================
+   ⑥ 规则
+   ============================================================ */
+.rules {
+  padding: 0 24rpx;
+}
+
+.rule {
+  margin-bottom: 16rpx;
+  padding: 24rpx;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+}
+
+.rule-title {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.rule-line {
+  display: block;
+  font-size: 23rpx;
+  color: var(--text-sub);
+  line-height: 1.75;
+}
+
+.rule-warn {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.20);
+}
+
+.page-tail {
+  height: 20rpx;
+}
+
+/* ============================================================
+   弹层：遮罩 / 邀请抽屉 / 兑换对话框
+   ============================================================ */
+.mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--scrim);
+  z-index: 1000;
+}
+
+/* 邀请好友 —— 底部抽屉 */
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1001;
+  padding: 36rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--card-bg);
+}
+
+.sheet-head {
+  position: relative;
+  text-align: center;
+  margin-bottom: 32rpx;
+}
+
+.sheet-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.sheet-sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: var(--primary-color);
+}
+
+.sheet-close {
+  position: absolute;
+  top: 0; right: 0;
+  width: 48rpx; height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: var(--text-sub);
+}
+
+.inv-stats {
+  display: flex;
+  margin-bottom: 28rpx;
+  padding: 24rpx 0;
+  border-radius: var(--r-md);
+  background: var(--plate-bg);
+}
+
+.inv-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.inv-num {
+  display: block;
+  font-family: var(--font-num);
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.inv-label {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--text-sub);
+}
+
+.inv-rules {
+  margin-bottom: 28rpx;
+}
+
+.inv-rule {
+  display: block;
+  font-size: 23rpx;
+  color: var(--text-sub);
+  line-height: 1.8;
+}
+
+.sheet-btn {
+  display: block;
+  width: 100%;
+  border-radius: 999rpx;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 2.6;
+  border: none;
+}
+
+.sheet-btn::after {
+  border: none;
+}
+
+/* 兑换确认 —— 居中对话框 */
+.dialog {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: 600rpx;
+  padding: 40rpx 32rpx 32rpx;
+  border-radius: var(--r-lg);
+  background: var(--card-bg);
+}
+
+.dlg-top {
+  text-align: center;
+}
+
+.dlg-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.dlg-sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: var(--text-sub);
+}
+
+.dlg-info {
+  margin: 28rpx 0 32rpx;
+  padding: 24rpx;
+  border-radius: var(--r-md);
+  background: var(--plate-bg);
+}
+
+.dlg-info-line {
+  display: block;
+  font-size: 23rpx;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.dlg-cost {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-top: 16rpx;
+}
+
+.dlg-cost-label {
+  font-size: 24rpx;
+  color: var(--text-sub);
+}
+
+.dlg-cost-num {
+  margin-left: 12rpx;
+  font-family: var(--font-num);
+  font-size: 52rpx;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1.1;
+}
+
+.dlg-cost-unit {
+  margin-left: 6rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.dlg-rest {
+  margin-top: 12rpx;
+  text-align: center;
+  font-size: 21rpx;
+  color: var(--text-sub);
+}
+
+.dlg-btns {
+  display: flex;
+}
+
+.dlg-btn {
+  flex: 1;
+  height: 84rpx;
+  line-height: 84rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.dlg-btn-ghost {
+  margin-right: 16rpx;
+  border: 1rpx solid var(--border-color);
+  color: var(--text-sub);
+}
+
+.dlg-btn-primary {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.dlg-btn-off {
+  background: var(--plate-bg);
+  color: var(--text-sub);
+}
+
+/* ============================================================
+   暗色模式（配色已走变量，这里只补覆盖）
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  .balance {
+    background: linear-gradient(135deg, #0a2c1a 0%, #10432c 45%, #10b981 100%);
+  }
+
+  .balance-num {
+    color: #fff;
+  }
+
+  .checkin.is-checked {
+    background: var(--plate-bg);
+  }
+
+  .checkin-btn {
+    color: #06281c;
+  }
+
+  .act-icon-share { background: rgba(59, 130, 246, 0.16); }
+  .act-icon-invite { background: rgba(168, 85, 247, 0.16); }
+  .act-icon-video { background: rgba(245, 158, 11, 0.16); }
+
+  .rec-dot-check { background: #c084fc; }
+  .rec-amt-out { color: #f87171; }
+
+  .rule-warn {
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(245, 158, 11, 0.24);
+  }
+}

@@ -1,0 +1,261 @@
+/* ============================================================
+   小辣椒动态头像 · Design Tokens
+   ------------------------------------------------------------
+   本文件是设计令牌的**唯一数据源**，在 app.wxss 顶部 @import。
+   新增色值/尺寸必须加到亮色 + 暗色两处，禁止在 pages/*.wxss 里现写。
+
+   设计原则（借鉴壁纸二 v2.0「抹茶轻妆」的结构，但数值按本品牌重算）：
+   ① 明暗同色相只差明度 —— 切主题不跳色。暗色下主色 L 提亮补偿。
+   ② 暗色不是纯黑 OLED，用带绿调的深色（长时间看头像图不刺眼）。
+   ③ 五级表面色阶 + 四级文本 + 三级描边，构成完整层级。
+   ④ 付费页主按钮必须用实心 --primary，不做「克制」降级（转化场景）。
+
+   ⚠️ 兼容说明：app.wxss 原有 6 个变量（--primary-color / --bg-color /
+      --card-bg / --text-main / --text-sub / --border-color / --shadow-color）
+      已被全站 20+ 页面引用，**不能删除**，这里做一层语义映射到新令牌。
+      改版页面请直接用新令牌名，逐步迁移旧名。
+
+   主题机制：跟随系统（@media prefers-color-scheme）。
+   项目已开启 app.json darkmode + themeLocation，故必须用 media，
+   不可用 html[data-theme] —— 两套并存会导致亮色变量在暗色下也生效。
+   ============================================================ */
+
+/* ---------- 亮色（默认 · 主视图）---------- */
+page {
+  /* ---- 表面层级：void 导航栏外沿 / base 页面底 / raised 卡片 / overlay 浮层 ---- */
+  --void:      #eef1f5;  /* 导航栏外沿，比 base 略深，衬托内容区 */
+  --base:      #f7f8fa;  /* 页面底（沿用原--bg-color） */
+  --raised:    #ffffff;  /* 卡片：纯白，让头像图贴底 */
+  --overlay:   #ffffff;  /* 浮层 / 弹窗 */
+  --sunken:    #eef1f5;  /* 图标底 / 槽位 / 已完成态 */
+  --plate-bg:  #e8edf2;  /* 更沉的槽位（进度槽等） */
+  --spec-bg:   #f0fdf4;  /* 品牌淡绿底（签到/积分区） */
+
+  /* ---- 分隔线三级 ---- */
+  --line:        rgba(31, 42, 68, 0.10);
+  --line-soft:   rgba(31, 42, 68, 0.055);
+  --line-strong: rgba(31, 42, 68, 0.18);
+
+  /* ---- 文本四级（--text-main/sub 为兼容别名，见文末映射）---- */
+  --ink:   #1f2a44;  /* on base 13.7:1 · 主文本（沿用原 --text-main） */
+  --ink-2: #475569;  /* on base 7.4:1 · 次要正文 */
+  --ink-3: #94a3b8;  /* on base 3.1:1 · 辅助说明（沿用原 --text-sub） */
+  --ink-4: #b6c0cd;  /* on base 2.1:1 · 仅装饰/占位，非文本 */
+
+  /* ---- 品牌强调：微信绿 ---- */
+  --primary:      #07c160;  /* 全App 唯一实心色。on --base 2.9:1，
+                                故正文级强调用 --ink-2，实心面上用 --primary */
+  --primary-deep: #049c4f;  /* 渐变末端，按下态 */
+  --primary-ink:  #ffffff;  /* 实心primary 上的文字 · 4.6:1 */
+  --primary-soft: rgba(7, 193, 96, 0.10);
+  --primary-18:   rgba(7, 193, 96, 0.18);
+  --primary-28:   rgba(7, 193, 96, 0.28);
+  --primary-line: rgba(7, 193, 96, 0.34);
+  --primary-40:   rgba(7, 193, 96, 0.40);
+
+  /* ---- 语义色（金色只用于会员态强调，不当主按钮）---- */
+  --gold:      #d4a017;  /* 会员卡位/终身档强调 */
+  --gold-soft: rgba(212, 160, 23, 0.12);
+  --gold-line: rgba(212, 160, 23, 0.32);
+  --danger:      #ef4444;  /* 退款提示 / 违规警告 */
+  --danger-soft: rgba(239, 68, 68, 0.08);
+  --warn:      #f59e0b;  /* 注意卡 */
+  --info:      #3b82f6;  /* iOS 区域提示等中性信息 */
+
+  /* ---- 统一图标盒：所有功能图标盒共用，取代彩虹图标底 ----
+     ⚠️ images/tool-*.svg 是 stroke="#fff" 白描边，放在淡底上会看不见
+        → 必须用filter 染色到 --primary-ink-base，见文末 .tool-ic-dye */
+  --tint-base:  #e8f7ee;/* 图标底：极淡绿 */
+  --tint-line:  rgba(7, 193, 96, 0.16);
+  --tint-ink:   #07c160;  /* 描边图标落在此色上 */
+
+  --scrim:        rgba(31, 42, 68, 0.45);  /* 弹窗遮罩 */
+  --scrim-strong: rgba(31, 42, 68, 0.60);
+}
+
+/* ---------- 暗色（跟随系统）----------
+   底色带绿调而非纯黑：头像/壁纸图本身色彩丰富，纯黑底会显得脏。 */
+@media (prefers-color-scheme: dark) {
+  page {
+    --void:      #0f1216;
+    --base:      #121212;
+    --raised:    #1f2937;
+    --overlay:   #1c1c1e;
+    --sunken:    #1a2029;
+    --plate-bg:  #232a33;
+    --spec-bg:   #14261c;
+
+    --line:        rgba(255, 255, 255, 0.11);
+    --line-soft:   rgba(255, 255, 255, 0.06);
+    --line-strong: rgba(255, 255, 255, 0.18);
+
+    --ink:   #f3f4f6;  /* on base 14.2:1 */
+    --ink-2: #d1d5db;  /* on base 10.4:1 */
+    --ink-3: #9ca3af;  /* on base 6.4:1 */
+    --ink-4: #6b7280;  /* on base 3.5:1 */
+
+    /* 暗色下主色提亮到 #10b981，与 tabBar 激活色同值 */
+    --primary:      #10b981;
+    --primary-deep: #059669;
+    --primary-ink:  #06281c;  /* 实心变亮，文字转深 */
+    --primary-soft: rgba(16, 185, 129, 0.14);
+    --primary-18:   rgba(16, 185, 129, 0.20);
+    --primary-28:   rgba(16, 185, 129, 0.30);
+    --primary-line: rgba(16, 185, 129, 0.38);
+    --primary-40:   rgba(16, 185, 129, 0.46);
+
+    --gold:      #fbbf24;
+    --gold-soft: rgba(251, 191, 36, 0.14);
+    --gold-line: rgba(251, 191, 36, 0.36);
+    --danger:      #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.12);
+    --warn:      #fbbf24;
+    --info:      #60a5fa;
+
+    --tint-base:  #14311f;
+    --tint-line:  rgba(16, 185, 129, 0.20);
+    --tint-ink:   #10b981;
+
+    --scrim:        rgba(0, 0, 0, 0.60);
+    --scrim-strong: rgba(0, 0, 0, 0.72);
+  }
+}
+
+/* ---------- 字体 ---------- */
+page {
+  --font-ui:   'PingFang SC', 'HarmonyOS Sans SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-num:  'DIN Alternate', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: var(--base);
+  /* 数字统一等宽，消除跳字 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   兼容映射：app.wxss 的旧变量名 → 新令牌
+   20+ 页面在用，勿删。改版页面请直接用新名。
+   ⚠️ --shadow-color 必须给字面值，不能写 var(--sh-1) —— 会与 --sh-1 成环。
+   ============================================================ */
+page {
+  --primary-color: var(--primary);
+  --bg-color: var(--base);
+  --card-bg: var(--raised);
+  --text-main: var(--ink);
+  --text-sub: var(--ink-3);
+  --border-color: var(--line);
+  --shadow-color: rgba(16, 42, 66, 0.08);
+}
+
+/* ---------- 圆角（4 档 + 胶囊；细线用 1rpx 不要 1px）---------- */
+page {
+  --r-xs:  16rpx;   /*  8px · 图标底 / 缩略图 */
+  --r-md:  24rpx;   /* 12px · 卡片（默认，页面基准） */
+  --r-lg:  32rpx;   /* 16px · 浮层 / 大卡 */
+  --r-sig: 20rpx;   /* 10px · 签名档（小徽标） */
+  --r-pill:  999rpx;
+  --r-control: 999rpx;
+}
+
+/* ---------- 间距（8pt 栅格）---------- */
+page {
+  --gutter:  24rpx;  /* 12px · 页面左右安全边距 */
+  --gap:     20rpx;  /* 10px · 栅格间隙 */
+  --section: 48rpx;  /* 24px · 区块间距 */
+  --block:   32rpx;  /* 16px · 卡内块间距 */
+  --inset:   24rpx;  /* 12px · 卡内边距 */
+  --chip:    16rpx;  /*  8px · chip 内边距 */
+  --hair:    12rpx;  /*  6px · 发丝级微间距 */
+}
+
+/* ---------- 投影三档 ---------- */
+page {
+  --sh-1: 0 2rpx 8rpx rgba(16, 42, 66, 0.08);   /* 卡片 · 几乎不可察 */
+  --sh-2: 0 6rpx 20rpx rgba(31, 42, 68, 0.08);  /* 浮起卡 / 大卡 */
+  --sh-3: 0 12rpx 32rpx rgba(31, 42, 68, 0.12); /* 浮层 / 抽屉 */
+}
+@media (prefers-color-scheme: dark) {
+  page {
+    --sh-1: 0 2rpx 8rpx rgba(0, 0, 0, 0.28);
+    --sh-2: 0 6rpx 20rpx rgba(0, 0, 0, 0.36);
+    --sh-3: 0 12rpx 32rpx rgba(0, 0, 0, 0.46);
+  }
+}
+
+/* ---------- 动效 ---------- */
+page {
+  --ease:    cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast:  120ms;
+  --t-base:  220ms;
+  --t-slow:  360ms;
+}
+
+/* 唯一允许的呼吸动效：「正在动」信号点 */
+@keyframes chili-breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+.live-dot {
+  width: 8rpx; height: 8rpx; border-radius: 50%;
+  background: var(--primary);
+  animation: chili-breathe 0.6s var(--ease) infinite;
+}
+
+/* ============================================================
+   组件基元
+   ============================================================ */
+
+/* 内容卡：hairline 打底 + 极轻投影 */
+.card {
+  background: var(--raised);
+  border-radius: var(--r-md);
+  border: 1rpx solid var(--line);
+  box-shadow: var(--sh-1);
+}
+
+/* 统一图标盒：淡绿底 + 1rpx 描边 */
+.icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tint-base);
+  border: 1rpx solid var(--tint-line);
+  border-radius: var(--r-xs);
+}
+
+/* 白描边图标染色到品牌绿 —— images/tool-*.svg 是 stroke="#fff"，
+   放淡底上直接看不见，必须染。实测≈#07c160 */
+.icon-box-img {
+  filter: brightness(0) saturate(100%) invert(52%) sepia(85%) saturate(1700%) hue-rotate(100deg);
+}
+
+/* 数字排印（廉价感主要来源，单独约束）*/
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* 主按钮：实心品牌绿。付费场景不做降级。*/
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-weight: 500;
+}
+
+/* 次按钮：描边 */
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1rpx solid var(--line-strong);
+  color: var(--ink-2);
+  font-weight: 500;
+}

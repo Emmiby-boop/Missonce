@@ -1,34 +1,19 @@
 @import 'components/skeleton.wxss';
+@import 'config/tokens.wxss';
+
+/* ============================================================
+   基础样式
+   ⚠️ 设计令牌的唯一数据源在 config/tokens.wxss（含明暗两套 + 兼容映射），
+      这里不要再重复定义 --primary-color / --bg-color 等，会与之打架。
+      本文件只放「与设计无关的全局基础规则」。
+   ============================================================ */
 
 page {
-  --primary-color: #07C160;
-  --bg-color: #f7f8fa;
-  --card-bg: #ffffff;
-  --text-main: #1f2a44;
-  --text-sub: #94a3b8;
-  --border-color: #e2e8f0;
-  --shadow-color: rgba(16, 42, 66, 0.08);
-
   background: var(--bg-color);
-  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   color: var(--text-main);
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   padding-top: 0;
   min-height: 100vh; /* 确保页面至少一屏高，避免内容少时无法滚动 */
-}
-
-@media (prefers-color-scheme: dark) {
-  page {
-    --primary-color: #10b981;
-    --bg-color: #121212;
-    --card-bg: #1f2937;
-    --text-main: #f3f4f6;
-    --text-sub: #9ca3af;
-    --border-color: #374151;
-    --shadow-color: rgba(0, 0, 0, 0.4);
-
-    background: var(--bg-color);
-    color: var(--text-main);
-  }
 }
 
 .container {

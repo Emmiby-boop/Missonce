@@ -11,6 +11,28 @@ const MEMBER_CONFIG = {
   lifetime: { name: '终身会员', days: null, dailyDownloads: Infinity }
 }
 
+/**
+ * 辣度值兑换会员的定价（2026-10-10 重定）
+ * ------------------------------------------------------------
+ * ⚠️ 重定原因：原定价与现金价严重失衡 ——
+ *    原倍率（积分价/现金价）周卡 1.32x → 终身7.27x，
+ *   终身卡要攒 50000 分（纯签到需13.9 年，全勤也要714 天），
+ *    等于在告诉用户「积分没用，宁可不用」，页面也因此显得复杂。
+ *
+ * 新定价原则：短档贴近现金价（1:1 略上浮），长档给积分优惠（倍率递减），
+ * 让「攒积分换长档」在数学上真的划算 —— 每千积分换到天数随档位递增。
+ *
+ * 档位      现金价    积分价    倍率     每千积分可换
+ * 周卡      ¥3.80     400      1.053x18 天
+ * 月卡      ¥8.80     900      1.023x    33 天
+ * 季卡      ¥18.80   1800      0.957x    50 天
+ * 年卡      ¥38.80   3500      0.902x   104 天
+ * 终身      ¥68.80   5900      0.858x   619 天（按 10 年折算）
+ *
+ * ⚠️ 改价纪律：MP 后台 virtual_pay_config.products（现金价）与这里是两条独立定价，
+ *    **改任何一边都必须同步另一边**，并同步 agreementContent.js 第三/四条的价格表述，
+ *    否则协议与实际支付不一致会被判误导。
+ */
 const POINTS_CONFIG = {
   checkInPoints: 10,
   checkInBonus: 30,
@@ -23,11 +45,11 @@ const POINTS_CONFIG = {
   dailyFreeDownload: 1,
   watchAdPoints: 20,
   watchAdDailyLimit: 15,
-  memberWeeklyPoints: 500,
-  memberMonthlyPoints: 1800,
-  memberQuarterlyPoints: 4800,
-  memberYearlyPoints: 16800,
-  memberLifetimePoints: 50000,
+  memberWeeklyPoints: 400,
+  memberMonthlyPoints: 900,
+  memberQuarterlyPoints: 1800,
+  memberYearlyPoints: 3500,
+  memberLifetimePoints: 5900,
   singleDownloadPoints: 6,
   threeDownloadPoints: 15,
   tenDownloadPoints: 45,

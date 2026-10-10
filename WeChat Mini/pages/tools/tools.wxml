@@ -10,36 +10,29 @@
 <view class="container">
   <ad-unit kind="interstitial" page-path="/pages/tools/tools"></ad-unit>
 
-  <!-- 每日签到 -->
-  <view class="checkin {{isCheckedIn ? 'is-checked' : ''}}" catchtap="handleCheckIn">
-    <view class="checkin-head">
-      <view class="checkin-copy">
-        <text class="checkin-tag">{{isCheckedIn ? '已完成' : '今日任务'}}</text>
-        <text class="checkin-title">{{isCheckedIn ? '今日已签到' : '每日签到'}}</text>
-        <text class="checkin-desc">{{isCheckedIn ? '明天记得再来，连续签到不断档' : '签到赚辣度值 · 连续 7 天领好礼'}}</text>
-      </view>
-      <view class="checkin-badge">
-        <view class="flame"></view>
-      </view>
-    </view>
-
-    <view class="checkin-progress">
-      <view class="ring" style="--p:{{checkInPercent}}%">
-        <view class="ring-inner">
-          <text class="ring-text">{{checkInDays}}/7</text>
-        </view>
-      </view>
-      <view class="progress-copy">
-        <text class="progress-title">{{progressTitle}}</text>
-        <text class="progress-sub">{{progressSub}}</text>
-      </view>
-    </view>
-
-    <view class="checkin-btn {{(isCheckedIn || !isLoggedIn) ? 'is-mute' : ''}}">
-      <text class="btn-text">{{isCheckedIn ? '今日已签到' : (isLoggedIn ? '立即签到' : '登录后签到')}}</text>
-      <text class="btn-pill" wx:if="{{!isCheckedIn}}">+{{checkInReward}}</text>
-    </view>
+<!-- 每日签到 —— 2026-10-10 压缩为一行
+     改版原因（借鉴壁纸二 2026-10-06 的教训）：
+     原实现是 340rpx 的大卡（tag + 标题 + 描述 + 火苗徽章 + conic-gradient 进度环
+     + 双行进度文案 + 88rpx 按钮 + 奖励胶囊，共 7 层信息），
+     占了首屏近一半高度，用户进「工具箱」第一眼看到的是运营活动而不是工具。
+     现在压缩到 ~108rpx 一行，要点：
+       ① 奖励数字必须保留 —— 压缩后要移进文案行，否则失去点击动机
+       ② 已签到用降饱和表达「这是状态」而不是「召唤」
+       ③ 今天待签用实心点，视觉上等你点
+-->
+<view class="checkin {{isCheckedIn ? 'is-checked' : ''}}" catchtap="handleCheckIn">
+  <view class="checkin-left">
+    <text class="checkin-title">{{isCheckedIn ? '今日已签到' : '每日签到'}}</text>
+    <text class="checkin-desc">{{isCheckedIn ? ('连续 ' + checkInDays + ' 天') : ('+' + checkInReward + ' 辣度值')}}</text>
   </view>
+  <view class="checkin-dots">
+    <view class="checkin-dot {{index < checkInDays ? 'is-done' : ''}} {{!isCheckedIn && index === 0 ? 'is-today' : ''}}"
+          wx:for="{{[0, 1, 2, 3, 4, 5, 6]}}" wx:key="index"></view>
+  </view>
+  <view class="checkin-btn {{(isCheckedIn || !isLoggedIn) ? 'is-mute' : ''}}">
+    <text>{{isCheckedIn ? '已完成' : (isLoggedIn ? '签到' : '登录')}}</text>
+  </view>
+</view>
 
   <!-- 创作工具 -->
   <view class="section" wx:if="{{toolsList.length > 0}}">

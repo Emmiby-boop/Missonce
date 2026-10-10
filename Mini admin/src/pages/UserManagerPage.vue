@@ -383,7 +383,8 @@ const priceLevels = [
   { key: 'yearly', label: '年卡会员', desc: '365天有效期' },
   { key: 'lifetime', label: '终身会员', desc: '永久有效' }
 ]
-const priceForm = reactive<Record<string, number>>({ weekly: 500, monthly: 1800, quarterly: 4800, yearly: 16800, lifetime: 50000 })
+// 默认值须与云端 userPoints/shared.js 的 memberXxxPoints 一致（2026-10-10 重定定价）
+const priceForm = reactive<Record<string, number>>({ weekly: 400, monthly: 900, quarterly: 1800, yearly: 3500, lifetime: 5900 })
 const savingPrices = ref(false)
 
 async function loadPrices() {

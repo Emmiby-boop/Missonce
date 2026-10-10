@@ -14,18 +14,27 @@ const TOOLS_CONFIG_CACHE_TTL = 10 * 60 * 1000
 // 🔥 默认工具列表（后台未配置或网络失败时降级使用）
 // 布局约定：sort 最小的一项若为 primary 绿色 → 渲染为整行主推大卡；
 //           其余 square = 半宽方卡（两列），wide = 整行宽卡；
-//           辣度值（id=points / linkUrl=/subpackages/points/points）固定为数据卡。
+//           辣度值（id=points / linkUrl=/subpackages/spicy/spicy）固定为数据卡。
+// ⚠️ 2026-10-10：辣度值页已从 points 拆出，数据卡的 linkUrl 指向新页面；
+//    后台若仍配着旧的 /subpackages/points/points，靠 POINTS_TOOL_PATH 兼容识别。
 const DEFAULT_TOOLS = [
   { id: 'avatar-diy', title: '头像DIY', desc: '加边框·调滤镜·写字，30秒出图', icon: '/images/tool-diy.svg', linkType: 'page', linkUrl: '/subpackages/avatar-diy/avatar-diy', size: 'square', color: 'primary', visible: true, sort: 0 },
   { id: 'watermark', title: '去水印', desc: '视频/图片', icon: '/images/tool-watermark.svg', linkType: 'miniProgram', linkUrl: 'wxbd304fe2186156e4', miniProgramPath: '', size: 'square', color: 'secondary', visible: true, sort: 1 },
   { id: 'inspiration', title: '灵感文案', desc: 'AI 帮你写', icon: '/images/quick-inspiration.svg', linkType: 'page', linkUrl: '/subpackages/inspiration-writer/inspiration-writer', size: 'square', color: 'tertiary', visible: true, sort: 2 },
-  { id: 'points', title: '辣度值', desc: '查看辣度值·兑换好物', icon: '/images/icon-diamond.svg', linkType: 'page', linkUrl: '/subpackages/points/points', size: 'wide', color: 'quaternary', visible: true, sort: 3 }
+  { id: 'points', title: '辣度值', desc: '查看辣度值·兑换好物', icon: '/images/icon-diamond.svg', linkType: 'page', linkUrl: '/subpackages/spicy/spicy', size: 'wide', color: 'quaternary', visible: true, sort: 3 }
 ]
 
 // 辣度值中心判定（与后台配置的 id / linkUrl 对齐）
-const POINTS_TOOL_IDS = ['points', 'tool_points']
-const POINTS_TOOL_PATH = '/subpackages/points/points'
-const STREAK_CYCLE = 7
+// ⚠️ 2026-10-10 拆分后，辣度值页独立为 subpackages/spicy/spicy；
+//    这里的常量用于「把指向积分的项渲染成数据卡」，判定路径需同步新页面。
+const POINTS_TOOL_IDS = ['points', 'tool_points', 'spicy']
+const POINTS_TOOL_PATH = '/subpackages/spicy/spicy'
+// 旧路径兜底：后台若仍配着拆分前的 /subpackages/points/points（那是现在的会员页），
+// 必须识别成辣度值卡，否则会渲染成普通方卡；并且要改写 linkUrl 指向新页面，
+// 否则点「辣度值」会跳回会员页。
+const POINTS_TOOL_PATH_LEGACY = '/subpackages/points/points'
+/* 注：原 STREAK_CYCLE = 7 已随签到卡压缩为一行而移除（wxml 零引用），
+   7 天周期的语义现在由 wxml 的 7 个圆点直接表达。 */
 
 // 千分位格式化（1,280）
 function formatThousands(n) {
@@ -54,11 +63,8 @@ Page({
     isCheckedIn: false,
     checkInDays: 0,
     points: 0,
-    // 签到卡片展示态
+    // 签到条展示态（奖励数字已移入文案行，见 tools.wxml）
     checkInReward: 10,
-    checkInPercent: 0,
-    progressTitle: '开始你的连续签到',
-    progressSub: '连续 7 天领专属好礼',
     pointsText: '0',
     // 工具列表（从后台配置加载，降级到 DEFAULT_TOOLS）
     toolsList: [],
@@ -172,7 +178,10 @@ Page({
   // variant: featured（整行主推大卡）/ stat（辣度值数据卡）/ wide（整行宽卡）/ square（半宽方卡）
   _applyToolsList(tools) {
     const list = (tools || []).map((t, index) => {
-      const isPoints = POINTS_TOOL_IDS.indexOf(t.id) > -1 || t.linkUrl === POINTS_TOOL_PATH
+      const isPoints =
+        POINTS_TOOL_IDS.indexOf(t.id) > -1 ||
+        t.linkUrl === POINTS_TOOL_PATH ||
+        t.linkUrl === POINTS_TOOL_PATH_LEGACY
 
       let variant
       if (isPoints) {
@@ -184,8 +193,16 @@ Page({
         variant = (index === 0 && t.color === 'primary') ? 'featured' : 'square'
       }
 
+      // 🔥 旧路径兜底：后台仍配着 /subpackages/points/points（现会员页）时，
+      // 把 linkUrl 改写成辣度值新页面，保证点「辣度值」不会跳回会员页。
+      const finalLinkUrl =
+        isPoints && t.linkUrl === POINTS_TOOL_PATH_LEGACY
+          ? POINTS_TOOL_PATH
+          : t.linkUrl
+
       return {
         ...t,
+        linkUrl: finalLinkUrl,
         variant,
         initial: (t.title || '工').slice(0, 1)
       }
@@ -227,37 +244,21 @@ Page({
     }
   },
 
-  // 统一收敛签到卡片的展示数据（进度环 / 文案 / 辣度值格式化）
+  /**
+   * 统一收敛签到条的展示数据
+   *
+   * 2026-10-10 签到卡从340rpx 大卡压缩成一行后，原先的
+   * checkInPercent（进度环百分比）/ progressTitle / progressSub
+   * （双行进度文案）已无人使用（wxml 零引用），一并移除。
+   * 现在只保留：勾选态、连续天数、辣度值。
+   */
   _syncCheckInView({ isCheckedIn, checkInDays, points }) {
     const days = Number(checkInDays) || 0
-    const pct = Math.max(0, Math.min(100, Math.round((days / STREAK_CYCLE) * 100)))
-
-    let progressTitle
-    let progressSub
-    if (!this.data.isLoggedIn) {
-      progressTitle = '登录后开始签到'
-      progressSub = '每天签到都能领取辣度值'
-    } else if (isCheckedIn) {
-      progressTitle = `已连续签到 ${days} 天`
-      progressSub = '明天记得再来，连续签到不断档'
-    } else if (days <= 0) {
-      progressTitle = '开始你的连续签到'
-      progressSub = `连续 ${STREAK_CYCLE} 天解锁专属头像框`
-    } else if (days < STREAK_CYCLE) {
-      progressTitle = `连续签到 ${days} 天`
-      progressSub = `再签 ${STREAK_CYCLE - days} 天解锁专属头像框`
-    } else {
-      progressTitle = `连续签到 ${days} 天`
-      progressSub = '继续签到累积更多辣度值'
-    }
 
     this.setData({
       isCheckedIn: !!isCheckedIn,
       checkInDays: days,
       points: Number(points) || 0,
-      checkInPercent: pct,
-      progressTitle,
-      progressSub,
       pointsText: formatThousands(points)
     })
   },

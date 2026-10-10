@@ -385,6 +385,24 @@ page {
   box-shadow: 0 2rpx 8rpx var(--shadow-color);
 }
 
+/* 分享行改成 <button open-type="share"> 后必须重置 button 默认样式，
+   否则浏览器默认的灰底/边框/字号会破坏与另两行的视觉一致性。
+   （button 默认有 background:#f8f8f8 + border + font-size:inherit 差异）*/
+.act-row-btn {
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  line-height: normal;
+  font-family: inherit;
+  background: var(--card-bg);
+  border: 1rpx solid rgba(0,0,0,0.04);
+  box-sizing: border-box;
+}
+
+.act-row-btn::after {
+  border: none;
+}
+
 .act-icon {
   width: 80rpx; height: 80rpx;
   border-radius: 20rpx;
@@ -1454,4 +1472,147 @@ page {
     color: #34d399;
   }
 
+}
+
+/* ============================================================
+   会员权益（2026-10-10 随积分区块搬走而新增）
+   ============================================================ */
+.benefits {
+  padding: 0 24rpx;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  padding: 24rpx;
+  border-radius: var(--r-md);
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+}
+
+.benefit-ic {
+  flex-shrink: 0;
+  width: 72rpx; height: 72rpx;
+  border-radius: 20rpx;
+  background: var(--tint-base, rgba(7, 193, 96, 0.10));
+  border: 1rpx solid var(--tint-line, rgba(7, 193, 96, 0.16));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.benefit-ic-img {
+  width: 36rpx; height: 36rpx;
+}
+
+.benefit-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.benefit-tt {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.benefit-ds {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.benefit-note {
+  margin: 20rpx 24rpx 0;
+  padding: 20rpx 24rpx;
+  border-radius: var(--r-md);
+  background: rgba(59, 130, 246, 0.06);
+  border: 1rpx solid rgba(59, 130, 246, 0.16);
+}
+
+.benefit-note-t {
+  display: block;
+  font-size: 22rpx;
+  color: var(--text-sub);
+  line-height: 1.7;
+}
+
+@media (prefers-color-scheme: dark) {
+  .benefit-note {
+    background: rgba(59, 130, 246, 0.10);
+    border-color: rgba(59, 130, 246, 0.24);
+  }
+}
+
+/* ============================================================
+   辣度值入口（积分内容迁往 subpackages/spicy 后，在会员页保留入口）
+   ============================================================ */
+.points-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16rpx 24rpx 0;
+  padding: 22rpx 24rpx;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, #f0fdf4 0%, #e6f9ec 100%);
+  border: 1rpx solid rgba(7, 193, 96, 0.18);
+}
+
+.points-entry-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.points-entry-ic {
+  flex-shrink: 0;
+  width: 64rpx; height: 64rpx;
+  border-radius: 18rpx;
+  background: var(--card-bg);
+  border: 1rpx solid rgba(7, 193, 96, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.points-entry-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 18rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.points-entry-tt {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.points-entry-ds {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.points-entry-arrow {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 40rpx;
+  line-height: 1;
+  color: var(--primary-color);
+  opacity: 0.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .points-entry {
+    background: linear-gradient(135deg, #14261c 0%, #10301f 100%);
+    border-color: rgba(16, 185, 129, 0.24);
+  }
 }

@@ -112,9 +112,10 @@
 
   <!-- 菜单列表 -->
   <view class="menu-section">
-    <block wx:for="{{menuItems}}" wx:key="title">
-      <block wx:if="{{!item.isShare && !(item.title === '清除缓存' && !userInfo)}}">
-        <view class="menu-item" bindtap="onMenuItemTap" data-title="{{item.title}}">
+    <!-- wx:key 用 key 字段（menuItems 现在每个项都有唯一 key），比用 title 更稳 -->
+    <block wx:for="{{menuItems}}" wx:key="key">
+      <block wx:if="{{!item.isShare && !(item.key === 'clearCache' && !userInfo)}}">
+        <view class="menu-item" bindtap="onMenuItemTap" data-key="{{item.key}}">
           <view class="menu-left">
             <view class="menu-icon-box" style="background: {{item.color}};">
               <image class="menu-icon-img" src="{{item.iconPath}}"></image>
@@ -122,7 +123,8 @@
             <text class="menu-title">{{item.title}}</text>
           </view>
           <view class="menu-right">
-            <text class="menu-desc" wx:if="{{item.title === '我的辣度值' && userInfo}}">{{points}}</text>
+            <!-- 辣度值项显示当前余额（比静态 desc 更有用） -->
+            <text class="menu-desc" wx:if="{{item.key === 'spicy' && userInfo}}">{{points}} 辣度值</text>
             <text class="menu-desc" wx:elif="{{item.desc}}">{{item.desc}}</text>
             <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
           </view>
@@ -277,6 +279,17 @@
       <button class="action-btn-item" hover-class="none" bindtap="handleOfficialAccount">
         <text>官方账号</text>
       </button>
+      <!-- 复制入口：2026-10-10 补上。
+           copyOfficialAccountName / handleShowContactInfo 这两个方法此前已存在但
+           wxml 里没有任何绑定 —— 也就是说公众号名和邮箱根本复制不了，属于死方法。 -->
+      <view class="action-btn-item" hover-class="none" bindtap="copyOfficialAccountName"
+            wx:if="{{officialAccountName}}">
+        <text>复制公众号名</text>
+      </view>
+      <view class="action-btn-item" hover-class="none" bindtap="handleShowContactInfo"
+            wx:if="{{contactEmail}}">
+        <text>复制邮箱</text>
+      </view>
     </view>
     <view class="action-sheet-footer">
       <view class="action-btn-cancel" bindtap="closeContactMenu">取消</view>

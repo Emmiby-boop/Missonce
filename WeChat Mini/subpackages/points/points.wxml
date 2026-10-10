@@ -128,238 +128,68 @@
   <!-- 协议提示（常驻，点击查看全文） -->
   <view class="agree-bar" bindtap="openAgreement">
     <text class="agree-bar-txt">开通即表示同意《会员服务协议》</text>
-    <text class="agree-bar-link">查看全文 ›</text>
+    <text class="agree-row-link" bindtap="openAgreement">查看全文 ›</text>
   </view>
 
-  <!-- 我的辣度值 -->
-  <view class="sec-head" id="points-section">
-    <text class="sec-title">我的辣度值</text>
-    <text class="sec-title-sub">签到 / 分享 / 邀请均可获取</text>
-  </view>
-
-  <!-- ① 辣度值卡片 -->
-  <view class="p-card">
-    <view class="p-card-deco"></view>
-    <view class="p-card-icon">
-      <spicy-icon size="48"></spicy-icon>
-    </view>
-    <text class="p-label">辣度值</text>
-    <text class="p-value">{{points}}</text>
-    <text class="p-total">累计获得 {{totalPoints}} 辣度值</text>
-  </view>
-  <!-- ③ 签到卡片 -->
-  <view class="checkin">
-    <view class="card-left">
-      <text class="card-title">{{isCheckedIn ? '今日已签到' : '每日签到'}}</text>
-      <view class="streak">
-        <view class="dot done" wx:for="{{3}}" wx:key="index">
-          <text class="dot-t">✓</text>
-        </view>
-        <view class="dot {{isCheckedIn ? 'done' : 'today'}}">
-          <text class="dot-t">{{isCheckedIn ? '✓' : '4'}}</text>
-        </view>
-        <view class="dot future" wx:for="{{3}}" wx:key="index">
-          <text class="dot-t">{{index + 5}}</text>
-        </view>
+  <!-- 辣度值入口（积分相关内容已迁至subpackages/spicy）-->
+  <view class="points-entry" bindtap="goSpicyPage">
+    <view class="points-entry-left">
+      <view class="points-entry-ic"><spicy-icon size="36"></spicy-icon></view>
+      <view class="points-entry-main">
+        <text class="points-entry-tt">我的辣度值</text>
+        <text class="points-entry-ds">当前 {{points}} · 签到/分享/看视频可赚</text>
       </view>
     </view>
-    <view class="checkin-btn {{isCheckedIn ? 'off' : ''}}" bindtap="handleCheckIn">
-      <text>{{isCheckedIn ? '已签到' : '签到 +' + checkInReward}}</text>
-    </view>
+    <text class="points-entry-arrow">›</text>
   </view>
-  <!-- ④ 赚辣度值 -->
+
+  <!-- 会员权益 -->
   <view class="sec-head">
-    <text class="sec-title">赚辣度值</text>
+    <text class="sec-title">会员权益</text>
+    <text class="sec-title-sub">开通后立即生效</text>
   </view>
 
-  <view class="actions">
-    <view class="act-row" bindtap="handleShare">
-      <view class="act-icon act-icon-share">
-        <image class="act-icon-img" src="/images/icon-points-share.svg" mode="aspectFit" />
-      </view>
-      <view class="act-info">
-        <text class="act-name">分享给好友</text>
-        <text class="act-desc">每日最多 {{shareDailyLimit}} 次</text>
-      </view>
-      <text class="act-pts">+{{shareReward}}</text>
-    </view>
-
-    <view class="act-row" bindtap="inviteFriend">
-      <view class="act-icon act-icon-invite">
-        <image class="act-icon-img" src="/images/icon-points-invite.svg" mode="aspectFit" />
-      </view>
-      <view class="act-info">
-        <text class="act-name">邀请好友</text>
-        <text class="act-desc">好友注册即得奖励</text>
-      </view>
-      <text class="act-pts">+{{inviteReward}}</text>
-    </view>
-
-    <view class="act-row" bindtap="watchAdForPoints">
-      <view class="act-icon act-icon-video">
-        <image class="act-icon-img" src="/images/icon-points-video.svg" mode="aspectFit" />
-      </view>
-      <view class="act-info">
-        <text class="act-name">观看视频</text>
-        <text class="act-desc">每日最多 {{watchAdDailyLimit}} 次</text>
-      </view>
-      <text class="act-pts">+{{watchAdPoints}}</text>
-    </view>
-  </view>
-  <!-- 激励视频广告组件（隐藏） -->
-  <view class="ad-hidden">
-    <ad-unit kind="rewarded"
-             id="rewardAdComp"
-             page-path="/subpackages/points/points"
-             reward-cloud-name="userPoints"
-             reward-cloud-action="rewardAdWatch"
-             reward-points="{{watchAdPoints}}"
-             button-text="观看激励视频获取辣度值"
-             show-button="{{false}}"
-             bind:rewarded="onRewardedFinished"
-             custom-class="reward-ad-component"></ad-unit>
-  </view>
-  <!-- ⑤ 辣度值规则 -->
-  <view class="sec-head" id="rules-section">
-    <text class="sec-title">辣度值规则</text>
-  </view>
-
-  <view class="rules">
-    <view class="rule">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-checkin.svg" mode="aspectFit" />
-        <text class="rule-tt">每日签到</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 每日签到可获得 {{checkInReward}} 辣度值</text>
-        <text class="rule-ln">· 连续签到 7 天额外奖励 30 辣度值</text>
-        <text class="rule-ln">· 连续签到 30 天额外奖励 100 辣度值</text>
+  <view class="benefits">
+    <view class="benefit">
+      <view class="benefit-ic"><image class="benefit-ic-img" src="/images/icon-diamond.svg" mode="aspectFit" /></view>
+      <view class="benefit-main">
+        <text class="benefit-tt">去水印下载</text>
+        <text class="benefit-ds">全部下载功能去除素材水印</text>
       </view>
     </view>
-
-    <view class="rule">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-share.svg" mode="aspectFit" />
-        <text class="rule-tt">分享奖励</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 分享小程序可获得 {{shareReward}} 辣度值</text>
-        <text class="rule-ln">· 每日最多 {{shareDailyLimit}} 次分享奖励</text>
+    <view class="benefit">
+      <view class="benefit-ic"><image class="benefit-ic-img" src="/images/icon-hot.svg" mode="aspectFit" /></view>
+      <view class="benefit-main">
+        <text class="benefit-tt">高清下载</text>
+        <text class="benefit-ds">更高分辨率 / 更长时长版本</text>
       </view>
     </view>
-
-    <view class="rule">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-crown.svg" mode="aspectFit" />
-        <text class="rule-tt">会员特权</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 辣度值兑换会员，畅享专属权益</text>
-        <text class="rule-ln">· 会员专属下载次数，下载更自由</text>
+    <view class="benefit">
+      <view class="benefit-ic"><image class="benefit-ic-img" src="/images/icon-camera.svg" mode="aspectFit" /></view>
+      <view class="benefit-main">
+        <text class="benefit-tt">专属资源</text>
+        <text class="benefit-ds">优先获取会员专属素材合集</text>
       </view>
     </view>
-
-    <view class="rule rule-warn">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-warning.svg" mode="aspectFit" />
-        <text class="rule-tt">注意事项</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 辣度值仅限本小程序使用，不可转让</text>
-        <text class="rule-ln">· 规则可能会根据运营情况调整</text>
+    <view class="benefit">
+      <view class="benefit-ic"><image class="benefit-ic-img" src="/images/icon-bell.svg" mode="aspectFit" /></view>
+      <view class="benefit-main">
+        <text class="benefit-tt">免广告</text>
+        <text class="benefit-ds">有效期内不再展示广告</text>
       </view>
     </view>
   </view>
-  <!-- ⑥ 最近记录 -->
-  <view class="sec-head">
-    <text class="sec-title">最近记录</text>
-  </view>
 
-  <!-- 记录加载中 -->
-  <view wx:if="{{loading && records.length === 0}}" class="state-center">
-    <view class="spinner"></view>
-    <text class="state-text">加载中...</text>
-  </view>
-
-  <!-- 空态 -->
-  <view wx:elif="{{!loading && records.length === 0}}" class="state-center">
-    <text class="empty-icon">📋</text>
-    <text class="state-text">暂无记录</text>
-    <text class="state-hint">完成任务赚取辣度值吧</text>
-  </view>
-
-  <!-- 记录列表 -->
-  <view wx:else class="rec-list">
-    <view wx:for="{{records}}" wx:key="_id" class="rec-item">
-      <view class="rec-dot {{item.type === 'checkIn' ? 'rec-dot-ci' : item.amount > 0 ? 'rec-dot-in' : 'rec-dot-out'}}"></view>
-      <view class="rec-body">
-        <text class="rec-desc">{{item.description}}</text>
-        <view class="rec-meta">
-          <text class="rec-time">{{formatTime(item.createdAt)}}</text>
-          <text wx:if="{{item.checkInDays}}" class="rec-streak">连续 {{item.checkInDays}} 天</text>
-        </view>
-      </view>
-      <text class="rec-amt {{item.amount > 0 ? 'rec-amt-plus' : 'rec-amt-minus'}}">{{item.amount > 0 ? '+' : ''}}{{item.amount}}</text>
-    </view>
-  </view>
-
-  <!-- 加载更多 -->
-  <view wx:if="{{hasMore && records.length > 0}}" class="state-center state-pad" bindtap="loadMore">
-    <view wx:if="{{loadingMore}}" class="spinner spinner-sm"></view>
-    <text class="state-text">{{loadingMore ? '加载中...' : '加载更多'}}</text>
-  </view>
-
-  <view wx:if="{{!hasMore && records.length > 0}}" class="state-end">
-    <view class="end-line"></view>
-    <text class="end-text">没有更多了</text>
-    <view class="end-line"></view>
+  <view class="benefit-note">
+    <text class="benefit-note-t">权益以小程序内实际展示为准；会员有效期自支付成功时起算。</text>
   </view>
 
   <!-- 底部间距 -->
   <view style="height: 40rpx;"></view>
 </view>
 
-<!-- 邀请弹窗 -->
-<view class="modal-mask" wx:if="{{showInviteModal}}" bindtap="closeInviteModal"></view>
-<view class="modal" wx:if="{{showInviteModal}}">
-  <view class="modal-top">
-    <view class="modal-icon-wrap">
-      <image class="modal-icon-img" src="/images/icon-points-invite.svg" mode="aspectFit" />
-    </view>
-    <text class="modal-title">邀请好友</text>
-    <text class="modal-sub">成功邀请 1 人立得 {{inviteInfo.rewardPoints}} 辣度值</text>
-  </view>
-
-  <view class="invite-stats">
-    <view class="invite-stat">
-      <text class="invite-stat-n">{{inviteInfo.todayInvites}}</text>
-      <text class="invite-stat-l">今日邀请</text>
-    </view>
-    <view class="invite-stat-div"></view>
-    <view class="invite-stat">
-      <text class="invite-stat-n">{{inviteInfo.totalInvites}}</text>
-      <text class="invite-stat-l">总邀请</text>
-    </view>
-    <view class="invite-stat-div"></view>
-    <view class="invite-stat">
-      <text class="invite-stat-n">{{inviteInfo.validInvites}}</text>
-      <text class="invite-stat-l">成功邀请</text>
-    </view>
-  </view>
-
-  <view class="invite-rules">
-    <text class="invite-rules-tt">邀请规则</text>
-    <view wx:for="{{inviteInfo.rules}}" wx:key="index" class="invite-rule-ln">
-      <text class="invite-rule-dot">·</text>
-      <text class="invite-rule-txt">{{item}}</text>
-    </view>
-  </view>
-
-  <button class="invite-btn" open-type="share">邀请好友</button>
-  <view class="modal-close" bindtap="closeInviteModal">
-    <text>✕</text>
-  </view>
-</view>
+<!-- 邀请弹窗已删除（2026-10-10 拆分）：会员页无邀请入口，
+     showInviteModal 无任何代码路径能置 true，属死 UI；邀请功能在辣度值页。 -->
 
 <!-- 支付方式选择弹窗（现金购买会员） -->
 <view class="modal-mask" wx:if="{{showCashModal}}" bindtap="closeCashModal"></view>
@@ -462,9 +292,5 @@
 
 <!-- 会员服务协议：已改为独立整页 subpackages/agreement/agreement（见 points.js openAgreement） -->
 
-<!-- 广告加载中 -->
-<view class="ad-mask" wx:if="{{showAdLoading}}" catchtouchmove="noop" catchtap="noop">
-  <view class="spinner"></view>
-  <text class="ad-mask-text">加载中...</text>
-  <text class="ad-mask-sub">正在准备广告，请稍候</text>
-</view>
+<!-- 注：原广告加载遮罩（.ad-mask / showAdLoading）已删除——
+showAdLoading 从未被 setData，属永不显示的死 UI。对应样式见 points.wxss 注释。 -->
