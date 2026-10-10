@@ -58,6 +58,35 @@
     </view>
   </view>
 
+  <!-- 会员卡位（未开通=首购引导 / 已开通=状态+续费） -->
+  <view class="vip-entry {{isMember ? 'vip-entry-on' : ''}}" bindtap="goMemberCenter" wx:if="{{userInfo}}">
+    <view class="vip-entry-deco"></view>
+    <view class="vip-entry-main">
+      <block wx:if="{{isMember}}">
+        <view class="vip-entry-head">
+          <text class="vip-entry-name">{{memberName || '会员'}}</text>
+          <text class="vip-entry-tag">生效中</text>
+        </view>
+        <text class="vip-entry-sub" wx:if="{{memberDaysRemaining > 0}}">剩余 {{memberDaysRemaining}} 天{{memberExpireText ? ' · ' + memberExpireText : ''}}</text>
+        <text class="vip-entry-sub" wx:else>已到期，续费后恢复免广告</text>
+      </block>
+      <block wx:else>
+        <view class="vip-entry-head">
+          <text class="vip-entry-name">开通会员</text>
+          <text class="vip-entry-tag vip-entry-tag-first" wx:if="{{cashFirstYuan}}">首购 ¥{{cashFirstYuan}} 起</text>
+        </view>
+        <text class="vip-entry-sub">去水印 · 高清下载 · 专属资源</text>
+      </block>
+    </view>
+    <view class="vip-entry-cta">
+      <text>{{isMember ? '续费' : '立即开通'}}</text>
+    </view>
+  </view>
+  <view class="vip-entry-agree" wx:if="{{userInfo}}" bindtap="openMemberAgreement">
+    <text>开通即表示同意</text>
+    <text class="vip-entry-agree-link">《会员服务协议》</text>
+  </view>
+
   <!-- 未登录提示 -->
   <view class="login-hint-card" wx:if="{{!userInfo}}">
     <text class="hint-icon">🔐</text>
@@ -93,7 +122,8 @@
             <text class="menu-title">{{item.title}}</text>
           </view>
           <view class="menu-right">
-            <text class="menu-desc">{{item.desc || ''}}</text>
+            <text class="menu-desc" wx:if="{{item.title === '我的辣度值' && userInfo}}">{{points}}</text>
+            <text class="menu-desc" wx:elif="{{item.desc}}">{{item.desc}}</text>
             <image class="menu-arrow" src="../../images/icon-arrow.png" mode="widthFix"></image>
           </view>
         </view>

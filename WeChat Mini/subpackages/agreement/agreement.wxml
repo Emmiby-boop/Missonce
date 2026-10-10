@@ -1,0 +1,73 @@
+<!-- 会员服务协议 · 独立整页
+     布局铁律：整页 flex column，导航栏 flex-shrink:0，正文 scroll-view flex:1。
+     这样正文永远不会钻到导航栏底下（参考图里的常见问题）。 -->
+<view class="ag-page">
+  <!-- 顶部导航栏 -->
+  <view class="nav" style="padding-top: {{statusBarHeight}}px;">
+    <view class="nav-inner" style="height: {{navBarHeight}}px;">
+      <view class="nav-back" bindtap="onBack" hover-class="nav-back-hover">
+        <image class="nav-back-img" src="/images/preview-back.svg" mode="aspectFit" />
+      </view>
+      <text class="nav-title">会员服务协议</text>
+    </view>
+    <!-- 阅读进度条：提示全文很长 -->
+    <view class="nav-progress">
+      <view class="nav-progress-bar" style="width: {{progress}}%;"></view>
+    </view>
+  </view>
+
+  <!-- 协议正文（独立滚动区） -->
+  <scroll-view
+    id="ag-scroll"
+    class="ag-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    bindscroll="onScroll"
+  >
+    <view class="ag-doc">
+      <!-- 文档头 -->
+      <view class="ag-doc-head">
+        <view class="ag-doc-badge">
+          <text class="ag-doc-badge-t">{{meta.appName}}</text>
+        </view>
+        <text class="ag-doc-title">会员服务协议</text>
+        <view class="ag-meta-line">
+          <text class="ag-meta-t">版本 v{{meta.version}}</text>
+          <text class="ag-meta-dot">·</text>
+          <text class="ag-meta-t">更新日期：{{meta.updatedAt}}</text>
+        </view>
+        <text class="ag-meta-eff">{{meta.effectiveAt}}</text>
+      </view>
+
+      <!-- 概述引言块 -->
+      <view class="ag-lede">
+        <text class="ag-lede-t">{{meta.operatorDesc}}</text>
+        <text class="ag-lede-t">请您在开通及使用本服务前，逐条审慎阅读并充分理解本协议各项条款内容。您通过勾选、点击"
+          同意并继续"或完成实际支付等任何形式，即视为您已完全理解并自愿接受本协议的全部约束。</text>
+      </view>
+
+      <!-- 章节 -->
+      <view class="ag-sec" wx:for="{{sections}}" wx:key="title">
+        <view class="ag-sec-head">
+          <view class="ag-sec-bar"></view>
+          <text class="ag-sec-t">{{item.title}}</text>
+        </view>
+        <view class="ag-item" wx:for="{{item.items}}" wx:for-item="line" wx:for-index="li" wx:key="li">
+          <text class="ag-item-no">{{index + 1}}.{{li + 1}}</text>
+          <text class="ag-item-t">{{line}}</text>
+        </view>
+      </view>
+
+      <view class="ag-tail"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部同意条 -->
+  <view class="ag-bar">
+    <button class="ag-btn" bindtap="onAgree" hover-class="ag-btn-hover">
+      {{agreed ? '已同意，返回' : '我已阅读并同意'}}
+    </button>
+    <text class="ag-bar-tip">点击即表示您已阅读并接受《会员服务协议》全部条款</text>
+  </view>
+</view>

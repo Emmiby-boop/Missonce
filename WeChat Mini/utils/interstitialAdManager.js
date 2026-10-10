@@ -1,6 +1,7 @@
 import { fetchPageAds, pickByType } from './adUtil.js'
 import logger from './logger'
 import { getStorage, setStorage } from './storageManager.js'
+import { isAdFree } from './memberAdFree.js'
 
 let globalInterstitialAd = null
 let lastShowTime = 0
@@ -66,6 +67,10 @@ let minAppStartTime = DEFAULT_MIN_APP_START_TIME // 当前生效的启动延迟�
  */
 async function initInterstitialAd(pagePath) {
   try {
+    // 🔥 会员免插屏：直接不初始化，省掉广告请求与实例创建
+    if (isAdFree()) {
+      return false
+    }
 
     currentPagePath = pagePath
 
@@ -146,6 +151,11 @@ async function initInterstitialAd(pagePath) {
  * @returns {boolean} 是否可以显示
  */
 function canShowInterstitialAd() {
+  // 🔥 会员免插屏：闸门放在最前面，连广告实例都不用建
+  if (isAdFree()) {
+    return false
+  }
+
   if (!globalInterstitialAd) {
     return false
   }

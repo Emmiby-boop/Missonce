@@ -5,8 +5,8 @@
 
 /** 品牌文案 */
 export const BRAND = {
-  appName: '小辣椒动态头像壁纸',
-  tagline: '小辣椒 · 动态壁纸',
+  appName: '小辣椒动态头像',
+  tagline: '小辣椒 · 动态头像',
 }
 
 /** 按钮 / 提示文案 */

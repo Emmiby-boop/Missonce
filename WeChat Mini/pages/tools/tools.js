@@ -422,7 +422,7 @@ Page({
     const { recordShareReward } = require('../../utils/shareReward.js')
     setTimeout(() => recordShareReward(), 500)
     return {
-      title: '小辣椒头像工具 | 海量精美素材免费下载',
+      title: '小辣椒动态头像 | 海量精美素材免费下载',
       path: '/pages/tools/tools',
       imageUrl: '/images/share-cover.png'
     }
@@ -430,7 +430,7 @@ Page({
 
   onShareTimeline() {
     return {
-      title: '小辣椒头像工具 | 海量精美素材免费下载',
+      title: '小辣椒动态头像 | 海量精美素材免费下载',
       query: '',
       imageUrl: '/images/share-cover.png'
     }

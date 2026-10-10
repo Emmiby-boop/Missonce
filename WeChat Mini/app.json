@@ -20,6 +20,7 @@
         "resource-list/resource-list",
         "inspiration-writer/inspiration-writer",
         "points/points",
+        "agreement/agreement",
         "notifications/notifications",
         "avatar-diy/avatar-diy",
         "announcement-detail/announcement-detail",
@@ -55,7 +56,7 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "@navBgColor",
-    "navigationBarTitleText": "小辣椒动态头像壁纸",
+    "navigationBarTitleText": "小辣椒动态头像",
     "navigationBarTextStyle": "@navTextStyle",
     "backgroundColorTop": "@navBgColor",
     "backgroundColorBottom": "@pageBgColor"

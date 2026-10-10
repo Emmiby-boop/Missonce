@@ -13,6 +13,7 @@ import { performanceMonitor } from '../../utils/performance.js'
 import logger from '../../utils/logger.js'
 import { getStorage, setStorage, getWindowInfo, getTheme } from '../../utils/storageManager'
 import { hapticSelect, hapticLongPress, isHapticEnabled, setHapticEnabled, hapticTap } from '../../utils/haptic'
+import { setMember as setMemberAdFree } from '../../utils/memberAdFree'
 
 Page({
   // 点击底部 tabBar 时的轻震反馈（onTabItemTap 基础库 1.9.0+，点击当前 tab 同样触发）
@@ -72,8 +73,18 @@ Page({
     favoriteCount: 0,
     recentItems: [],
 
+    // 会员 / 积分（顶部会员卡位 + 列表余额行）
+    isMember: false,
+    memberName: '',
+    memberDaysRemaining: 0,
+    memberExpireText: '',
+    points: 0,
+    cashFirstYuan: '',
+
     // Menu Configuration - 浅色渐变背景搭配白色描边图标
     menuItems: [
+      { title: '会员中心', iconPath: '/images/menu-vip.svg', color: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', desc: '开通享特权', key: 'memberCenter' },
+      { title: '我的辣度值', iconPath: '/images/menu-points.svg', color: 'linear-gradient(135deg, #fed7aa, #fdba74)', desc: '', key: 'points' },
       { title: '联系我们', iconPath: '/images/menu-contact.svg', color: 'linear-gradient(135deg, #bbf7d0, #86efac)', desc: '客服与反馈' },
       { title: '推荐给好友', iconPath: '/images/menu-share.svg', color: 'linear-gradient(135deg, #bfdbfe, #93c5fd)', desc: '分享给好友', isShare: true },
       { title: '清除缓存', iconPath: '/images/menu-clear.svg', color: 'linear-gradient(135deg, #fef3c7, #fde68a)', desc: '释放存储空间' },
@@ -173,6 +184,7 @@ Page({
       this.loadRecentItems()
       this.loadDownloadCount()
       this.loadBrowseCount()
+      this.loadMemberInfo()
       this._lastRefreshTime = now
     } else if (isLoggedIn && shouldRefresh) {
       // 已登录，静默刷新（30秒节流）
@@ -180,7 +192,83 @@ Page({
       this.loadRecentItems()
       this.loadDownloadCount()
       this.loadBrowseCount()
+      this.loadMemberInfo()
       this._lastRefreshTime = now
+    } else if (!isLoggedIn) {
+      this._safeSetData({ isMember: false, memberName: '', memberDaysRemaining: 0, memberExpireText: '', points: 0 })
+    }
+
+    // 🔥 从会员中心返回时强制刷新会员状态：用户可能刚完成支付或兑换，
+    // 此时不能被 30 秒节流挡住，否则卡位仍显示「未开通」。
+    if (isLoggedIn && this._leftForPoints) {
+      this._leftForPoints = false
+      this.loadMemberInfo()
+    }
+  },
+
+  /**
+   * 会员状态 + 辣度值余额（顶部会员卡位 / 列表余额行）
+   * 数据源与「会员中心」页一致：userPoints.getMemberStatus + userPoints.getUserInfo
+   * 首购起价来自 virtualPay.getProducts（未配置虚拟支付时静默留空）
+   */
+  async loadMemberInfo() {
+    if (!this.data.userInfo) return
+
+    const [memberRes, userRes] = await Promise.all([
+      wx.cloud.callFunction({ name: 'userPoints', data: { action: 'getMemberStatus' } })
+        .catch(() => null),
+      wx.cloud.callFunction({ name: 'userPoints', data: { action: 'getUserInfo' } })
+        .catch(() => null)
+    ])
+
+    const member = memberRes && memberRes.result && memberRes.result.success ? memberRes.result.data : null
+    const user = userRes && userRes.result && userRes.result.success ? userRes.result.data : null
+
+    let memberName = ''
+    if (member && member.isMember) {
+      memberName = member.memberName || ''
+    }
+
+    let expireText = ''
+    if (member && member.expireDate) {
+      const d = new Date(member.expireDate)
+      if (!isNaN(d.getTime())) {
+        expireText = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} 到期`
+      }
+    }
+
+    this._safeSetData({
+      isMember: !!(member && member.isMember),
+      memberName,
+      memberDaysRemaining: (member && member.daysRemaining) || 0,
+      memberExpireText: expireText,
+      points: (user && user.points) || 0
+    })
+
+    // 🔥 同步插屏广告闸门（与会员中心页共用同一份 storage 缓存）
+    setMemberAdFree(!!(member && member.isMember))
+
+    this.loadFirstPrice()
+  },
+
+  /** 「¥x 起首购」：取现金档位最低价，失败静默 */
+  async loadFirstPrice() {
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'virtualPay',
+        data: { action: 'getProducts' }
+      })
+      const list = res && res.result && res.result.success ? (res.result.data || []) : []
+      let lowest = 0
+      list.forEach(p => {
+        if (p && p.price > 0 && (lowest === 0 || p.price < lowest)) lowest = p.price
+      })
+      const yuan = lowest > 0
+        ? (lowest % 100 === 0 ? String(lowest / 100) : String((lowest / 100).toFixed(2)).replace(/\.?0+$/, ''))
+        : ''
+      this._safeSetData({ cashFirstYuan: yuan })
+    } catch (e) {
+      //虚拟支付未配置时忽略
     }
   },
 
@@ -328,6 +416,13 @@ Page({
     }
     // 🔥 cloud:// 链接直接使用，微信小程序 image 组件原生支持
     this.setData({ displayAvatarUrl: avatarUrl })
+  },
+
+  /** 头像加载失败（cloud:// 临时链接过期）→ 回落到默认头像，避免破图 */
+  onAvatarImageError() {
+    if (this.data.displayAvatarUrl !== '/images/default-avatar.png') {
+      this.setData({ displayAvatarUrl: '/images/default-avatar.png' })
+    }
   },
 
   loadDownloadCount() {
@@ -624,6 +719,14 @@ Page({
   onMenuItemTap(e) {
     const title = e.currentTarget.dataset.title
     switch (title) {
+      case '会员中心':
+        this.goPointsPage()
+        break
+
+      case '我的辣度值':
+        this.goPointsPage()
+        break
+
       case '联系我们':
         this.handleContact()
         break
@@ -637,6 +740,26 @@ Page({
       default:
         break
     }
+  },
+
+  /** 跳转会员中心（subpackages/points/points 兼会员中心与辣度值） */
+  goPointsPage() {
+    this._leftForPoints = true
+    wx.navigateTo({ url: '/subpackages/points/points' })
+  },
+
+  /** 顶部会员卡位点击 → 会员中心 */
+  goMemberCenter() {
+    hapticTap()
+    this.goPointsPage()
+  },
+
+  /** 「开通即表示同意《会员服务协议》」→ 协议独立整页（合规：付费前须可完整查阅） */
+  openMemberAgreement() {
+    wx.navigateTo({
+      url: '/subpackages/agreement/agreement?from=profile',
+      fail: () => wx.showToast({ title: '协议页面打开失败，请重试', icon: 'none' })
+    })
   },
 
   handleContact() {
@@ -1186,7 +1309,7 @@ Page({
     const userInfo = getStorage('userInfo')
     const inviterParam = userInfo && userInfo.openid ? '?inviter=' + userInfo.openid : ''
     return {
-      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      title: '小辣椒动态头像，海量精美素材免费下载！',
       path: '/pages/index/index' + inviterParam,
       imageUrl: '/images/share-cover.png'
     }
@@ -1196,7 +1319,7 @@ Page({
     const userInfo = getStorage('userInfo')
     const inviterParam = userInfo && userInfo.openid ? 'inviter=' + userInfo.openid : ''
     return {
-      title: '小辣椒动态头像壁纸，海量精美素材免费下载！',
+      title: '小辣椒动态头像，海量精美素材免费下载！',
       query: inviterParam,
       imageUrl: '/images/share-cover.png'
     }

@@ -4,7 +4,7 @@
     <view class="nav-back" bindtap="goBack">
       <image class="nav-back-img" src="/images/preview-back.svg" mode="aspectFit" />
     </view>
-    <text class="nav-title">辣度值</text>
+    <text class="nav-title">会员中心</text>
     <view class="nav-right" bindtap="toggleRules">
       <text class="nav-help">?</text>
     </view>
@@ -15,160 +15,29 @@
 <view class="page">
   <ad-unit kind="interstitial" page-path="/subpackages/points/points"></ad-unit>
 
-  <!-- ① 辣度值卡片 -->
-  <view class="p-card">
-    <view class="p-card-deco"></view>
-    <view class="p-card-icon">
-      <spicy-icon size="48"></spicy-icon>
-    </view>
-    <text class="p-label">辣度值</text>
-    <text class="p-value">{{points}}</text>
-    <text class="p-total">累计获得 {{totalPoints}} 辣度值</text>
-  </view>
-
-  <!-- ② 会员横幅 -->
-  <view class="m-banner" bindtap="scrollToVip" wx:if="{{!isMember}}">
-    <view class="card-left">
-      <text class="card-title">开通会员享特权</text>
-      <text class="card-sub">去水印 · 高清下载 · 专属资源</text>
-    </view>
-    <view class="m-banner-btn">去兑换</view>
-  </view>
-
-  <view class="m-banner m-banner-active" wx:if="{{isMember}}">
-    <view class="card-left">
-      <text class="card-title">{{memberName}}</text>
-      <text class="card-sub" wx:if="{{memberDaysRemaining > 0}}">剩余 {{memberDaysRemaining}} 天</text>
-      <text class="card-sub" wx:if="{{memberDaysRemaining <= 0}}">即将到期</text>
-    </view>
-    <view class="m-banner-badge">生效中</view>
-  </view>
-
-  <!-- ③ 签到卡片 -->
-  <view class="checkin">
-    <view class="card-left">
-      <text class="card-title">{{isCheckedIn ? '今日已签到' : '每日签到'}}</text>
-      <view class="streak">
-        <view class="dot done" wx:for="{{3}}" wx:key="index">
-          <text class="dot-t">✓</text>
-        </view>
-        <view class="dot {{isCheckedIn ? 'done' : 'today'}}">
-          <text class="dot-t">{{isCheckedIn ? '✓' : '4'}}</text>
-        </view>
-        <view class="dot future" wx:for="{{3}}" wx:key="index">
-          <text class="dot-t">{{index + 5}}</text>
-        </view>
+  <!-- ① 会员卡位（未开通=权益引导 / 已开通=状态+续费） -->
+  <view class="vip-card {{isMember ? 'vip-card-on' : ''}}" bindtap="onVipCardTap">
+    <view class="vip-card-bg"></view>
+    <block wx:if="{{isMember}}">
+      <view class="vip-card-top">
+        <text class="vip-card-name">{{memberName || '会员'}}</text>
+        <text class="vip-card-badge">生效中</text>
       </view>
-    </view>
-    <view class="checkin-btn {{isCheckedIn ? 'off' : ''}}" bindtap="handleCheckIn">
-      <text>{{isCheckedIn ? '已签到' : '签到 +' + checkInReward}}</text>
-    </view>
-  </view>
-
-  <!-- ④ 赚辣度值 -->
-  <view class="sec-head">
-    <text class="sec-title">赚辣度值</text>
-  </view>
-
-  <view class="actions">
-    <view class="act-row" bindtap="handleShare">
-      <view class="act-icon act-icon-share">
-        <image class="act-icon-img" src="/images/icon-points-share.svg" mode="aspectFit" />
+      <text class="vip-card-sub" wx:if="{{memberDaysRemaining > 0}}">剩余 {{memberDaysRemaining}} 天 · 到期后恢复广告</text>
+      <text class="vip-card-sub" wx:else>已到期，续费后可继续免广告</text>
+      <view class="vip-card-btn">立即续费</view>
+    </block>
+    <block wx:else>
+      <view class="vip-card-top">
+        <text class="vip-card-name">开通会员</text>
+        <text class="vip-card-badge vip-card-badge-first" wx:if="{{cashFirstPurchase}}">首购特惠</text>
       </view>
-      <view class="act-info">
-        <text class="act-name">分享给好友</text>
-        <text class="act-desc">每日最多 {{shareDailyLimit}} 次</text>
+      <text class="vip-card-sub">去水印 · 高清下载 · 专属资源</text>
+      <view class="vip-card-btn">
+        <text wx:if="{{cashFirstYuan}}">¥{{cashFirstYuan}} 起首购</text>
+        <text wx:else>立即开通</text>
       </view>
-      <text class="act-pts">+{{shareReward}}</text>
-    </view>
-
-    <view class="act-row" bindtap="inviteFriend">
-      <view class="act-icon act-icon-invite">
-        <image class="act-icon-img" src="/images/icon-points-invite.svg" mode="aspectFit" />
-      </view>
-      <view class="act-info">
-        <text class="act-name">邀请好友</text>
-        <text class="act-desc">好友注册即得奖励</text>
-      </view>
-      <text class="act-pts">+{{inviteReward}}</text>
-    </view>
-
-    <view class="act-row" bindtap="watchAdForPoints">
-      <view class="act-icon act-icon-video">
-        <image class="act-icon-img" src="/images/icon-points-video.svg" mode="aspectFit" />
-      </view>
-      <view class="act-info">
-        <text class="act-name">观看视频</text>
-        <text class="act-desc">每日最多 {{watchAdDailyLimit}} 次</text>
-      </view>
-      <text class="act-pts">+{{watchAdPoints}}</text>
-    </view>
-  </view>
-
-  <!-- 激励视频广告组件（隐藏） -->
-  <view class="ad-hidden">
-    <ad-unit kind="rewarded"
-             id="rewardAdComp"
-             page-path="/subpackages/points/points"
-             reward-cloud-name="userPoints"
-             reward-cloud-action="rewardAdWatch"
-             reward-points="{{watchAdPoints}}"
-             button-text="观看激励视频获取辣度值"
-             show-button="{{false}}"
-             bind:rewarded="onRewardedFinished"
-             custom-class="reward-ad-component"></ad-unit>
-  </view>
-
-  <!-- ⑤ 辣度值规则 -->
-  <view class="sec-head" id="rules-section">
-    <text class="sec-title">辣度值规则</text>
-  </view>
-
-  <view class="rules">
-    <view class="rule">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-checkin.svg" mode="aspectFit" />
-        <text class="rule-tt">每日签到</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 每日签到可获得 {{checkInReward}} 辣度值</text>
-        <text class="rule-ln">· 连续签到 7 天额外奖励 30 辣度值</text>
-        <text class="rule-ln">· 连续签到 30 天额外奖励 100 辣度值</text>
-      </view>
-    </view>
-
-    <view class="rule">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-share.svg" mode="aspectFit" />
-        <text class="rule-tt">分享奖励</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 分享小程序可获得 {{shareReward}} 辣度值</text>
-        <text class="rule-ln">· 每日最多 {{shareDailyLimit}} 次分享奖励</text>
-      </view>
-    </view>
-
-    <view class="rule">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-crown.svg" mode="aspectFit" />
-        <text class="rule-tt">会员特权</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 辣度值兑换会员，畅享专属权益</text>
-        <text class="rule-ln">· 会员专属下载次数，下载更自由</text>
-      </view>
-    </view>
-
-    <view class="rule rule-warn">
-      <view class="rule-hd">
-        <image class="rule-icon" src="/images/icon-points-warning.svg" mode="aspectFit" />
-        <text class="rule-tt">注意事项</text>
-      </view>
-      <view class="rule-lines">
-        <text class="rule-ln">· 辣度值仅限本小程序使用，不可转让</text>
-        <text class="rule-ln">· 规则可能会根据运营情况调整</text>
-      </view>
-    </view>
+    </block>
   </view>
 
   <!-- ⑥ 会员兑换 -->
@@ -256,7 +125,151 @@
       </view>
     </view>
   </scroll-view>
+  <!-- 协议提示（常驻，点击查看全文） -->
+  <view class="agree-bar" bindtap="openAgreement">
+    <text class="agree-bar-txt">开通即表示同意《会员服务协议》</text>
+    <text class="agree-bar-link">查看全文 ›</text>
+  </view>
 
+  <!-- 我的辣度值 -->
+  <view class="sec-head" id="points-section">
+    <text class="sec-title">我的辣度值</text>
+    <text class="sec-title-sub">签到 / 分享 / 邀请均可获取</text>
+  </view>
+
+  <!-- ① 辣度值卡片 -->
+  <view class="p-card">
+    <view class="p-card-deco"></view>
+    <view class="p-card-icon">
+      <spicy-icon size="48"></spicy-icon>
+    </view>
+    <text class="p-label">辣度值</text>
+    <text class="p-value">{{points}}</text>
+    <text class="p-total">累计获得 {{totalPoints}} 辣度值</text>
+  </view>
+  <!-- ③ 签到卡片 -->
+  <view class="checkin">
+    <view class="card-left">
+      <text class="card-title">{{isCheckedIn ? '今日已签到' : '每日签到'}}</text>
+      <view class="streak">
+        <view class="dot done" wx:for="{{3}}" wx:key="index">
+          <text class="dot-t">✓</text>
+        </view>
+        <view class="dot {{isCheckedIn ? 'done' : 'today'}}">
+          <text class="dot-t">{{isCheckedIn ? '✓' : '4'}}</text>
+        </view>
+        <view class="dot future" wx:for="{{3}}" wx:key="index">
+          <text class="dot-t">{{index + 5}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="checkin-btn {{isCheckedIn ? 'off' : ''}}" bindtap="handleCheckIn">
+      <text>{{isCheckedIn ? '已签到' : '签到 +' + checkInReward}}</text>
+    </view>
+  </view>
+  <!-- ④ 赚辣度值 -->
+  <view class="sec-head">
+    <text class="sec-title">赚辣度值</text>
+  </view>
+
+  <view class="actions">
+    <view class="act-row" bindtap="handleShare">
+      <view class="act-icon act-icon-share">
+        <image class="act-icon-img" src="/images/icon-points-share.svg" mode="aspectFit" />
+      </view>
+      <view class="act-info">
+        <text class="act-name">分享给好友</text>
+        <text class="act-desc">每日最多 {{shareDailyLimit}} 次</text>
+      </view>
+      <text class="act-pts">+{{shareReward}}</text>
+    </view>
+
+    <view class="act-row" bindtap="inviteFriend">
+      <view class="act-icon act-icon-invite">
+        <image class="act-icon-img" src="/images/icon-points-invite.svg" mode="aspectFit" />
+      </view>
+      <view class="act-info">
+        <text class="act-name">邀请好友</text>
+        <text class="act-desc">好友注册即得奖励</text>
+      </view>
+      <text class="act-pts">+{{inviteReward}}</text>
+    </view>
+
+    <view class="act-row" bindtap="watchAdForPoints">
+      <view class="act-icon act-icon-video">
+        <image class="act-icon-img" src="/images/icon-points-video.svg" mode="aspectFit" />
+      </view>
+      <view class="act-info">
+        <text class="act-name">观看视频</text>
+        <text class="act-desc">每日最多 {{watchAdDailyLimit}} 次</text>
+      </view>
+      <text class="act-pts">+{{watchAdPoints}}</text>
+    </view>
+  </view>
+  <!-- 激励视频广告组件（隐藏） -->
+  <view class="ad-hidden">
+    <ad-unit kind="rewarded"
+             id="rewardAdComp"
+             page-path="/subpackages/points/points"
+             reward-cloud-name="userPoints"
+             reward-cloud-action="rewardAdWatch"
+             reward-points="{{watchAdPoints}}"
+             button-text="观看激励视频获取辣度值"
+             show-button="{{false}}"
+             bind:rewarded="onRewardedFinished"
+             custom-class="reward-ad-component"></ad-unit>
+  </view>
+  <!-- ⑤ 辣度值规则 -->
+  <view class="sec-head" id="rules-section">
+    <text class="sec-title">辣度值规则</text>
+  </view>
+
+  <view class="rules">
+    <view class="rule">
+      <view class="rule-hd">
+        <image class="rule-icon" src="/images/icon-points-checkin.svg" mode="aspectFit" />
+        <text class="rule-tt">每日签到</text>
+      </view>
+      <view class="rule-lines">
+        <text class="rule-ln">· 每日签到可获得 {{checkInReward}} 辣度值</text>
+        <text class="rule-ln">· 连续签到 7 天额外奖励 30 辣度值</text>
+        <text class="rule-ln">· 连续签到 30 天额外奖励 100 辣度值</text>
+      </view>
+    </view>
+
+    <view class="rule">
+      <view class="rule-hd">
+        <image class="rule-icon" src="/images/icon-points-share.svg" mode="aspectFit" />
+        <text class="rule-tt">分享奖励</text>
+      </view>
+      <view class="rule-lines">
+        <text class="rule-ln">· 分享小程序可获得 {{shareReward}} 辣度值</text>
+        <text class="rule-ln">· 每日最多 {{shareDailyLimit}} 次分享奖励</text>
+      </view>
+    </view>
+
+    <view class="rule">
+      <view class="rule-hd">
+        <image class="rule-icon" src="/images/icon-points-crown.svg" mode="aspectFit" />
+        <text class="rule-tt">会员特权</text>
+      </view>
+      <view class="rule-lines">
+        <text class="rule-ln">· 辣度值兑换会员，畅享专属权益</text>
+        <text class="rule-ln">· 会员专属下载次数，下载更自由</text>
+      </view>
+    </view>
+
+    <view class="rule rule-warn">
+      <view class="rule-hd">
+        <image class="rule-icon" src="/images/icon-points-warning.svg" mode="aspectFit" />
+        <text class="rule-tt">注意事项</text>
+      </view>
+      <view class="rule-lines">
+        <text class="rule-ln">· 辣度值仅限本小程序使用，不可转让</text>
+        <text class="rule-ln">· 规则可能会根据运营情况调整</text>
+      </view>
+    </view>
+  </view>
   <!-- ⑥ 最近记录 -->
   <view class="sec-head">
     <text class="sec-title">最近记录</text>
@@ -360,9 +373,27 @@
     </view>
   </view>
 
+  <!-- 协议勾选（合规要求：付费前显式同意 + 显著提示退款规则） -->
+  <view class="agree-row" catchtap="toggleAgree">
+    <view class="agree-box {{agreementAgreed ? 'agree-box-on' : ''}}">
+      <text wx:if="{{agreementAgreed}}" class="agree-box-tick">✓</text>
+    </view>
+    <view class="agree-row-txt">
+      <text bindtap="toggleAgree">我已阅读并同意</text>
+      <text class="agree-row-link" catchtap="openAgreement">《会员服务协议》</text>
+    </view>
+  </view>
+  <text class="agree-refund-tip">虚拟商品·开通 24 小时内未使用可申请无理由退款</text>
+
+  <!-- iOS 前置说明：小程序读不到 Apple ID 区域，只能提前告知要求，避免用户踩坑 -->
+  <view class="ios-region-tip" wx:if="{{isIOS}}">
+    <text class="ios-region-tip-t">iOS 支付需使用「中国大陆区」Apple ID，非大陆区账号将无法完成支付</text>
+  </view>
+
   <!-- 现金购买（虚拟支付） -->
-  <button class="cash-btn cash-btn-primary" bindtap="buyWithCash" disabled="{{cashBuying}}">
-    {{cashBuying ? '支付中...' : '现金购买 ¥' + cashModalProduct.priceYuan}}
+  <button class="cash-btn cash-btn-primary" bindtap="buyWithCash"
+          disabled="{{cashBuying || !agreementAgreed}}">
+    {{cashBuying ? '支付中...' : (agreementAgreed ? '现金购买 ¥' + cashModalProduct.priceYuan : '请先同意服务协议')}}
   </button>
 
   <!-- 辣度值兑换 -->
@@ -374,6 +405,62 @@
     <text>✕</text>
   </view>
 </view>
+
+<!-- 支付未完成指引（Apple IAP 拒付 errno 4 后的自定义引导，替代不可控的原生弹窗） -->
+<view class="modal-mask" wx:if="{{showPayGuideModal}}" bindtap="closePayGuide"></view>
+<view class="pg-modal" wx:if="{{showPayGuideModal}}">
+  <view class="pg-head">
+    <text class="pg-title">支付未完成指引</text>
+    <text class="pg-sub">若提示「无法完成充值」或受限，可参考以下方式</text>
+  </view>
+
+  <scroll-view class="pg-body" scroll-y enhanced show-scrollbar="{{false}}">
+    <!-- ① 手机端：PC 微信用户不该再被推荐「去电脑版」 -->
+    <view class="pg-card pg-card-rec" wx:if="{{!payGuideOnPC}}">
+      <view class="pg-card-hd">
+        <text class="pg-badge">推荐方式</text>
+        <text class="pg-card-tt">电脑版微信快捷开通</text>
+      </view>
+      <text class="pg-card-desc">在 Windows 电脑版微信中打开本小程序即可开通会员，会员特权与手机端实时同步！</text>
+    </view>
+
+    <view class="pg-card" wx:else>
+      <view class="pg-card-hd">
+        <text class="pg-badge pg-badge-alt">排查指引</text>
+        <text class="pg-card-tt">当前支付未能完成</text>
+      </view>
+      <text class="pg-card-desc">若反复失败，请检查微信版本是否为最新、是否存在未完成的支付订单、支付账户余额是否正常。</text>
+    </view>
+
+    <view class="pg-card">
+      <view class="pg-card-hd">
+        <text class="pg-badge pg-badge-alt" wx:if="{{!payGuideOnPC}}">备选</text>
+        <text class="pg-card-tt">{{payGuideOnPC ? '也可改用安卓手机开通' : '若需在手机上开通，请排查苹果设置'}}</text>
+      </view>
+      <view class="pg-steps">
+        <view class="pg-step">
+          <text class="pg-step-n">1</text>
+          <text class="pg-step-t">确认当前 Apple ID 为中国大陆区账号</text>
+        </view>
+        <view class="pg-step">
+          <text class="pg-step-n">2</text>
+          <text class="pg-step-t">确认 App Store 已绑定有充足余额的支付方式</text>
+        </view>
+        <view class="pg-step" wx:if="{{!payGuideOnPC}}">
+          <text class="pg-step-n">3</text>
+          <text class="pg-step-t">检查 App Store「购买记录」中是否有待确认的订单</text>
+        </view>
+      </view>
+    </view>
+    <view style="height: 8rpx;"></view>
+  </scroll-view>
+
+  <view class="pg-foot">
+    <view class="pg-btn" bindtap="closePayGuide">我知道了</view>
+  </view>
+</view>
+
+<!-- 会员服务协议：已改为独立整页 subpackages/agreement/agreement（见 points.js openAgreement） -->
 
 <!-- 广告加载中 -->
 <view class="ad-mask" wx:if="{{showAdLoading}}" catchtouchmove="noop" catchtap="noop">

@@ -2,6 +2,7 @@ import logger from "./utils/logger"
 import { initStorageCache } from "./utils/storageManager"
 import { ENV_ID } from "./config/constants.js"
 import { isLowEndDevice } from "./utils/device.js"
+import { refresh as refreshMemberAdFree } from "./utils/memberAdFree"
 
 // 🔥 PV 事件本地批量上报：避免每次切页都调 logger 云函数（单次 callFunction 约 300-600ms）
 // 策略：PV 先缓存到内存，累积 5 条或每 30 秒批量上报一次
@@ -85,6 +86,11 @@ App({
 
     // 🔥 低端机检测（benchmarkLevel ≤ 10）：供页面挂 low-end class 降级毛玻璃等效果
     this.globalData.lowEnd = isLowEndDevice()
+
+    // 🔥 会员免广告：拉一次会员状态回填本地缓存（插屏广告闸门）。
+    // 不 await —— 首次冷启动时广告实例初始化晚于本次调用，
+    // 此时用的是 storage 里的旧值（可能过期），但下次启动即准确。
+    setTimeout(() => { refreshMemberAdFree() }, 1500)
 
     // 🔥 记录启动完成时间
     this.performanceMonitor("launch")

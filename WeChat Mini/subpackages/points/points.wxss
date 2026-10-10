@@ -67,6 +67,104 @@ page {
 }
 
 /* ===========================
+   ⓪ 会员卡位（会员中心主视觉）
+   =========================== */
+.vip-card {
+  margin: 16rpx 24rpx 0;
+  padding: 32rpx 28rpx 28rpx;
+  border-radius: 24rpx;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f3d24 0%, #12603a 45%, #07C160 100%);
+  box-shadow: 0 8rpx 28rpx rgba(7, 193, 96, 0.22);
+}
+
+.vip-card::after {
+  content: '';
+  position: absolute;
+  right: -60rpx;
+  top: -80rpx;
+  width: 240rpx;
+  height: 240rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.vip-card-bg {
+  position: absolute;
+  left: -40rpx;
+  bottom: -70rpx;
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vip-card-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vip-card-name {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1rpx;
+}
+
+.vip-card-badge {
+  flex-shrink: 0;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.vip-card-badge-first {
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  color: #5a3e00;
+  font-weight: 600;
+}
+
+.vip-card-sub {
+  position: relative;
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.vip-card-btn {
+  position: relative;
+  margin-top: 24rpx;
+  padding: 18rpx 0;
+  border-radius: 999rpx;
+  background: #fff;
+  color: #07C160;
+  font-size: 28rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 已开通：金色调，避免和引导态混淆 */
+.vip-card-on {
+  background: linear-gradient(135deg, #3b2a00 0%, #6b4c00 45%, #d4a017 100%);
+  box-shadow: 0 8rpx 28rpx rgba(212, 160, 23, 0.24);
+}
+
+.vip-card-on .vip-card-btn {
+  color: #a06a00;
+}
+
+.vip-card:active {
+  transform: scale(0.985);
+}
+
+/* ===========================
    ① 辣度值卡片
    =========================== */
 .p-card {
@@ -484,6 +582,289 @@ page {
   color: #f59e0b;
   font-weight: 700;
 }
+
+/* ===========================
+   会员服务协议
+   =========================== */
+
+/* 套餐区下方的常驻提示 */
+.agree-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 4rpx 24rpx 8rpx;
+}
+
+.agree-bar-txt {
+  font-size: 22rpx;
+  color: var(--text-sub);
+}
+
+.agree-bar-link {
+  font-size: 22rpx;
+  color: #07c160;
+  font-weight: 500;
+}
+
+/* 支付弹窗内的勾选行 */
+.agree-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 8rpx;
+}
+
+.agree-box {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid var(--border-color);
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.agree-box-on {
+  background: #07c160;
+  border-color: #07c160;
+}
+
+.agree-box-tick {
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.agree-row-txt {
+  flex: 1;
+  min-width: 0;
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+
+.agree-row-link {
+  color: #07c160;
+  font-weight: 500;
+}
+
+/* 退款提示（合规硬性要求：付费前显著位置） */
+.agree-refund-tip {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #ef4444;
+  text-align: center;
+}
+
+/* iOS 前置说明（Apple ID 区域要求） */
+.ios-region-tip {
+  margin-top: 10rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 12rpx;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1rpx solid rgba(59, 130, 246, 0.18);
+}
+
+.ios-region-tip-t {
+  font-size: 21rpx;
+  color: #2563eb;
+  line-height: 1.5;
+}
+
+/* ===========================
+   支付未完成指引弹窗（errno 4）
+   设计语言沿用页面既有体系：会员卡绿渐变 + 金色 tag + .modal 圆角节奏
+   =========================== */
+.pg-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600rpx;
+  max-height: 78vh;
+  background: var(--card-bg);
+  border-radius: 24rpx;
+  padding: 36rpx 28rpx 24rpx;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pg-head {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pg-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.pg-sub {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: var(--text-sub);
+}
+
+.pg-body {
+  flex: 1;
+  min-height: 0;
+  margin-top: 24rpx;
+}
+
+/* 卡片：白底细线，克制，与页面其它卡片一致 */
+.pg-card {
+  padding: 22rpx 24rpx;
+  border-radius: 20rpx;
+  background: var(--card-bg);
+  border: 1rpx solid var(--border-color);
+  margin-bottom: 16rpx;
+}
+
+/* 推荐卡：会员卡同款绿渐变，与 vip-card 视觉一致 */
+.pg-card-rec {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f3d24 0%, #12603a 45%, #07C160 100%);
+  border-color: transparent;
+  box-shadow: 0 6rpx 20rpx rgba(7, 193, 96, 0.2);
+}
+
+.pg-card-rec::after {
+  content: '';
+  position: absolute;
+  right: -50rpx;
+  top: -60rpx;
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pg-card-hd {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+  position: relative;
+  z-index: 1;
+}
+
+/* 金色 tag，与页面 vip-card-tag / tier-badge-l 同色系 */
+.pg-badge {
+  display: inline-block;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+  margin-right: 14rpx;
+}
+
+.pg-badge-alt {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07C160;
+}
+
+.pg-card-tt {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-main);
+  flex: 1;
+  min-width: 0;
+}
+
+/* 推荐卡内文字反白 */
+.pg-card-rec .pg-card-tt,
+.pg-card-rec .pg-card-desc {
+  color: #fff;
+}
+
+.pg-card-rec .pg-card-desc {
+  opacity: 0.9;
+}
+
+.pg-card-desc {
+  display: block;
+  position: relative;
+  z-index: 1;
+  font-size: 24rpx;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+/* 排查步骤 */
+.pg-steps {
+  position: relative;
+  z-index: 1;
+}
+
+.pg-step {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10rpx;
+}
+
+.pg-step:last-child {
+  margin-bottom: 0;
+}
+
+/* 序号：微信绿实心圆，跟 tier-badge / dot 体系一致 */
+.pg-step-n {
+  flex-shrink: 0;
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  background: rgba(7, 193, 96, 0.1);
+  color: #07C160;
+  font-size: 19rpx;
+  font-weight: 600;
+  text-align: center;
+  line-height: 30rpx;
+  margin-right: 12rpx;
+}
+
+.pg-card-rec .pg-step-n {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.pg-step-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.pg-foot {
+  flex-shrink: 0;
+  padding-top: 16rpx;
+}
+
+/* 主按钮：微信绿，跟 cash-btn-primary 一致 */
+.pg-btn {
+  height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 999rpx;
+  background: #07C160;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 注：原「协议全文抽屉弹窗」(.ag-modal/.ag-head/.ag-body/.ag-sec/.ag-item/.ag-btn 等)
+   已于2026-10-10 迁移到独立整页 subpackages/agreement/agreement.wxss，本页不再使用。 */
 
 .sec-title-sub {
   font-size: 22rpx;
@@ -1027,4 +1408,50 @@ page {
     background: linear-gradient(135deg, #d4a017, #b8860b);
     color: #fffbeb;
   }
+
+  /* 支付未完成指引弹窗 */
+  .pg-card-rec {
+    background: linear-gradient(135deg, #064e3b 0%, #0b3d2a 50%, #10b981 100%);
+    box-shadow: none;
+  }
+
+  .pg-badge-alt {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+  }
+
+  .pg-step-n {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+  }
+
+  .pg-btn {
+    background: #10b981;
+  }
+
+  /* 会员服务协议 */
+  .ios-region-tip {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.28);
+  }
+
+  .ios-region-tip-t {
+    color: #93c5fd;
+  }
+
+  .agree-box {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .agree-box-on {
+    background: #10b981;
+    border-color: #10b981;
+  }
+
+  .agree-row-link,
+  .agree-bar-link {
+    color: #34d399;
+  }
+
 }

@@ -856,7 +856,7 @@ Page({
     const firstTag = categories[0] || tags[0] || ''
     let title = '发现了一张超好看的壁纸'
     if (firstTag) {
-      title = `${firstTag}壁纸 | 小辣椒壁纸`
+      title = `${firstTag}壁纸 | 小辣椒动态头像`
     } else if (wallpaperData.title && !wallpaperData.title.includes('.')) {
       title = wallpaperData.title
     }
@@ -882,9 +882,9 @@ Page({
     const categories = wallpaperData.categories || []
     const tags = wallpaperData.tags || []
     const firstTag = categories[0] || tags[0] || ''
-    let title = '小辣椒头像壁纸 | 精美壁纸免费下载'
+    let title = '小辣椒动态头像 | 精美壁纸免费下载'
     if (firstTag) {
-      title = `${firstTag}壁纸 | 小辣椒壁纸`
+      title = `${firstTag}壁纸 | 小辣椒动态头像`
     }
     const resourceId = wallpaperData._id || wallpaperData.id || ''
     const shareUrl = safeDecodeURIComponent(this.data.currentUrl)

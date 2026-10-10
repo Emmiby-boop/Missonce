@@ -791,7 +791,7 @@ Page({
       const tags = currentAvatar.tags || []
       const firstTag = categories[0] || tags[0] || ''
       if (firstTag) {
-        title = `${firstTag}头像 | 小辣椒壁纸`
+        title = `${firstTag}头像 | 小辣椒动态头像`
       } else if (currentAvatar.title && !currentAvatar.title.includes('.')) {
         title = currentAvatar.title
       }
@@ -818,9 +818,9 @@ Page({
     const categories = currentAvatar?.categories || []
     const tags = currentAvatar?.tags || []
     const firstTag = categories[0] || tags[0] || ''
-    let title = '小辣椒头像壁纸 | 精美头像免费下载'
+    let title = '小辣椒动态头像 | 精美头像免费下载'
     if (firstTag) {
-      title = `${firstTag}头像 | 小辣椒壁纸`
+      title = `${firstTag}头像 | 小辣椒动态头像`
     }
     const resourceId = currentAvatar?._id || currentAvatar?.id || ''
     const shareUrl = safeDecodeURIComponent(currentUrl)

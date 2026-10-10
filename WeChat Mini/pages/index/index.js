@@ -766,7 +766,7 @@ Page({
     // 🔥 分享成功后记录奖励
     setTimeout(() => recordShareReward(), 500)
     return {
-      title: '小辣椒头像壁纸 | 海量精美素材免费下载',
+      title: '小辣椒动态头像 | 海量精美素材免费下载',
       path: '/pages/index/index',
       imageUrl: '/images/share-cover.png'
     }
@@ -774,7 +774,7 @@ Page({
 
   onShareTimeline() {
     return {
-      title: '小辣椒头像壁纸 | 海量精美素材免费下载',
+      title: '小辣椒动态头像 | 海量精美素材免费下载',
       query: '',
       imageUrl: '/images/share-cover.png'
     }
