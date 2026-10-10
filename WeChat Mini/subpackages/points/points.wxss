@@ -441,12 +441,48 @@ page {
 
 /* 现金购买价（虚拟支付开通后显示） */
 .tier-cash {
-  display: block;
-  font-size: 22rpx;
-  color: #f59e0b;
-  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8rpx;
   margin-top: 6rpx;
   margin-bottom: 10rpx;
+  min-height: 34rpx;
+}
+
+/* 划线原价（仅非 iOS 首购展示） */
+.tier-cash-old {
+  font-size: 22rpx;
+  color: #cbd5e1;
+  text-decoration: line-through;
+}
+
+/* 到手价：首购时高亮成促销色 */
+.tier-cash-new {
+  font-size: 26rpx;
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+/* 弹窗内的价格区 */
+.cash-modal-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+
+.cash-modal-old {
+  font-size: 26rpx;
+  color: #cbd5e1;
+  text-decoration: line-through;
+}
+
+.cash-modal-new {
+  font-size: 40rpx;
+  color: #f59e0b;
+  font-weight: 700;
 }
 
 .sec-title-sub {
@@ -874,6 +910,17 @@ page {
   .nav {
     background: rgba(18,18,18,0.88);
     box-shadow: 0 1rpx 0 rgba(255,255,255,0.06);
+  }
+
+  /* 划线原价：暗色下用更暗的灰，别太扎眼 */
+  .tier-cash-old,
+  .cash-modal-old {
+    color: #6b7280;
+  }
+
+  .tier-cash-new,
+  .cash-modal-new {
+    color: #fbbf24;
   }
 
   .nav-back-img {

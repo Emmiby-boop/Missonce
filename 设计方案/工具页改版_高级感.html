@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小辣椒 · 工具页改版 · 高级感方向</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   原型外壳
+   ============================================================ */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:#08090A;color:#e6e3dd;
+  font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1300px;margin:0 auto;padding:52px 24px 110px}
+
+.masthead{border-bottom:1px solid rgba(230,227,221,.12);padding-bottom:30px;margin-bottom:34px}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.26em;
+  text-transform:uppercase;color:#4ae176;margin-bottom:16px
+}
+h1{
+  font-family:"Noto Serif SC",serif;font-weight:700;font-size:40px;letter-spacing:-.028em;
+  line-height:1.12;margin:0 0 16px;color:#F5F1EA
+}
+.lede{max-width:760px;font-size:14.5px;line-height:1.85;color:#9E9A93;font-weight:300}
+.lede b{color:#E6E3DD;font-weight:500}
+.lede s{color:#6E6A64;text-decoration:none}
+
+/* 为什么上一版不够 —— 自查表 */
+.diag{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0;
+  border:1px solid rgba(230,227,221,.12);margin:0 0 40px
+}
+.diag div{padding:18px 22px;border-right:1px solid rgba(230,227,221,.10);border-bottom:1px solid rgba(230,227,221,.10)}
+.diag div:nth-child(3n){border-right:0}
+.diag h4{
+  margin:0 0 8px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  font-family:"IBM Plex Mono",monospace;color:#4ae176;font-weight:500
+}
+.diag p{margin:0;font-size:13px;line-height:1.7;color:#8E8A83;font-weight:300}
+.diag p b{color:#C8C4BD;font-weight:500}
+
+/* 控制条 */
+.controls{
+  display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;
+  border:1px solid rgba(230,227,221,.12);padding:14px 18px;margin-bottom:36px
+}
+.ctl{display:flex;align-items:center;gap:9px}
+.ctl>span{font-size:10px;letter-spacing:.16em;color:#7C7872;text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+.seg{display:flex;border:1px solid rgba(230,227,221,.16)}
+.seg button{
+  font:inherit;font-size:12.5px;padding:7px 15px;border:0;background:transparent;
+  color:#8E8A83;cursor:pointer;transition:all .22s ease;font-weight:400
+}
+.seg button[aria-pressed="true"]{background:#006e2f;color:#fff;font-weight:500}
+.seg button:focus-visible{outline:2px solid #4ae176;outline-offset:2px}
+
+/* ============================================================
+   手机外壳（中性，不抢戏）
+   ============================================================ */
+.stage{display:flex;gap:34px;overflow-x:auto;padding-bottom:18px;align-items:flex-start}
+.stage::-webkit-scrollbar{height:8px}
+.stage::-webkit-scrollbar-thumb{background:#24262A;border-radius:0}
+.slot{flex-shrink:0}
+.slot-head{display:flex;align-items:baseline;gap:11px;margin-bottom:14px}
+.slot-head .idx{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.2em;color:#6E6A64;text-transform:uppercase}
+.slot-head .nm{font-family:"Noto Serif SC",serif;font-size:17px;font-weight:600;color:#F5F1EA;letter-spacing:-.02em}
+.slot-head .pick{font-size:9.5px;font-weight:500;letter-spacing:.14em;background:#006e2f;color:#fff;padding:3px 8px}
+.slot-head .sub{font-size:12px;color:#6E6A64;font-weight:300;margin-top:6px;line-height:1.6;max-width:320px;display:block}
+
+.phone{width:390px;height:844px;transform:scale(.84);transform-origin:top left}
+.slot:not(.slot-sm){width:328px;height:712px}
+.slot-sm{width:250px;height:560px}
+.phone.sm{transform:scale(.64)}
+.phone-frame{
+  width:100%;height:100%;border-radius:8px;padding:9px;
+  background:#15171A;box-shadow:0 30px 70px rgba(0,0,0,.6)
+}
+.screen{
+  width:100%;height:100%;overflow:hidden;position:relative;display:flex;flex-direction:column;
+  background:var(--bg);color:var(--text);font-family:var(--font-body);
+  transition:background .4s ease,color .4s ease
+}
+.screen::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:var(--atmos)}
+.grain{
+  position:absolute;inset:0;pointer-events:none;z-index:1;opacity:var(--grain,0);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay
+}
+.statusbar{
+  position:relative;z-index:4;height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;color:var(--text)
+}
+.statusbar .r{display:flex;gap:6px;align-items:center}
+.statusbar .r i{width:4px;height:8px;background:currentColor;opacity:.85}
+.statusbar .r i:nth-child(3){height:6px;opacity:.4}
+
+/* 通用细线 */
+.rule{height:1px;background:var(--line);width:100%}
+.rule.top{border:0}
+
+/* 中间内容滚动区（TabBar 固定，其余部分滚动） */
+.body{position:relative;z-index:2;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.body::-webkit-scrollbar{width:0}
+
+/* ============================================================
+   方向 D · 深墨雅致（暗）
+   色板 = 全站暗色模式令牌：
+   底 #121212 / 文字 #f3f4f6 / 次要 #9ca3af / 线 #374151 系
+   主色 #22c55e（填充）、#4ae176（暗底文字，与 profile 一致）
+   ============================================================ */
+.dir-d{
+  --bg:#121212; --text:#f3f4f6; --muted:#9ca3af; --faint:#6b7280;
+  --accent:#4ae176; --accent-fill:#22c55e; --accent-ink:#052012; --gold:#4ae176;
+  --line:rgba(243,244,246,.11); --line-soft:rgba(243,244,246,.06);
+  --surface:rgba(243,244,246,.035);
+  --font-display:"Noto Serif SC","Songti SC",serif;
+  --font-latin:"Cormorant Garamond","Playfair Display",serif;
+  --font-body:"Noto Sans SC","PingFang SC",sans-serif;
+  --font-num:"JetBrains Mono","IBM Plex Mono",monospace;
+  --atmos:radial-gradient(520px 380px at 82% -8%,rgba(34,197,94,.20),transparent 62%),
+          radial-gradient(430px 330px at 4% 98%,rgba(74,225,118,.07),transparent 62%);
+  --grain:.05;
+}
+
+/* 抬头 */
+.head{position:relative;z-index:3;flex-shrink:0;padding:6px 22px 16px}
+.head .kicker{
+  font-family:var(--font-num);font-size:9.5px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:12px
+}
+.head h2{
+  margin:0;font-family:var(--font-display);font-weight:600;font-size:31px;line-height:1.1;
+  letter-spacing:-.03em;color:var(--text)
+}
+.head h2 em{font-family:var(--font-latin);font-style:italic;font-weight:500;font-size:26px;color:var(--muted);letter-spacing:0}
+.head .meta{
+  display:flex;align-items:center;gap:10px;margin-top:12px;
+  font-family:var(--font-num);font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase
+}
+.head .meta .ln{flex:1;height:1px;background:var(--line)}
+
+/* Hero：作品压字 */
+.hero-d{position:relative;z-index:3;flex-shrink:0;margin:0 0 4px}
+.hero-art{position:relative;height:206px;overflow:hidden;background:#1a1a1a}
+.hero-art .ph{position:absolute;inset:0;background:var(--art)}
+.hero-art .ph::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(18,18,18,.95) 0%,rgba(18,18,18,.55) 42%,rgba(18,18,18,.12) 78%,transparent 100%)
+}
+.hero-art .sil{
+  position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:104px;height:104px;opacity:.5
+}
+.hero-copy{position:absolute;left:22px;right:22px;bottom:18px;z-index:2}
+.hero-copy .lab{
+  font-family:var(--font-num);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:9px
+}
+.hero-copy .big{
+  font-family:var(--font-display);font-weight:600;font-size:27px;line-height:1.14;letter-spacing:-.025em;color:#f3f4f6
+}
+.hero-copy .big b{font-family:var(--font-num);font-weight:500;font-size:29px;color:var(--gold);letter-spacing:-.02em}
+.hero-copy .sml{margin-top:7px;font-size:12px;color:rgba(243,244,246,.62);font-weight:300;line-height:1.5}
+
+/* 印章：虚线圈 → 盖下变实心绿并回正 */
+.stamp{
+  position:absolute;right:20px;top:16px;z-index:3;width:74px;height:74px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  border:1.5px dashed rgba(74,225,118,.5);background:rgba(18,18,18,.42);backdrop-filter:blur(6px);
+  transition:transform .5s cubic-bezier(.16,1,.3,1),background .4s ease,border-color .4s ease;
+  transform:rotate(-8deg)
+}
+.stamp .d{font-family:var(--font-num);font-size:23px;font-weight:500;color:var(--accent);line-height:1}
+.stamp .m{font-family:var(--font-num);font-size:8px;letter-spacing:.16em;color:var(--muted);margin-top:3px}
+.stamp:hover{background:rgba(34,197,94,.14);border-color:rgba(74,225,118,.8)}
+.stamp:active{transform:rotate(-8deg) scale(.94)}
+.stamp.on{
+  background:var(--accent-fill);border:1.5px solid rgba(243,244,246,.45);transform:rotate(-3deg);
+  box-shadow:0 8px 26px rgba(34,197,94,.30)
+}
+.stamp.on .d{color:var(--accent-ink)}
+.stamp.on .m{color:rgba(5,32,18,.72)}
+
+/* 签到行动条：不是圆角按钮，是一条细线上的文字按钮 */
+.act{
+  position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:var(--surface);cursor:pointer;transition:background .3s ease
+}
+.act:hover{background:rgba(245,241,234,.06)}
+.act .t{font-family:var(--font-display);font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.act .t span{font-family:var(--font-num);font-size:10px;color:var(--gold);letter-spacing:.1em;margin-left:8px}
+.act .a{font-size:12px;color:var(--accent);display:flex;align-items:center;gap:7px;letter-spacing:.04em}
+.act .a i{display:block;width:22px;height:1px;background:var(--accent);transition:width .3s cubic-bezier(.16,1,.3,1)}
+.act:hover .a i{width:34px}
+.act.done .t{color:var(--muted)}
+.act.done .a{color:var(--faint)}
+.act.done .a i{background:var(--faint)}
+
+/* 工具列表：无卡片，细线分隔 */
+.sec-d{position:relative;z-index:3;padding:26px 22px 0}
+.sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.sec-h .n{font-family:var(--font-num);font-size:10px;letter-spacing:.16em;color:var(--accent)}
+.sec-h .t{font-family:var(--font-display);font-size:16px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.sec-h .ln{flex:1;height:1px;background:var(--line);margin-left:6px}
+.sec-h .c{font-family:var(--font-num);font-size:10px;color:var(--faint);letter-spacing:.1em}
+
+.row{
+  display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line-soft);
+  cursor:pointer;position:relative;transition:padding-left .3s cubic-bezier(.16,1,.3,1)
+}
+.row:hover{padding-left:8px}
+.row:active{opacity:.6}
+.row .ico{width:26px;height:26px;flex-shrink:0;color:var(--muted);opacity:.8}
+.row .ico svg{width:100%;height:100%}
+.row .bd{display:block;flex:1;min-width:0}
+.row .nm{display:block;font-family:var(--font-display);font-size:16px;font-weight:600;letter-spacing:-.015em;color:var(--text);line-height:1.3}
+.row .ds{display:block;font-size:11.5px;color:var(--muted);font-weight:300;margin-top:3px;line-height:1.45}
+.row .ar{font-size:16px;color:var(--faint);transition:color .3s ease,transform .3s cubic-bezier(.16,1,.3,1)}
+.row:hover .ar{color:var(--accent);transform:translateX(4px)}
+
+/* 主推条：左侧绿竖线 + 极淡底色，仍然不是卡片 */
+.row.key{padding-left:14px;border-left:2px solid var(--accent-fill);background:linear-gradient(90deg,rgba(34,197,94,.10),transparent 70%)}
+.row.key:hover{padding-left:20px}
+.row.key .nm{font-size:18px}
+.row.key .ico{color:var(--accent);opacity:1}
+
+/* 辣度值：数字说话 */
+.bal{display:flex;align-items:flex-end;justify-content:space-between;padding:20px 0 4px;border-bottom:1px solid var(--line-soft)}
+.bal .l{font-size:11.5px;color:var(--muted);font-weight:300;letter-spacing:.06em}
+.bal .v{font-family:var(--font-num);font-size:30px;font-weight:500;color:var(--gold);line-height:1;letter-spacing:-.02em}
+.bal .v small{font-family:var(--font-body);font-size:11px;color:var(--muted);margin-left:6px;font-weight:300}
+.bal .g{font-size:11px;color:var(--accent);letter-spacing:.06em;align-self:center}
+
+/* 作品带（破格：冲出屏幕左右边缘） */
+.marquee{position:relative;z-index:2;flex-shrink:0;margin:22px 0 0;overflow:hidden;padding:2px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.marquee::before{
+  content:"最近作品";position:absolute;left:22px;top:8px;z-index:2;
+  font-family:var(--font-num);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)
+}
+.track{display:flex;gap:10px;width:max-content;animation:slide 34s linear infinite;padding-top:20px}
+@keyframes slide{to{transform:translateX(-50%)}}
+.thumb{width:86px;height:86px;flex-shrink:0;position:relative;overflow:hidden;background:#1a1a1a}
+.thumb .ph{position:absolute;inset:0;background:var(--art)}
+.thumb .sil{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:46px;height:46px;opacity:.42}
+
+/* TabBar：只有文字 + 顶部 1px 线 */
+.tabbar{
+  position:relative;z-index:4;flex-shrink:0;height:62px;padding-bottom:6px;display:flex;align-items:center;
+  background:var(--bg);border-top:1px solid var(--line)
+}
+.tabbar .tab{
+  flex:1;height:100%;display:flex;align-items:center;justify-content:center;position:relative;
+  font-size:11.5px;letter-spacing:.08em;color:var(--faint);font-weight:400;transition:color .3s ease
+}
+.tabbar .tab.on{color:var(--text)}
+.tabbar .tab.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:2px;background:var(--accent-fill)}
+
+/* ============================================================
+   方向 E · 纸感编辑（浅）
+   色板 = 全站浅色模式令牌：
+   底 #f7f8fa / 文字 #1f2a44 / 次要 #94a3b8 / 线 #e2e8f0
+   主色 #07C160（品牌绿，用于装饰线与编号）
+        #006e2f（深绿，用于文字/数字/按钮，保证 4.5:1 以上）
+   ============================================================ */
+.dir-e{
+  --bg:#f7f8fa; --text:#1f2a44; --muted:#94a3b8; --faint:#cbd5e1;
+  --accent:#006e2f; --accent-fill:#006e2f; --brand:#07C160; --gold:#006e2f;
+  --line:#e2e8f0; --line-soft:#eef2f6; --surface:rgba(31,42,68,.022);
+  --font-display:"Noto Serif SC","Songti SC",serif;
+  --font-latin:"Playfair Display",serif;
+  --font-body:"Noto Sans SC","PingFang SC",sans-serif;
+  --font-num:"IBM Plex Mono",monospace;
+  --atmos:linear-gradient(to bottom,rgba(34,197,94,.06),transparent 55%),
+          repeating-linear-gradient(0deg,rgba(31,42,68,.009) 0 1px,transparent 1px 34px),
+          repeating-linear-gradient(90deg,rgba(31,42,68,.009) 0 1px,transparent 1px 34px);
+  --grain:.035;
+}
+.dir-e .head{padding:10px 24px 18px}
+.dir-e .head .kicker{color:var(--faint)}
+.dir-e .head h2{font-size:38px;font-weight:700;letter-spacing:-.035em}
+.dir-e .head .meta{color:var(--faint)}
+
+/* 签到：不对称，超大等宽数字 + 1px 进度线 */
+.chk{position:relative;z-index:3;padding:0 24px 20px;display:flex;align-items:flex-start;gap:18px}
+.chk .big{
+  font-family:var(--font-num);font-size:52px;font-weight:500;line-height:.92;letter-spacing:-.05em;color:var(--text);
+  font-variant-numeric:tabular-nums
+}
+.chk .big sup{font-size:15px;font-weight:400;color:var(--faint);letter-spacing:0;vertical-align:super;margin-left:2px}
+.chk .rt{flex:1;padding-top:5px}
+.chk .rt .l1{font-family:var(--font-display);font-size:15px;font-weight:600;letter-spacing:-.02em;color:var(--text);line-height:1.35}
+.chk .rt .l2{font-size:11.5px;color:var(--muted);font-weight:300;margin-top:5px;line-height:1.5}
+.prog{margin:0 24px;position:relative;z-index:3;height:1px;background:var(--line)}
+.prog i{display:block;height:1px;background:var(--accent);width:57%;transition:width .6s cubic-bezier(.16,1,.3,1)}
+.prog-lb{
+  position:relative;z-index:3;margin:0 24px;padding:8px 0 0;display:flex;justify-content:space-between;
+  font-family:var(--font-num);font-size:9px;letter-spacing:.18em;color:var(--faint);text-transform:uppercase
+}
+.act-e{
+  position:relative;z-index:3;margin:16px 24px 0;padding:13px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .3s ease
+}
+.act-e:hover{background:rgba(26,24,23,.03)}
+.act-e .t{font-family:var(--font-display);font-size:15px;font-weight:600;letter-spacing:-.015em;color:var(--text)}
+.act-e .a{font-size:11.5px;color:var(--accent);letter-spacing:.06em;display:flex;align-items:center;gap:8px}
+.act-e .a i{display:block;width:22px;height:1px;background:var(--accent);transition:width .3s cubic-bezier(.16,1,.3,1)}
+.act-e:hover .a i{width:36px}
+.act-e.done .t{color:var(--muted)}
+
+.dir-e .sec-d{padding:28px 24px 0}
+.dir-e .sec-h .t{font-size:17px}
+.dir-e .row{border-bottom:1px solid var(--line-soft)}
+.dir-e .row .nm{font-size:16.5px}
+.dir-e .row .ar{color:var(--faint)}
+.dir-e .row.key{border-left:2px solid var(--brand);background:linear-gradient(90deg,rgba(34,197,94,.08),transparent 70%)}
+.dir-e .row.key .nm{font-size:18.5px}
+.dir-e .bal{border-bottom:1px solid var(--line-soft)}
+.dir-e .bal .v{color:var(--gold);font-size:32px}
+.dir-e .marquee{margin:24px 0 0}
+.dir-e .marquee::before{left:24px}
+.dir-e .thumb{border:1px solid var(--line-soft)}
+.dir-e .tabbar{border-top:1px solid var(--line)}
+.dir-e .tabbar .tab{color:var(--faint)}
+.dir-e .tabbar .tab.on{color:var(--text)}
+
+/* 编辑风小字注脚 */
+.colophon{
+  position:relative;z-index:3;margin:22px 24px 0;padding-top:14px;border-top:1px solid var(--line);
+  font-family:var(--font-num);font-size:8.5px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;
+  display:flex;justify-content:space-between
+}
+
+/* ============================================================
+   现状（小图对照）
+   ============================================================ */
+.dir-legacy{
+  --bg:#f8f9ff; --text:#0b1c30; --muted:#5c5f61;
+  --font-display:"Noto Sans SC",sans-serif; --font-body:"Noto Sans SC",sans-serif;
+  --atmos:linear-gradient(to bottom,rgba(34,197,94,.08),transparent);
+  --line:#eef2f6; --grain:0;
+}
+.dir-legacy .lg{padding:14px 18px;position:relative;z-index:3}
+.dir-legacy .lg-card{background:#fff;border-radius:16px;padding:18px;position:relative;overflow:hidden;box-shadow:0 4px 15px rgba(34,197,94,.08);border:1px solid rgba(255,255,255,.6);margin-bottom:26px}
+.dir-legacy .lg-t{font-size:11px;font-weight:700;letter-spacing:.15em;color:#006e2f}
+.dir-legacy .lg-h{font-size:22px;font-weight:700;margin-top:4px;color:#0b1c30;line-height:1.2}
+.dir-legacy .lg-s{font-size:13px;color:#5c5f61;margin-top:6px}
+.dir-legacy .lg-b{position:absolute;top:12px;right:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:10px;font-weight:600;padding:3px 9px;border-radius:10px}
+.dir-legacy .lg-ico{position:absolute;right:14px;bottom:14px;width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
+.dir-legacy .lg-sec{font-size:12px;font-weight:600;letter-spacing:.1em;color:#5c5f61;text-transform:uppercase;margin-bottom:12px}
+.dir-legacy .lg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dir-legacy .lg-c{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(34,197,94,.05);border:1px solid rgba(255,255,255,.8);overflow:hidden}
+.dir-legacy .lg-sq{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.dir-legacy .lg-wd{grid-column:span 2;padding:14px;display:flex;align-items:center;gap:10px}
+.dir-legacy .lg-ib{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dir-legacy .lg-n{font-size:15px;font-weight:700;color:#0b1c30}
+.dir-legacy .lg-d{font-size:11px;color:#5c5f61;margin-top:2px}
+.dir-legacy .lg-ar{margin-left:auto;font-size:24px;color:#bccbb9}
+.dir-legacy .lg-tb{height:56px;display:flex;border-top:1px solid #eef2f6;background:#fff}
+.dir-legacy .lg-tb div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#94a3b8}
+.dir-legacy .lg-tb div.on{color:#006e2f}
+.dir-legacy .lg-tb span{font-size:10px}
+
+/* ============================================================
+   文档
+   ============================================================ */
+.doc{margin-top:70px;border-top:1px solid rgba(230,227,221,.12);padding-top:40px}
+.doc h3{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:#D9614A;margin:0 0 18px;font-weight:500
+}
+.doc h3:not(:first-child){margin-top:48px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:11px 14px;border-bottom:1px solid rgba(230,227,221,.09);vertical-align:top}
+.tbl th{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7C7872;font-weight:500;font-family:"IBM Plex Mono",monospace}
+.tbl td:first-child{color:#F5F1EA;font-weight:500;white-space:nowrap}
+.tbl td{color:#9E9A93;line-height:1.7;font-weight:300}
+.tbl td b{color:#DDD9D2;font-weight:500}
+.sw{display:inline-block;width:13px;height:13px;margin-right:8px;vertical-align:-2px;border:1px solid rgba(255,255,255,.15)}
+.notes{font-size:14px;line-height:1.9;color:#9E9A93;max-width:840px;font-weight:300;padding-left:18px}
+.notes li{margin-bottom:7px}
+.notes b{color:#E6E3DD;font-weight:500}
+.notes code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:rgba(230,227,221,.07);padding:1px 6px;color:#C9A96A}
+.pick{
+  margin-top:46px;padding:26px 30px;border-left:2px solid #C7452F;background:rgba(199,69,47,.06)
+}
+.pick p{margin:0;font-size:14.5px;line-height:1.9;color:#CFCBC4;font-weight:300}
+.pick b{color:#F5F1EA;font-weight:500}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  .track{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">小辣椒 · 工具页改版 · V2</div>
+    <h1>去掉卡片网格，让作品和排版说话</h1>
+    <p class="lede">
+      上一版给的三个方向（圆角 Bento 网格 / 玻璃拟态 / 霓虹暗色）我自己复看了一遍，<b>都还是 AI 味的三个招牌套路</b>：
+      统一圆角卡片 + 居中图标 + 统一阴影，是把"模板"当成了"设计"。
+      这一版换了做法 —— <b>全部删掉卡片网格</b>，改用细线分隔、衬线中文标题、等宽编号、
+      全出血的作品图，以及一枚<b>印章</b>当签到按钮。
+      <br><br>
+      <b>配色已对齐全站：</b>全部取自现有令牌 —— 主色 <code>#07C160</code> / <code>#22c55e</code>、
+      深绿 <code>#006e2f</code>、暗色亮绿 <code>#4ae176</code>；中性色 底 <code>#f7f8fa</code> ↔ <code>#121212</code>、
+      文字 <code>#1f2a44</code> ↔ <code>#f3f4f6</code>、次要 <code>#94a3b8</code> ↔ <code>#9ca3af</code>、
+      线 <code>#e2e8f0</code> ↔ <code>#374151</code>。没有引入任何一个新色值。
+      <br><br>
+      <s>高级感不是把东西做得更精致，而是删掉更多东西，只留下必须留下的。</s>
+    </p>
+  </header>
+
+  <div class="diag">
+    <div><h4>删掉了什么</h4><p>圆角卡片网格、图标色块、玻璃模糊层、霓虹描边、弹性弹跳动效、<b>以及所有自造的新色值</b></p></div>
+    <div><h4>换成了什么</h4><p><b>1px 细线分隔</b>的列表、<b>衬线中文</b>标题、<b>等宽字体</b>编号与数字、<b>全出血作品图</b></p></div>
+    <div><h4>为什么高级</h4><p>卡片是"容器思维"，细线是"版面思维"。容器只能堆，版面能安排层级与视线</p></div>
+    <div><h4>记忆点</h4><p><b>印章签到</b>：虚线圈 → 盖下变实心绿并回正到 -3°，是"完成一件事"的仪式感</p></div>
+    <div><h4>配色纪律</h4><p>只从现有令牌里取色。主色分两级：<b>#07C160 做装饰线</b>（醒目）、<b>#006e2f 做文字与按钮</b>（保证对比度）</p></div>
+    <div><h4>破格元素</h4><p>横向<b>无限滚动作品带</b>冲出屏幕左右边缘 —— 每屏至少一个元素逃出栅格</p></div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl">
+      <span>方向</span>
+      <div class="seg" id="seg-dir">
+        <button data-dir="both" aria-pressed="true">并排</button>
+        <button data-dir="d" aria-pressed="false">只看 D</button>
+        <button data-dir="e" aria-pressed="false">只看 E</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span>签到</span>
+      <div class="seg" id="seg-in">
+        <button data-in="0" aria-pressed="true">未签到</button>
+        <button data-in="1" aria-pressed="false">已签到</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span>动效</span>
+      <div class="seg" id="seg-mo">
+        <button data-mo="on" aria-pressed="true">开</button>
+        <button data-mo="off" aria-pressed="false">关</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+
+    <!-- 现状 -->
+    <div class="slot slot-sm">
+      <div class="slot-head"><span class="idx">现状</span><span class="nm">线上版本</span></div>
+      <div class="phone sm dir-legacy">
+        <div class="phone-frame"><div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="r"><i></i><i></i><i></i></span></div>
+          <div class="lg">
+            <div class="lg-card">
+              <div class="lg-t">今日任务</div>
+              <div class="lg-h">每日签到</div>
+              <div class="lg-s">签到赚辣度值 · 连续7天领好礼</div>
+              <div class="lg-b">+辣度值</div>
+              <div class="lg-ico"><svg viewBox="0 0 48 48" fill="none" style="width:100%;height:100%"><path d="M24 6c-6 8-12 14-12 22 0 6 5 10 12 10s12-4 12-10c0-8-6-14-12-22z" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 28c0 3 2.5 5 6 5" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+            </div>
+            <div class="lg-sec">创作工具</div>
+            <div class="lg-grid">
+              <div class="lg-c lg-sq">
+                <div class="lg-ib"><svg viewBox="0 0 48 48" fill="none" style="width:26px;height:26px"><path d="M24 6L8 14v14c0 9 6.5 16 16 18 9.5-2 16-9 16-18V14L24 6z" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="20" r="5" stroke="#fff" stroke-width="2.5"/><circle cx="34" cy="14" r="3" fill="#fff"/></svg></div>
+                <div><div class="lg-n" style="text-align:center">头像DIY</div><div class="lg-d" style="text-align:center">边框/滤镜/文字</div></div>
+              </div>
+              <div class="lg-c lg-sq">
+                <div class="lg-ib" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><svg viewBox="0 0 48 48" fill="none" style="width:26px;height:26px"><path d="M24 6c-6 8-12 14-12 22 0 6 5 10 12 10s12-4 12-10c0-8-6-14-12-22z" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/><path d="M32 16l6 6M38 16l-6 6" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+                <div><div class="lg-n" style="text-align:center">去水印</div><div class="lg-d" style="text-align:center">视频/图片一键</div></div>
+              </div>
+              <div class="lg-c lg-wd">
+                <div class="lg-ib" style="background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(251,191,36,.05))"><svg viewBox="0 0 48 48" fill="none" style="width:26px;height:26px"><path d="M18 22c0-4 3-7 6-7s6 3 6 7c0 3-1.5 5-3 7h-6c-1.5-2-3-4-3-7z" fill="#A78BFA"/><rect x="18" y="33" width="12" height="3" rx="1.5" fill="#6D28D9"/></svg></div>
+                <div><div class="lg-n">灵感文案</div><div class="lg-d">激发创作火花</div></div>
+                <span class="lg-ar">›</span>
+              </div>
+              <div class="lg-c lg-wd">
+                <div class="lg-ib" style="background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(168,85,247,.05))"><svg viewBox="0 0 24 24" fill="none" style="width:24px;height:24px"><circle cx="12" cy="12" r="9" fill="#fbbf24"/><circle cx="12" cy="12" r="6.5" fill="#fde68a"/></svg></div>
+                <div><div class="lg-n">辣度值</div><div class="lg-d">当前 1280 辣度值</div></div>
+                <span class="lg-ar">›</span>
+              </div>
+            </div>
+          </div>
+          <div class="lg-tb">
+            <div><span>首页</span></div><div class="on"><span>工具</span></div><div><span>专题</span></div><div><span>我的</span></div>
+          </div>
+        </div></div>
+      </div>
+      <div class="slot-head" style="margin-top:12px"><span class="sub">四张等权重圆角卡 + 居中图标 + 统一阴影 —— 换掉 Logo 就是别家产品</span></div>
+    </div>
+
+    <!-- ============ D ============ -->
+    <div class="slot" data-slot="d">
+      <div class="slot-head">
+        <span class="idx">方向 D</span><span class="nm">暖石雅致</span><span class="pick">推荐</span>
+      </div>
+      <div class="phone dir-d" data-dir="D">
+        <div class="phone-frame"><div class="screen">
+          <div class="grain"></div>
+          <div class="statusbar"><span>9:41</span><span class="r"><i></i><i></i><i></i></span></div>
+
+          <div class="body">
+          <div class="head">
+            <div class="kicker">Xiaolajiao · Tools</div>
+            <h2>工具箱<em>&nbsp;/&nbsp;04</em></h2>
+            <div class="meta"><span>创作工具集</span><span class="ln"></span><span>2026</span></div>
+          </div>
+
+          <div class="hero-d">
+            <div class="hero-art">
+              <div class="ph" style="--art:radial-gradient(85% 70% at 26% 16%,rgba(127,217,164,.55) 0%,transparent 58%),radial-gradient(75% 70% at 80% 84%,rgba(22,101,52,.8) 0%,transparent 62%),linear-gradient(155deg,#14301F,#0B120E 62%,#080B09)"></div>
+              <svg class="sil" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="17" r="8" stroke="#f3f4f6" stroke-width="1.6"/><path d="M8 44c2.5-8 8.6-12 16-12s13.5 4 16 12" stroke="#f3f4f6" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <div class="stamp" data-stamp>
+                <span class="d">04</span>
+                <span class="m">SIGN IN</span>
+              </div>
+              <div class="hero-copy">
+                <div class="lab">连续签到</div>
+                <div class="big">已连续 <b data-days>04</b> 天</div>
+                <div class="sml" data-hint>再签 3 天解锁专属头像框</div>
+              </div>
+            </div>
+            <div class="act" data-act>
+              <span class="t">今日签到<span>+10</span></span>
+              <span class="a">立即签到<i></i></span>
+            </div>
+          </div>
+
+          <div class="marquee"><div class="track" data-track></div></div>
+
+          <div class="sec-d">
+            <div class="sec-h">
+              <span class="n">01</span><span class="t">创作工具</span><span class="ln"></span><span class="c">04 items</span>
+            </div>
+
+            <div class="row key">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3L4 7v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V7l-8-4z"/><circle cx="12" cy="11" r="2.6"/><path d="M8 17.6c.8-1.6 2.3-2.6 4-2.6s3.2 1 4 2.6" stroke-linecap="round"/></svg></span>
+              <span class="bd"><span class="nm">头像 DIY</span><span class="ds">加边框 · 调滤镜 · 写字，30 秒出图</span></span>
+              <span class="ar">→</span>
+            </div>
+            <div class="row">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3c-3 4-6 7-6 11a6 6 0 0 0 12 0c0-4-3-7-6-11z"/><path d="M9 14.5a3 3 0 0 0 3 2.5"/><path d="M16 8l3 3M19 8l-3 3"/></svg></span>
+              <span class="bd"><span class="nm">去水印</span><span class="ds">视频 / 图片一键去除</span></span>
+              <span class="ar">→</span>
+            </div>
+            <div class="row">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M9 15h6M10 18h4"/><path d="M9 3a6 6 0 0 0-3 10.5c.6.8 1 1.6 1 2.5h10c0-.9.4-1.7 1-2.5A6 6 0 0 0 15 3z"/></svg></span>
+              <span class="bd"><span class="nm">灵感文案</span><span class="ds">AI 帮你把想法写成句子</span></span>
+              <span class="ar">→</span>
+            </div>
+
+            <div class="bal">
+              <div>
+                <div class="l">辣度值余额</div>
+                <div class="v">1,280<small>点</small></div>
+              </div>
+              <span class="g">去兑换 →</span>
+            </div>
+          </div>
+          </div><!-- /body -->
+
+          <div class="tabbar">
+            <div class="tab">首页</div><div class="tab on">工具</div><div class="tab">专题</div><div class="tab">我的</div>
+          </div>
+        </div></div>
+      </div>
+      <div class="slot-head" style="margin-top:12px">
+        <span class="sub">暗色模式令牌（#121212 / #f3f4f6 / #4ae176）+ 印章签到 + 衬线中文。工具列表用 1rpx 细线分隔，没有一张卡片。</span>
+      </div>
+    </div>
+
+    <!-- ============ E ============ -->
+    <div class="slot" data-slot="e">
+      <div class="slot-head">
+        <span class="idx">方向 E</span><span class="nm">纸张编辑</span>
+      </div>
+      <div class="phone dir-e" data-dir="E">
+        <div class="phone-frame"><div class="screen">
+          <div class="grain"></div>
+          <div class="statusbar"><span>9:41</span><span class="r"><i></i><i></i><i></i></span></div>
+
+          <div class="body">
+          <div class="head">
+            <div class="kicker">Xiaolajiao · Tools</div>
+            <h2>工具箱</h2>
+            <div class="meta"><span>04 tools</span><span class="ln"></span><span>daily</span></div>
+          </div>
+
+          <div class="chk">
+            <div class="big">04<sup>/07</sup></div>
+            <div class="rt">
+              <div class="l1">已连续签到 4 天</div>
+              <div class="l2" data-hint>再签 3 天解锁专属头像框</div>
+            </div>
+          </div>
+          <div class="prog"><i data-prog style="width:57%"></i></div>
+          <div class="prog-lb"><span>streak</span><span>day 04 / 07</span></div>
+
+          <div class="act-e" data-act>
+            <span class="t">今日签到</span>
+            <span class="a">立即签到 +10<i></i></span>
+          </div>
+
+          <div class="marquee"><div class="track" data-track></div></div>
+
+          <div class="sec-d">
+            <div class="sec-h">
+              <span class="n">01</span><span class="t">创作工具</span><span class="ln"></span><span class="c">04</span>
+            </div>
+
+            <div class="row key">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3L4 7v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V7l-8-4z"/><circle cx="12" cy="11" r="2.6"/><path d="M8 17.6c.8-1.6 2.3-2.6 4-2.6s3.2 1 4 2.6" stroke-linecap="round"/></svg></span>
+              <span class="bd"><span class="nm">头像 DIY</span><span class="ds">加边框 · 调滤镜 · 写字，30 秒出图</span></span>
+              <span class="ar">→</span>
+            </div>
+            <div class="row">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3c-3 4-6 7-6 11a6 6 0 0 0 12 0c0-4-3-7-6-11z"/><path d="M9 14.5a3 3 0 0 0 3 2.5"/></svg></span>
+              <span class="bd"><span class="nm">去水印</span><span class="ds">视频 / 图片一键去除</span></span>
+              <span class="ar">→</span>
+            </div>
+            <div class="row">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M9 15h6M10 18h4"/><path d="M9 3a6 6 0 0 0-3 10.5c.6.8 1 1.6 1 2.5h10c0-.9.4-1.7 1-2.5A6 6 0 0 0 15 3z"/></svg></span>
+              <span class="bd"><span class="nm">灵感文案</span><span class="ds">AI 帮你把想法写成句子</span></span>
+              <span class="ar">→</span>
+            </div>
+
+            <div class="bal">
+              <div>
+                <div class="l">辣度值余额</div>
+                <div class="v">1,280<small>点</small></div>
+              </div>
+              <span class="g">去兑换 →</span>
+            </div>
+          </div>
+
+          <div class="colophon"><span>小辣椒动态头像壁纸</span><span>v2 · 2026</span></div>
+          </div><!-- /body -->
+
+          <div class="tabbar">
+            <div class="tab">首页</div><div class="tab on">工具</div><div class="tab">专题</div><div class="tab">我的</div>
+          </div>
+        </div></div>
+      </div>
+      <div class="slot-head" style="margin-top:12px">
+        <span class="sub">浅色模式令牌（#f7f8fa / #1f2a44 / #07C160 + #006e2f）+ 34px 网格底纹 + 超大等宽数字。杂志编辑感。</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ 文档 ============ -->
+  <div class="doc">
+    <h3>为什么上一版还是 AI 味</h3>
+    <table class="tbl">
+      <thead><tr><th>反 AI 味检查项</th><th>上一版（A/B/C）</th><th>这一版（D/E）</th></tr></thead>
+      <tbody>
+        <tr><td>卡片</td><td>一模一样的圆角卡片 + 统一阴影 + 居中图标</td><td><b>没有卡片</b>。1px 细线分隔的列表 + 左竖线标记主推项</td></tr>
+        <tr><td>布局</td><td>2×N 网格，所有格子等权重</td><td>非对称：Hero 全出血压字，工具列表单列，作品带冲出屏幕边缘</td></tr>
+        <tr><td>配色</td><td>B 走玻璃拟态、C 走霓虹，还自造了朱砂红 / 亮金等新色值 —— 都和现有页面无关</td><td><b>零新增色值</b>。全部取自全站令牌，深色=暗色模式、浅色=浅色模式，切 tab 不跳色</td></tr>
+        <tr><td>字体</td><td>快乐体 / 几何无衬线 / 科技感等宽</td><td><b>衬线中文</b>（思源宋体 / 系统宋体）做标题 + 等宽做编号数字，中西混排</td></tr>
+        <tr><td>动效</td><td>弹性回弹 scale(.955)，每张卡都一样</td><td>只有三处：印章盖下、作品带横滚、行悬停时箭头右移 4px</td></tr>
+        <tr><td>氛围</td><td>径向光晕 + 颗粒（也是套路）</td><td>噪点压到 3.5–5%，E 方向用 34px 网格底纹模拟纸；顶部沿用首页那条淡绿渐变</td></tr>
+        <tr><td>记忆点</td><td>说不太出来</td><td><b>印章</b>：虚线圈 → 盖下变实心绿并回正到 -3°</td></tr>
+      </tbody>
+    </table>
+
+    <h3>设计令牌（全部来自现有页面，无新增）</h3>
+    <table class="tbl">
+      <thead><tr><th>令牌</th><th>D · 深墨雅致（暗）</th><th>E · 纸感编辑（浅）</th></tr></thead>
+      <tbody>
+        <tr><td>底色</td><td><span class="sw" style="background:#121212"></span>#121212 暗色模式底</td><td><span class="sw" style="background:#f7f8fa"></span>#f7f8fa 全局 --bg-color</td></tr>
+        <tr><td>正文色</td><td><span class="sw" style="background:#f3f4f6"></span>#f3f4f6（对比 16.4:1）</td><td><span class="sw" style="background:#1f2a44"></span>#1f2a44（对比 13.9:1）</td></tr>
+        <tr><td>次要文字</td><td><span class="sw" style="background:#9ca3af"></span>#9ca3af（7.1:1）</td><td><span class="sw" style="background:#94a3b8"></span>#94a3b8（2.7:1，仅用于描述性小字）</td></tr>
+        <tr><td>装饰线 / 编号</td><td><span class="sw" style="background:#4ae176"></span>#4ae176（profile 暗色主色）</td><td><span class="sw" style="background:#07C160"></span>#07C160 全局主色</td></tr>
+        <tr><td>文字强调 / 按钮</td><td><span class="sw" style="background:#22c55e"></span>#22c55e 填充 + 墨绿字（9.2:1）</td><td><span class="sw" style="background:#006e2f"></span>#006e2f（纸底 5.8:1）</td></tr>
+        <tr><td>数字色</td><td><span class="sw" style="background:#4ae176"></span>#4ae176</td><td><span class="sw" style="background:#006e2f"></span>#006e2f</td></tr>
+        <tr><td>分隔线</td><td>rgba(243,244,246,.11) 1rpx</td><td><span class="sw" style="background:#e2e8f0"></span>#e2e8f0 全局 --border-color 1rpx</td></tr>
+        <tr><td>标题字</td><td>Noto Serif SC 600 / 字距 -.03em</td><td>Noto Serif SC 700 / 字距 -.035em</td></tr>
+        <tr><td>数字字</td><td>JetBrains Mono</td><td>IBM Plex Mono</td></tr>
+        <tr><td>圆角</td><td>0（仅印章是圆）</td><td>0</td></tr>
+        <tr><td>阴影</td><td>0（只有印章盖下时一层绿投影）</td><td>0</td></tr>
+      </tbody>
+    </table>
+
+    <h3>小程序落地可行性</h3>
+    <ul class="notes">
+      <li><b>配色 100% 复用现有令牌</b>：直接沿用 <code>app.wxss</code> 的 <code>--primary-color / --bg-color / --card-bg / --text-main / --text-sub / --border-color</code>，
+        以及各页面已在用的 <code>#22c55e / #006e2f / #16a34a / #4ae176</code>。切换 tab 不会出现"另一个产品"的割裂感，也不需要新建设计令牌文件。</li>
+      <li><b>主色分两级用</b>：<code>#07C160</code> 只做装饰（主推竖线、编号、进度线），<code>#006e2f</code> 做文字与实心按钮。
+        这是被可访问性逼出来的分工 —— 亮绿上的白字只有 2.4:1，不合格；深绿才够。现有页面里其实已经混着用了，这里只是把规则明确下来。</li>
+      <li><b>单位</b>：原型 390px 宽，小程序 <code>1px ≈ 2rpx</code>。细线务必写 <code>1rpx</code> 而不是 <code>1px</code>，否则高分屏上会变粗、质感全毁。</li>
+      <li><b>字体</b>：思源宋体在小程序端可直接用系统宋体兜底 —— iOS 是 <code>Songti SC</code>，Android 可用 <code>Noto Serif CJK</code>。
+        想更稳就 <code>wx.loadFontFace</code> 加载自托管 woff2 子集。<b>等宽数字</b>必须单独处理：小程序不支持 <code>font-variant-numeric</code>，
+        要真正等宽就得加载 IBM Plex Mono / JetBrains Mono（只有拉丁数字，20–40KB，很划算）。</li>
+      <li><b>作品图</b>：原型里用的是 CSS 渐变占位。落地时 Hero 和作品带要换成<b>真实的头像/壁纸素材</b>（从 <code>resources</code> 集合取精选 8–12 张），
+        这是"高级感"真正成立的地方 —— 有作品才有质感，光有排版只是性冷淡。<b>素材整体色调建议控制在绿 / 中性区间</b>，跟全站色板呼应。</li>
+      <li><b>印章动画</b>：用 WXSS <code>transition</code> 即可（transform + background），不要用 JS 逐帧。<code>backdrop-filter</code> 只在印章上用一层，性能可控。</li>
+      <li><b>作品带横滚</b>：小程序建议用 <code>scroll-view</code> + <code>scroll-x</code> 而不是 CSS 无限动画 ——
+        CSS <code>animation</code> 在后台页面不会自动暂停，会持续耗电。原型里为了演示用了 CSS，落地要换。</li>
+      <li><b>后台配置兼容</b>：列表形态下 <code>size: square / wide</code> 失去意义（都渲染成一行）。建议后台改成 <code>key: true</code> 标记主推项，
+        <code>size</code> 字段保留但不再参与渲染 —— 现有配置不会报错，只是视觉统一成列表。</li>
+      <li><b>D 和 E 其实不是二选一</b>：它们就是同一套设计在<b>暗色模式与浅色模式</b>下的样子。
+        小程序已开 <code>darkmode: true</code>，建议两个都实现 —— 浅色的 E 跟随系统、暗色的 D 跟随系统，
+        这才是和全站最一致的做法。</li>
+    </ul>
+
+    <div class="pick">
+      <p><b>推荐：D + E 都要，按系统深浅色切换。</b>
+      配色对齐全站之后，"选哪个方向"这个问题其实消失了 —— D 就是现有暗色模式的排法，E 就是现有浅色模式的排法。
+      你真正要决定的只有一件事：<b>愿不愿意把工具页从"卡片网格"改成"细线列表"</b>。
+      <br><br>
+      这个改动的收益是：有了层级（主推项一眼看到）、有了记忆点（印章）、有了内容感（作品带），
+      而且不用引入任何新颜色、新字体家族之外的东西。成本是要接一套衬线中文标题 + 一个等宽数字字体，
+      并把 Hero 和作品带填上真实素材。
+      <br><br>
+      <b>如果只想先动一点点</b>，那就只做「布局改列表 + 印章签到」这两件事，字体先保持系统黑体。
+      去掉卡片网格本身就是"去 AI 味"最有效的一步，占整体效果的七成。</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  /* 生成作品带缩略图（原型用渐变 + 剪影占位，落地换成真实素材） */
+  var ARTS = [
+    'radial-gradient(110% 90% at 30% 20%,#7FD9A4,transparent 55%),linear-gradient(150deg,#173A28,#0A0F0C)',
+    'radial-gradient(110% 90% at 70% 25%,#9BB7A8,transparent 58%),linear-gradient(150deg,#1F2A26,#0C0F0E)',
+    'radial-gradient(110% 90% at 25% 70%,#4FD18B,transparent 55%),linear-gradient(150deg,#123024,#080D0B)',
+    'radial-gradient(110% 90% at 65% 65%,#8E9BC4,transparent 58%),linear-gradient(150deg,#1C1F2B,#0B0C10)',
+    'radial-gradient(110% 90% at 40% 30%,#C9C2A0,transparent 56%),linear-gradient(150deg,#2A2820,#0F0E0A)',
+    'radial-gradient(110% 90% at 75% 35%,#6FCF97,transparent 56%),linear-gradient(150deg,#14301F,#090E0B)'
+  ];
+  var SIL = '<svg class="sil" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="17" r="8" stroke="#f3f4f6" stroke-width="1.6"/><path d="M8 44c2.5-8 8.6-12 16-12s13.5 4 16 12" stroke="#f3f4f6" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  document.querySelectorAll('[data-track]').forEach(function (t) {
+    var html = '';
+    for (var pass = 0; pass < 2; pass++) {
+      for (var i = 0; i < ARTS.length; i++) {
+        html += '<div class="thumb" style="--art:' + ARTS[i] + '"><span class="ph"></span>' + SIL + '</div>';
+      }
+    }
+    t.innerHTML = html;
+  });
+
+  var phones = Array.prototype.slice.call(document.querySelectorAll('.phone[data-dir]'));
+
+  /* 方向切换：并排 / 单看 */
+  document.getElementById('seg-dir').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+    var v = b.dataset.dir;
+    document.querySelectorAll('.slot[data-slot]').forEach(function (s) {
+      s.style.display = (v === 'both' || s.dataset.slot === v) ? '' : 'none';
+    });
+  });
+
+  /* 签到状态 */
+  document.getElementById('seg-in').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+    var on = b.dataset.in === '1';
+    var day = on ? 5 : 4;
+    phones.forEach(function (p) {
+      var stamp = p.querySelector('[data-stamp]');
+      if (stamp) {
+        stamp.classList.toggle('on', on);
+        stamp.querySelector('.d').textContent = ('0' + day).slice(-2);
+        stamp.querySelector('.m').textContent = on ? 'SIGNED' : 'SIGN IN';
+      }
+      var days = p.querySelector('[data-days]');
+      if (days) days.textContent = ('0' + day).slice(-2);
+      p.querySelectorAll('[data-hint]').forEach(function (h) {
+        h.textContent = on
+          ? (day >= 7 ? '7 天达成，已解锁专属头像框' : '再签 ' + (7 - day) + ' 天解锁专属头像框')
+          : '再签 ' + (7 - day) + ' 天解锁专属头像框';
+      });
+      var big = p.querySelector('.chk .big');
+      if (big) big.innerHTML = ('0' + day).slice(-2) + '<sup>/07</sup>';
+      var prog = p.querySelector('[data-prog]');
+      if (prog) prog.style.width = Math.round(day / 7 * 100) + '%';
+      var lb = p.querySelector('.prog-lb span:last-child');
+      if (lb) lb.textContent = 'day ' + ('0' + day).slice(-2) + ' / 07';
+
+      var act = p.querySelector('[data-act]');
+      if (act) {
+        act.classList.toggle('done', on);
+        var t = act.querySelector('.t'), a = act.querySelector('.a');
+        if (on) { t.innerHTML = '今日已签<span>+10</span>'; a.innerHTML = '明日再来<i></i>'; }
+        else { t.innerHTML = '今日签到<span>+10</span>'; a.innerHTML = '立即签到<i></i>'; }
+      }
+    });
+  });
+
+  /* 动效开关 */
+  document.getElementById('seg-mo').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+    var off = b.dataset.mo === 'off';
+    document.querySelectorAll('.track').forEach(function (t) {
+      t.style.animationPlayState = off ? 'paused' : 'running';
+    });
+    document.body.style.setProperty('--ease', off ? 'linear' : 'cubic-bezier(.16,1,.3,1)');
+  });
+
+  /* 点印章 / 点行动条：原型内切换状态 */
+  phones.forEach(function (p) {
+    var stamp = p.querySelector('[data-stamp]'), act = p.querySelector('[data-act]');
+    var toggle = function () {
+      var cur = document.querySelector('#seg-in button[aria-pressed="true"]').dataset.in;
+      document.querySelector('#seg-in button[data-in="' + (cur === '1' ? '0' : '1') + '"]').click();
+    };
+    if (stamp) stamp.addEventListener('click', toggle);
+    if (act) act.addEventListener('click', toggle);
+  });
+})();
+</script>
+</body>
+</html>

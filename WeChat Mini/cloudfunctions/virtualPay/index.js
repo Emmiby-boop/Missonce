@@ -7,8 +7,17 @@
  *   → 推送丢失时 queryOrder 兜底查单补发货
  *
  * 配置存放：sys_config 集合 doc: virtual_pay_config
- *   { offerId, appKey, sandbox(0/1), products: { productId: { level, days, name, price } } }
- *   （MP 后台开通虚拟支付后，把 OfferID / 现网AppKey / 道具ID 填进去即可）
+ *   { offerId, appKey, sandbox(0/1), products: { productId: { level, days, name, price, type } } }
+ *   type: 'normal' = 原价道具（续费买）/ 'first' = 首购优惠道具
+ *
+ *   首购双轨：同一会员等级对应两个道具
+ *     member_monthly       type:'normal' price:1000  ← 续费价（¥10）
+ *     member_monthly_first type:'first'  price:499   ← 首购价（¥4.99），展示划线价 ¥10
+ *   下单时按「是否从未开通过会员」自动选道具：首次 → first，老客 → normal。
+ *   getProducts 把同 level 的两个道具合并成一个档位，附带 originalPrice 供前端画划线价。
+ *
+ * ⚠️ goodsPrice 必须与 MP 后台【道具管理】里该道具的价格完全一致（单位分），
+ *    否则下单报 -15013 goodsPrice 道具价格错误。
  *
  * 订单表：virtual_pay_orders
  *   { _openid, outTradeNo, wxOrderId, productId, level, status(pending/paid/delivered/refunded),
@@ -86,6 +95,61 @@ function genOutTradeNo() {
   const ts = Date.now().toString(36) // 8 位
   const rnd = crypto.randomBytes(5).toString('hex') // 10 位
   return 'T' + ts + rnd // 19 位
+}
+
+// ─── 首购判定 ────────────────────────────────────
+// 判定口径：该用户在 virtual_pay_orders 里没有任何已支付/已发货的现金订单。
+// 只看现金订单，不看 member_records —— 用辣度值兑换过的用户，
+// 对现金购买来说仍然是「首次」，照样该享受首购价（拉新逻辑优先）。
+const PAID_STATUS = ['paid', 'delivered']
+
+async function hasPaidCashOrder(openid) {
+  try {
+    const res = await db.collection('virtual_pay_orders')
+      .where({ _openid: openid, status: _.in(PAID_STATUS) })
+      .limit(1)
+      .get()
+    return !!(res.data && res.data.length)
+  } catch (e) {
+    console.error('[virtualPay] 首购判定失败:', e)
+    return false // 判定失败时按首购处理（对用户有利，且下单金额仍以道具后台价为准）
+  }
+}
+
+/**
+ * 首购优惠总开关。
+ * MP 后台的 5 个 *_first 道具没建好 / 还没发布（同步要 10~30 分钟）时，
+ * 必须让首购价下线，否则用户点了支付会报 -15010 productId 未发布。
+ * 建好后把 sys_config.virtual_pay_config.firstPurchaseEnabled 改成 true 即可。
+ */
+function isFirstPurchaseEnabled(cfg) {
+  return cfg.firstPurchaseEnabled === true
+}
+
+/** 把同 level 的 normal / first 两个道具合并成一个档位 */
+function buildLevelTiers(cfg) {
+  const byLevel = {}
+  Object.keys(cfg.products || {}).forEach((id) => {
+    const p = cfg.products[id]
+    if (!p || !p.level) return
+    const tier = byLevel[p.level] || (byLevel[p.level] = {
+      level: p.level,
+      name: p.name,
+      normalId: '',
+      firstId: ''
+    })
+    if (p.type === 'first') tier.firstId = id
+    else tier.normalId = id
+  })
+  return byLevel
+}
+
+function yuanOf(cent) {
+  if (cent === undefined || cent === null || cent === '') return ''
+  const n = Number(cent)
+  if (Number.isNaN(n)) return ''
+  // 整数分（如 300/1000/6800/12800）→ 不带小数；非整数分（如 499）→ 保留两位
+  return n % 100 === 0 ? String(n / 100) : (n / 100).toFixed(2)
 }
 
 // ─── 发货：开通会员（写 user_points，与 exchangeMember 同构） ──
@@ -220,14 +284,32 @@ exports.main = async (event, context) => {
   const { action } = event
 
   try {
-    // ── 下单：前端传 code + productId ──
+    // ── 下单：前端传 code + level（不再直接传 productId，避免前端自己挑优惠档） ──
     if (action === 'createOrder') {
       if (!openid) return { success: false, error: '未获取到用户身份' }
       const cfg = await loadConfig()
-      const productId = event.productId
-      const product = cfg.products && cfg.products[productId]
-      if (!product) return { success: false, error: '无效的商品: ' + productId }
       if (!event.code) return { success: false, error: '缺少登录 code' }
+
+      // 按 level 定位应售道具：首次购买 → first 优惠档；已购过 → normal 原价档
+      const firstEnabled = isFirstPurchaseEnabled(cfg)
+      const isFirst = firstEnabled && !(await hasPaidCashOrder(openid))
+      let productId = ''
+      let product = null
+
+      if (event.productId && cfg.products && cfg.products[event.productId]) {
+        // 兼容旧调用：直接给了 productId 就按给的来
+        productId = event.productId
+        product = cfg.products[productId]
+      } else {
+        const level = event.level
+        const tier = buildLevelTiers(cfg)[level]
+        if (!tier) return { success: false, error: '无效的会员档位: ' + level }
+        const wantId = isFirst && tier.firstId ? tier.firstId : tier.normalId
+        if (!wantId) return { success: false, error: '该档位未配置对应道具: ' + level }
+        productId = wantId
+        product = cfg.products[productId]
+      }
+      if (!product) return { success: false, error: '无效的商品: ' + productId }
 
       // code2Session 拿 sessionKey（一次性使用，避免存储）
       let sessionKey, payerOpenid
@@ -270,6 +352,7 @@ exports.main = async (event, context) => {
           productName: product.name || product.level,
           status: 'pending',
           amount: product.price,
+          isFirst: product.type === 'first',
           env,
           attach: signDataObj.attach,
           createdAt: new Date()
@@ -349,16 +432,46 @@ exports.main = async (event, context) => {
     }
 
     // ── 商品列表（前端展示价格） ──
+    // 返回「按档位合并」的列表：
+    //   isFirstPurchase=true  → price 为首购到手价，originalPrice 为划线原价（前端画删除线）
+    //   isFirstPurchase=false → price 为续费原价，无划线价
     if (action === 'getProducts') {
       const cfg = await loadConfig()
-      const products = Object.entries(cfg.products || {}).map(([id, p]) => ({
-        productId: id,
-        name: p.name,
-        level: p.level,
-        price: p.price, // 分
-        priceYuan: (p.price / 100).toFixed(p.price % 100 === 0 ? 0 : 1)
-      }))
-      return { success: true, data: products }
+      const firstEnabled = isFirstPurchaseEnabled(cfg)
+      const isFirst = firstEnabled ? (openid ? !(await hasPaidCashOrder(openid)) : false) : false
+      const tiers = buildLevelTiers(cfg)
+      const order = { weekly: 0, monthly: 1, quarterly: 2, yearly: 3, lifetime: 4 }
+
+      const list = Object.keys(tiers)
+        .map((level) => {
+          const tier = tiers[level]
+          const normal = tier.normalId ? cfg.products[tier.normalId] : null
+          const first = tier.firstId ? cfg.products[tier.firstId] : null
+          // 首购价优先；没配 first 道具就退回原价
+          const use = isFirst && first ? first : (normal || first)
+          const origin = normal || first
+          if (!use) return null
+          return {
+            level,
+            name: use.name || tier.name,
+            price: use.price,
+            priceYuan: yuanOf(use.price),
+            // 划线原价：仅首购档且确实便宜于原价时才给
+            originalPrice: isFirst && first && normal && first.price < normal.price
+              ? normal.price
+              : 0,
+            originalYuan: isFirst && first && normal && first.price < normal.price
+              ? yuanOf(normal.price)
+              : '',
+            isFirstPurchase: isFirst,
+            // 下单仍以 level 为准，云函数内部再选道具；此字段仅供调试对照
+            productId: (isFirst && tier.firstId) ? tier.firstId : (tier.normalId || tier.firstId || '')
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => (order[a.level] ?? 99) - (order[b.level] ?? 99))
+
+      return { success: true, data: list }
     }
 
     return { success: false, error: '无效的 action: ' + action }

@@ -54,7 +54,16 @@ Page({
     cashProducts: [],
     cashBuying: false,
     showCashModal: false,
-    cashModalProduct: null
+    cashModalProduct: null,
+    // 首购优惠：iOS 端不展示划线原价（规避机审对折扣文案的抓取），只显示到手价
+    isIOS: false,
+    cashFirstPurchase: false,
+    showStrike: false,
+    cashWeeklyOldYuan: '',
+    cashMonthlyOldYuan: '',
+    cashQuarterlyOldYuan: '',
+    cashYearlyOldYuan: '',
+    cashLifetimeOldYuan: '',
   },
 
   onLoad() {
@@ -69,6 +78,7 @@ Page({
     this.loadRecords()
     this.loadInviteInfo()
     this.loadExchangeOptions()
+    this.initPlatform()
     this.loadCashProducts()
   },
 
@@ -429,6 +439,20 @@ Page({
 
   // ═══════════ 虚拟支付：现金购买会员 ═══════════
 
+  /** 识别是否 iOS：iOS 端隐藏划线原价，只展示首购到手价 */
+  initPlatform() {
+    let isIOS = false
+    try {
+      const info = typeof wx.getDeviceInfo === 'function'
+        ? wx.getDeviceInfo()
+        : wx.getSystemInfoSync()
+      isIOS = String(info.platform || info.system || '').toLowerCase().indexOf('ios') >= 0
+    } catch (e) {
+      isIOS = false
+    }
+    this.setData({ isIOS })
+  },
+
   async loadCashProducts() {
     try {
       const res = await wx.cloud.callFunction({
@@ -439,13 +463,27 @@ Page({
         const products = res.result.data || []
         const byLevel = {}
         products.forEach(p => { byLevel[p.level] = p })
+
+        // 首购且非 iOS → 才展示划线原价（iOS 只给到手价）
+        const isFirst = !!(products[0] && products[0].isFirstPurchase)
+        const showStrike = isFirst && !this.data.isIOS
+
+        const yuanOf = (lvl, key) => (byLevel[lvl] ? (byLevel[lvl][key] || '') : '')
+
         this.setData({
           cashProducts: products,
-          cashWeeklyYuan: byLevel.weekly ? byLevel.weekly.priceYuan : '',
-          cashMonthlyYuan: byLevel.monthly ? byLevel.monthly.priceYuan : '',
-          cashQuarterlyYuan: byLevel.quarterly ? byLevel.quarterly.priceYuan : '',
-          cashYearlyYuan: byLevel.yearly ? byLevel.yearly.priceYuan : '',
-          cashLifetimeYuan: byLevel.lifetime ? byLevel.lifetime.priceYuan : ''
+          showStrike,
+          cashFirstPurchase: isFirst,
+          cashWeeklyYuan: yuanOf('weekly', 'priceYuan'),
+          cashMonthlyYuan: yuanOf('monthly', 'priceYuan'),
+          cashQuarterlyYuan: yuanOf('quarterly', 'priceYuan'),
+          cashYearlyYuan: yuanOf('yearly', 'priceYuan'),
+          cashLifetimeYuan: yuanOf('lifetime', 'priceYuan'),
+          cashWeeklyOldYuan: yuanOf('weekly', 'originalYuan'),
+          cashMonthlyOldYuan: yuanOf('monthly', 'originalYuan'),
+          cashQuarterlyOldYuan: yuanOf('quarterly', 'originalYuan'),
+          cashYearlyOldYuan: yuanOf('yearly', 'originalYuan'),
+          cashLifetimeOldYuan: yuanOf('lifetime', 'originalYuan')
         })
       }
     } catch (e) {
@@ -511,10 +549,10 @@ Page({
       })
       if (!codeRes.code) throw new Error('获取登录凭证失败')
 
-      // 2. 下单
+      // 2. 下单（只传 level，具体用首购档还是原价档由云函数判定）
       const orderRes = await wx.cloud.callFunction({
         name: 'virtualPay',
-        data: { action: 'createOrder', productId: product.productId, code: codeRes.code }
+        data: { action: 'createOrder', level: product.level, code: codeRes.code }
       })
       const order = orderRes.result
       if (!order || !order.success) {

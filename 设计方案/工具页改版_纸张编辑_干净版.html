@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工具页改版 · 纸张编辑（干净版）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   文档壳（不属于设计稿，只是外围展示用）
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#f4f5f7;color:#1f2937;
+  font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding:0 0 80px;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+.masthead{padding:56px 0 34px;border-bottom:1px solid #e5e7eb;margin-bottom:34px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:#07c160;margin-bottom:14px}
+.masthead h1{font-family:"Noto Serif SC",serif;font-weight:700;font-size:34px;letter-spacing:-.03em;line-height:1.25;color:#111827}
+.masthead .lede{margin-top:14px;max-width:760px;font-size:14px;line-height:1.85;color:#4b5563;font-weight:300}
+.masthead .lede b{color:#111827;font-weight:600}
+
+/* 控制面板 */
+.diag{margin:0 0 30px;padding:20px 22px;background:#fff;border:1px solid #e5e7eb}
+.diag-lb{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#9ca3af;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid #e5e7eb;margin-right:18px;vertical-align:middle}
+.seg button{
+  font-family:inherit;font-size:12px;color:#6b7280;background:#fff;border:0;
+  padding:7px 14px;cursor:pointer;transition:.2s;border-right:1px solid #e5e7eb;
+}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:#f9fafb;color:#111827}
+.seg button[aria-pressed="true"]{background:#07c160;color:#fff}
+.seg-row{display:flex;flex-wrap:wrap;gap:12px 0;align-items:center;margin-bottom:12px}
+.seg-row:last-child{margin-bottom:0}
+.seg-row .lb{font-size:12px;color:#6b7280;margin-right:4px;min-width:74px}
+
+/* 手机舞台 */
+.stage{display:flex;gap:44px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin-bottom:52px}
+.phone{
+  width:390px;height:820px;flex-shrink:0;position:relative;overflow:hidden;
+  background:var(--bg);border:1px solid #e5e7eb;
+  box-shadow:0 20px 60px -24px rgba(17,24,39,.22);
+  display:flex;flex-direction:column;
+}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+.scroll::-webkit-scrollbar{width:0}
+
+/* ============================================================
+   设计令牌 · 纸张编辑（干净版）
+   全部取自站内现有配色：首页 / 专题页 / 我的
+   ============================================================ */
+.phone{
+  --bg:#ffffff;
+  --bg-soft:#f7f8fa;
+  --text:#111827;          /* 主文本 —— 与首页一致 */
+  --sub:#6b7280;           /* 次要 */
+  --faint:#9ca3af;         /* 极弱 / 首页同款灰 */
+  --line:#eef0f2;          /* 1px 细线 */
+  --line-2:#e5e7eb;        /* 稍重的线 */
+  --brand:#07c160;         /* 微信绿 · 站内主色 */
+  --brand-deep:#15803d;    /* 深绿 · 数字与强调 */
+  --brand-soft:#dcfce7;    /* 淡绿底 · 首页同款 */
+  --paper:#f7f8fa;         /* 分区底 */
+  --font-display:"Noto Serif SC","Songti SC",serif;
+  --font-body:"PingFang SC","Noto Sans SC",sans-serif;
+  --font-num:"IBM Plex Mono",monospace;
+}
+
+/* 状态栏 + 极简导航（无标题） */
+.statusbar{height:44px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 22px 7px;font-family:var(--font-num);font-size:11px;color:var(--text);letter-spacing:.02em}
+.statusbar .r{display:flex;gap:4px;align-items:center}
+.statusbar .r i{width:3px;height:9px;background:var(--text);display:block;border-radius:1px}
+.statusbar .r i:nth-child(2){height:11px}
+.statusbar .r i:nth-child(3){height:7px;opacity:.45}
+.navslot{height:44px;flex-shrink:0}
+
+/* ---- 签到区：无标题，直接上内容 ---- */
+.signin{padding:0 24px 26px}
+.signin-top{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.sn-num{
+  font-family:var(--font-num);font-weight:500;color:var(--text);
+  font-size:46px;line-height:.94;letter-spacing:-.045em;
+}
+.sn-num .tail{font-size:15px;color:var(--faint);letter-spacing:0;margin-left:3px}
+.sn-rt{padding-bottom:5px;text-align:right}
+.sn-l1{font-size:12.5px;color:var(--sub);line-height:1.5}
+.sn-l2{font-size:11px;color:var(--faint);margin-top:3px;line-height:1.5}
+
+/* 进度：1px 细线，不是圆角条 */
+.prog{margin-top:18px;height:2px;background:var(--line-2);position:relative;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--brand);transition:width .6s cubic-bezier(.16,1,.3,1)}
+
+/* 签到按钮：细线直角，不是大色块 */
+.act{
+  margin-top:16px;width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border:1px solid var(--line-2);background:#fff;cursor:pointer;
+  font-family:inherit;transition:background .25s ease,border-color .25s ease,color .25s ease;
+}
+.act .t{font-size:13.5px;color:var(--text);font-weight:400;letter-spacing:.01em}
+.act .t span{font-family:var(--font-num);font-size:11.5px;color:var(--brand-deep);margin-left:7px}
+.act .a{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--brand-deep)}
+.act .a i{width:14px;height:1px;background:var(--brand-deep);display:block;transition:width .3s cubic-bezier(.16,1,.3,1)}
+.act:hover{border-color:var(--brand);background:#fafffb}
+.act:hover .a i{width:20px}
+.act:active{background:var(--brand-soft)}
+.act[disabled]{cursor:default;border-color:var(--line);background:var(--bg-soft)}
+.act[disabled] .t{color:var(--faint)}
+.act[disabled] .t span{color:var(--faint)}
+.act[disabled] .a{color:var(--faint)}
+.act[disabled] .a i{background:var(--faint)}
+.act[disabled]:hover{border-color:var(--line);background:var(--bg-soft)}
+
+/* ---- 分区：细线 + 极小标签 ---- */
+.sec{padding:22px 24px 0}
+.sec-h{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.sec-h .bar{width:14px;height:1.5px;background:var(--brand);flex-shrink:0}
+.sec-h .t{font-size:11px;color:var(--faint);letter-spacing:.14em}
+
+/* ---- 工具列表：1px 细线，零卡片 ---- */
+.rows{margin-top:6px}
+.row{
+  display:flex;align-items:center;gap:13px;width:100%;
+  padding:14px 0;border-bottom:1px solid var(--line);background:none;border-top:0;border-left:0;border-right:0;
+  font-family:inherit;cursor:pointer;text-align:left;transition:background .22s ease;
+}
+.row:last-child{border-bottom:0}
+.row:hover{background:#fcfcfd}
+.row .idx{
+  font-family:var(--font-num);font-size:10.5px;color:var(--faint);letter-spacing:.06em;
+  width:20px;flex-shrink:0;transition:color .22s ease;
+}
+.row:hover .idx{color:var(--brand)}
+.row .bd{flex:1;min-width:0}
+.row .bd{display:block}
+.row .nm{display:block;font-size:14.5px;color:var(--text);font-weight:400;letter-spacing:.005em;line-height:1.4;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ds{display:block;font-size:11px;color:var(--faint);margin-top:2px;line-height:1.5;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ar{font-size:14px;color:#d1d5db;flex-shrink:0;transition:color .25s ease,transform .3s cubic-bezier(.16,1,.3,1)}
+.row:hover .ar{color:var(--brand);transform:translateX(3px)}
+
+/* size = wide（后台可配）：主推行，左侧短标 + 图标方块 */
+.row.wide{padding:15px 0 15px 14px;position:relative}
+.row.wide::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:2px;height:calc(100% - 32px);min-height:18px;background:var(--brand);
+}
+.row.wide .nm{font-size:16px;font-weight:500;letter-spacing:-.01em}
+.row.wide .ds{margin-top:3px;font-size:11.5px}
+.row.wide .ic{
+  width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bg-soft);border:1px solid var(--line);
+}
+.row.wide .ic svg{width:20px;height:20px}
+.row.wide:hover{background:#fcfcfd}
+
+/* 隐藏项（后台 visible=false 时不渲染，这里仅演示占位说明） */
+.row.hidden{opacity:.32}
+
+/* ---- 辣度值：一行，不是卡片 ---- */
+.bal{display:flex;align-items:baseline;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.bal .v{font-family:var(--font-num);font-size:22px;color:var(--brand-deep);letter-spacing:-.02em;line-height:1}
+.bal .u{font-size:11.5px;color:var(--faint)}
+.bal .g{margin-left:auto;font-size:11.5px;color:var(--brand-deep);display:flex;align-items:center;gap:5px}
+.bal .g i{width:12px;height:1px;background:var(--brand-deep);display:block;transition:width .3s cubic-bezier(.16,1,.3,1)}
+.bal:hover .g i{width:18px}
+
+/* 底部留白 */
+.page-end{height:26px;flex-shrink:0}
+
+/* TabBar：细线上边 + 当前项绿色 */
+.tabbar{
+  flex-shrink:0;height:56px;border-top:1px solid var(--line-2);background:#fff;
+  display:flex;align-items:center;
+}
+.tabbar .tab{flex:1;text-align:center;font-size:11.5px;color:var(--faint);letter-spacing:.04em}
+.tabbar .tab.on{color:var(--brand);font-weight:500}
+
+/* ============================================================
+   文档区
+   ============================================================ */
+.doc{max-width:860px;margin:0 auto;padding:0 28px}
+.doc h2{font-family:"Noto Serif SC",serif;font-size:23px;font-weight:600;letter-spacing:-.02em;color:#111827;
+  margin:44px 0 14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
+.doc h3{font-size:14px;font-weight:600;color:#111827;margin:26px 0 10px}
+.doc p{font-size:13.5px;line-height:1.9;color:#4b5563;margin-bottom:12px;font-weight:300}
+.doc p b{color:#111827;font-weight:600}
+.doc code{font-family:"IBM Plex Mono",monospace;font-size:12px;background:#f3f4f6;padding:1px 5px;color:#111827}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0 16px}
+.tbl th{text-align:left;font-weight:600;color:#6b7280;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  padding:9px 10px;border-bottom:1px solid #e5e7eb}
+.tbl td{padding:9px 10px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:top;line-height:1.6}
+.tbl td b{color:#111827;font-weight:600}
+.sw{display:inline-block;width:12px;height:12px;border:1px solid rgba(0,0,0,.12);margin-right:7px;vertical-align:-1px}
+.notes{list-style:none;margin:10px 0 16px}
+.notes li{font-size:13px;line-height:1.85;color:#4b5563;margin-bottom:8px;padding-left:16px;position:relative;font-weight:300}
+.notes li::before{content:"—";position:absolute;left:0;color:#d1d5db}
+.notes li b{color:#111827;font-weight:600}
+.pick{margin-top:20px;padding:18px 20px;background:#fff;border-left:2px solid #07c160}
+.pick p{font-size:13.5px;line-height:1.9;color:#374151;margin:0}
+.pick p b{color:#111827}
+.cmp{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0}
+.cmp>div{flex:1;min-width:230px;border:1px solid #e5e7eb;background:#fff;padding:16px 18px}
+.cmp h4{font-size:12.5px;font-weight:600;color:#111827;margin-bottom:8px}
+.cmp p{font-size:12.5px;line-height:1.8;margin:0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="masthead">
+    <div class="eyebrow">Tools Page · Paper Edition</div>
+    <h1>纸张编辑 · 干净版</h1>
+    <p class="lede">
+      按你的要求：只保留「纸张编辑」这一个方向，配色<b>全部取自站内现有色板</b>（微信绿 + 中性灰），
+      删掉顶部「工具箱」大标题、<code>XIAOLAJIAO · TOOLS</code> 之类的英文标识、版本号、装饰性角标——
+      页面从上到下只有三件事：<b>签到、工具、辣度值</b>。
+      <br>
+      后台的 <b>size / color / visible / sort</b> 四项配置全部保留且可见：下面用控制面板切换即可看到布局变化。
+    </p>
+  </div>
+
+  <div class="diag">
+    <div class="diag-lb">控制面板 · 模拟后台配置</div>
+
+    <div class="seg-row">
+      <span class="lb">签到状态</span>
+      <div class="seg" id="seg-in">
+        <button data-in="0" aria-pressed="true">未签到</button>
+        <button data-in="1" aria-pressed="false">已签到</button>
+      </div>
+    </div>
+
+    <div class="seg-row">
+      <span class="lb">后台布局</span>
+      <div class="seg" id="seg-size">
+        <button data-size="mixed" aria-pressed="true">混合（当前配置）</button>
+        <button data-size="square" aria-pressed="false">全部方形</button>
+        <button data-size="wide" aria-pressed="false">全部宽形</button>
+      </div>
+    </div>
+
+    <div class="seg-row">
+      <span class="lb">隐藏一项</span>
+      <div class="seg" id="seg-vis">
+        <button data-vis="1" aria-pressed="true">4 项全显示</button>
+        <button data-vis="0" aria-pressed="false">隐藏「灵感文案」</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="phone" id="phone">
+      <div class="scroll">
+
+        <div class="statusbar"><span>9:41</span><span class="r"><i></i><i></i><i></i></span></div>
+        <div class="navslot"></div>
+
+        <!-- 签到区：无标题 -->
+        <div class="signin">
+          <div class="signin-top">
+            <div class="sn-num"><span data-days>04</span><span class="tail">/07</span></div>
+            <div class="sn-rt">
+              <div class="sn-l1" data-l1>已连续签到 4 天</div>
+              <div class="sn-l2" data-l2>再签 3 天解锁专属头像框</div>
+            </div>
+          </div>
+          <div class="prog"><i data-prog style="width:57.1%"></i></div>
+          <button class="act" data-act>
+            <span class="t">今日签到<span>+10</span></span>
+            <span class="a">立即签到<i></i></span>
+          </button>
+        </div>
+
+        <!-- 工具列表 -->
+        <div class="sec">
+          <div class="sec-h">
+            <span class="bar"></span>
+            <span class="t">创作工具</span>
+          </div>
+          <div class="rows" data-rows></div>
+        </div>
+
+        <!-- 辣度值 -->
+        <div class="sec">
+          <div class="sec-h">
+            <span class="bar"></span>
+            <span class="t">我的辣度值</span>
+          </div>
+          <div class="bal">
+            <span class="v">1,280</span>
+            <span class="u">可用</span>
+            <span class="g">去兑换<i></i></span>
+          </div>
+        </div>
+
+        <div class="page-end"></div>
+      </div>
+      <div class="tabbar">
+        <div class="tab">首页</div><div class="tab on">工具</div><div class="tab">专题</div><div class="tab">我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="doc">
+  <h2>这一版改了什么</h2>
+
+  <div class="cmp">
+    <div>
+      <h4>删掉的</h4>
+      <p>顶部「工具箱」大标题、<code>XIAOLAJIAO · TOOLS</code> kicker、<code>04 tools / daily</code> 元信息行、
+        <code>STREAK</code> / <code>DAY 04 / 07</code> / <code>BALANCE</code> 等英文小标签、工具数量角标、
+        底部 <code>v2 · 2026</code> 版本行、朱砂印章、作品横滚带、卡片与阴影。</p>
+    </div>
+    <div>
+      <h4>保留的</h4>
+      <p>1px 细线分隔的列表、超大等宽数字、右侧小箭头悬停位移、<code>size</code> 带来的行型差异、
+        图标方块（<code>color</code> 字段，中性底 + 彩色线，不铺色块）。</p>
+    </div>
+  </div>
+
+  <h3>页面只剩三件事</h3>
+  <p>
+    从上到下：<b>签到</b>（46px 等宽数字 + 1px 进度线 + 细线按钮）→ <b>创作工具</b>（细线列表）→ <b>我的辣度值</b>（一行）。
+    没有标题栏大标题，没有英文标识，没有装饰角标。视觉锚点只有三个：签到数字、绿短标、辣度值金额。
+  </p>
+
+  <h3>为什么还是「高级」而不是「寡淡」</h3>
+  <p>
+    卡片网格是<b>容器思维</b>——每个东西装进一个盒子，盒子一多就变成模板。
+    这一版是<b>版面思维</b>：用 1px 细线切分信息层级，用字号（46px 数字 → 16px 标题 → 11px 描述）
+    建立视线顺序，用留白代替边框。东西少了，但每一处的重量都不一样，眼睛知道先看哪里。
+  </p>
+
+  <h2>后台配置怎么保留</h2>
+  <p>
+    现有后台（工具箱管理）可配 <code>title / desc / icon / linkType / linkUrl / size / color / visible / sort</code>，
+    这一版<b>全部字段都还有意义</b>，不需要改数据结构：
+  </p>
+  <table class="tbl">
+    <thead><tr><th>字段</th><th>取值</th><th>在本版里的表现</th></tr></thead>
+    <tbody>
+      <tr><td><b>size</b></td><td><code>square</code></td><td>紧凑行：编号 01 + 标题 14.5px + 描述 11px，行高 ~54px</td></tr>
+      <tr><td><b>size</b></td><td><code>wide</code></td><td>主推行：左侧 2×40px 绿短标 + 38px 图标方块 + 标题 16px，行高 ~72px</td></tr>
+      <tr><td><b>color</b></td><td>4 档</td><td>只决定 wide 行图标方块里那根 1.6px 线稿的颜色，方块底色统一中性灰</td></tr>
+      <tr><td><b>visible</b></td><td>true / false</td><td>false 不渲染该行，编号自动重排（01 02 03…）</td></tr>
+      <tr><td><b>sort</b></td><td>数字</td><td>决定行顺序与编号</td></tr>
+      <tr><td><b>icon</b></td><td>SVG 路径</td><td>wide 行显示为图标方块内的线稿；square 行不显示图标（保持列表规整）</td></tr>
+      <tr><td><b>desc</b></td><td>文本</td><td>标题下方一行灰字，超出省略号</td></tr>
+    </tbody>
+  </table>
+
+  <h3>color 四档映射（只影响那根线稿）</h3>
+  <p>
+    为了「干净」，图标方块不再铺彩色底——统一是 <span class="sw" style="background:#f7f8fa"></span><code>#f7f8fa</code> 底 +
+    <span class="sw" style="background:#eef0f2"></span><code>#eef0f2</code> 细边。颜色只保留在中间那根 1.6px 的图标线上，
+    既能让用户区分工具，又不会在白底页面上出现四个彩色方块。
+  </p>
+  <table class="tbl">
+    <thead><tr><th>后台取值</th><th>图标线色</th><th>方块底</th><th>站内出处</th></tr></thead>
+    <tbody>
+      <tr><td><code>primary</code></td><td><span class="sw" style="background:#15803d"></span>#15803d 深绿</td><td>#f7f8fa</td><td>首页 / 专题页</td></tr>
+      <tr><td><code>secondary</code></td><td><span class="sw" style="background:#1d4ed8"></span>#1d4ed8 蓝</td><td>#f7f8fa</td><td>首页</td></tr>
+      <tr><td><code>tertiary</code></td><td><span class="sw" style="background:#b45309"></span>#b45309 琥珀</td><td>#f7f8fa</td><td>首页</td></tr>
+      <tr><td><code>quaternary</code></td><td><span class="sw" style="background:#6d28d9"></span>#6d28d9 紫</td><td>#f7f8fa</td><td>首页</td></tr>
+    </tbody>
+  </table>
+  <p>
+    想回到「彩色淡底」的样式也很简单：把 <code>.row.wide .ic</code> 的 <code>background</code> 换成
+    <code>#dcfce7 / #DBEAFE / #FEF3C7 / #EDE9FE</code> 即可，同样是站内现成色。但四个彩块会让页面变闹，不推荐。
+  </p>
+
+  <h2>设计令牌</h2>
+  <table class="tbl">
+    <thead><tr><th>令牌</th><th>值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>页面底</td><td><span class="sw" style="background:#ffffff"></span>#ffffff</td><td>纯白，与首页一致</td></tr>
+      <tr><td>主文本</td><td><span class="sw" style="background:#111827"></span>#111827</td><td>对比 16.1:1</td></tr>
+      <tr><td>次要文本</td><td><span class="sw" style="background:#6b7280"></span>#6b7280</td><td>对比 5.3:1</td></tr>
+      <tr><td>极弱文本</td><td><span class="sw" style="background:#9ca3af"></span>#9ca3af</td><td>仅用于编号与描述</td></tr>
+      <tr><td>分隔线</td><td><span class="sw" style="background:#eef0f2"></span>#eef0f2</td><td>1rpx</td></tr>
+      <tr><td>强调线</td><td><span class="sw" style="background:#e5e7eb"></span>#e5e7eb</td><td>按钮描边、tabbar 上边</td></tr>
+      <tr><td>品牌绿</td><td><span class="sw" style="background:#07c160"></span>#07c160</td><td>进度条、wide 行短标、当前 tab</td></tr>
+      <tr><td>深绿</td><td><span class="sw" style="background:#15803d"></span>#15803d</td><td>数字、签到按钮文字、去兑换</td></tr>
+      <tr><td>字体</td><td>系统无衬线</td><td>与首页 / 专题页 / 我的完全同源，无额外字体文件</td></tr>
+      <tr><td>数字字</td><td>IBM Plex Mono</td><td>签到天数、辣度值、编号（唯一需要加载的字体）</td></tr>
+      <tr><td>圆角</td><td>0</td><td>全站直角（图标方块也是直角）</td></tr>
+      <tr><td>阴影</td><td>0</td><td>没有一张卡片，也没有一个阴影</td></tr>
+    </tbody>
+  </table>
+
+  <h2>落地要点</h2>
+  <ul class="notes">
+    <li><b>不出现英文标识</b>：<code>STREAK</code> / <code>DAY 04 / 07</code> / <code>BALANCE</code> / 版本号全部删掉，
+      页面内不再有拉丁文装饰。这四行文字删掉后，页面少了 4 个"设计感表演"，反而更像正经工具。</li>
+    <li><b>wide 短标用伪元素</b>：<code>.row.wide::before</code> 定位在行左、<code>height: calc(100% - 32px)</code>。
+      这样即使后台把所有项都设成 wide，左侧也是 4 个独立短标，不会连成一根长绿线（实测对比过：连成一条时很脏）。</li>
+    <li><b>单位换算</b>：原型 390px 宽，小程序 <code>1px ≈ 2rpx</code>。签到数字 46px → <code>92rpx</code>；
+      细线务必写 <code>1rpx</code> 而非 <code>1px</code>，否则高分屏上会变粗、纸张质感全毁。</li>
+    <li><b>字体</b>：全站统一系统无衬线，不需要加载任何中文字体。只有数字部分建议
+      <code>wx.loadFontFace</code> 加载 IBM Plex Mono（拉丁数字子集约 20KB）——小程序不支持
+      <code>font-variant-numeric</code>，不加载的话签到数字在不同机型上宽度会跳。加载失败兜底系统字体，
+      视觉不会崩，只是数字不再严格对齐。</li>
+    <li><b>想加编辑感再说</b>：若之后觉得太素，只给 wide 行标题加 <code>font-family:"Noto Serif SC",serif</code> 即可
+      （iOS 可退 <code>Songti SC</code>，Android 加载思源宋体 woff2 子集）。这一版的骨架是排版和留白，
+      不是字体，加不加都成立。</li>
+    <li><b>导航栏</b>：原型里导航栏留空（44px）。小程序落地时可以保留系统标题「工具箱」，
+      也可以在 <code>tools.json</code> 里设 <code>"navigationBarTitleText": ""</code> 留白——两种都不影响下方布局。</li>
+    <li><b>点击区域</b>：square 行实际高度 54px（108rpx），wide 行 72px（144rpx），均超过 44px 最小触达标准，无需额外 padding。</li>
+    <li><b>作品带</b>：这一版按「干净」的要求删掉了。如果之后想在工具页露出精选头像/壁纸，
+      建议加在工具列表<b>之上</b>、签到区之下，用一条 88px 高的横向 <code>scroll-view</code>，
+      左右出血到屏幕边缘——它是最容易加回来、也最容易再加出彩的部分。</li>
+    <li><b>风险</b>：直角 + 零阴影在浅色下成立，但如果以后整站切深色，<code>#eef0f2</code> 的细线在深色底上会偏亮，
+      需要单独定义一套深色线色（建议 <code>rgba(255,255,255,.10)</code>）。</li>
+  </ul>
+
+  <div class="pick">
+    <p><b>建议直接按这一版开工。</b>它跟首页、专题页、我的页用的是同一套灰阶和同一个绿，
+    切 tab 时不会有割裂感；同时后台四个配置字段一个没丢，你随时能在后台把某项从「方形」改成「宽形」看效果。
+    <br><br>
+    关于「和站内保持一致」：<b>你现在看到的预览已经全部是系统无衬线字体</b>——标题、描述、数字之外的文字，
+    跟首页用的是同一套。唯一带字体个性的是签到数字和编号（等宽，用于对齐）。
+    <br><br>
+    如果你之后想让工具页「有编辑感一点」，可以只给 wide 行的标题加一行
+    <code>font-family:"Noto Serif SC",serif</code>（原型文档区的标题就是这个字体，可以对比着看）。
+    不加 → 完全融入站内；加了 → 工具页有自己的气质。这一步随时可改，不影响其他部分。</p>
+  </div>
+</div>
+
+<script>
+// ---------- 数据（对齐后台默认配置） ----------
+var TOOLS = [
+  { id:'avatar-diy',   title:'头像DIY',   desc:'边框 / 滤镜 / 文字',    size:'square', color:'primary',    visible:true, sort:0,
+    icon:'<circle cx="12" cy="9" r="4"/><path d="M4 21c1.4-4.4 4.6-6.6 8-6.6s6.6 2.2 8 6.6"/>' },
+  { id:'watermark',    title:'去水印',    desc:'视频 / 图片一键去除',   size:'square', color:'secondary',  visible:true, sort:1,
+    icon:'<path d="M4 7h16M4 12h16M4 17h10"/>' },
+  { id:'inspiration',  title:'灵感文案',  desc:'激发创作火花 · 每日更新', size:'wide',   color:'tertiary',   visible:true, sort:2,
+    icon:'<path d="M12 3l2.2 5.6L20 10l-5.8 1.4L12 17l-2.2-5.6L4 10l5.8-1.4z"/>' },
+  { id:'points',       title:'辣度值',    desc:'查看辣度值 · 兑换好物', size:'wide',   color:'quaternary', visible:true, sort:3,
+    icon:'<path d="M12 3l7 5v13H5V8z"/>' }
+];
+
+var COLORS = {
+  primary:    { fg:'#15803d' },
+  secondary:  { fg:'#1d4ed8' },
+  tertiary:   { fg:'#b45309' },
+  quaternary: { fg:'#6d28d9' }
+};
+
+var state = { checked:false, sizeMode:'mixed', hideInspiration:false };
+
+var rowsEl   = document.querySelector('[data-rows]');
+var daysEl   = document.querySelector('[data-days]');
+var l1El     = document.querySelector('[data-l1]');
+var l2El     = document.querySelector('[data-l2]');
+var progEl   = document.querySelector('[data-prog]');
+var actEl    = document.querySelector('[data-act]');
+
+function num(n){ return n < 10 ? '0' + n : String(n); }
+
+function renderRows(){
+  var list = TOOLS.filter(function(t){
+    if (state.hideInspiration && t.id === 'inspiration') return false;
+    return true;
+  }).slice().sort(function(a,b){ return a.sort - b.sort; });
+
+  var i = 0;
+  rowsEl.innerHTML = list.map(function(t){
+    i++;
+    var isWide = state.sizeMode === 'wide' ? true
+               : state.sizeMode === 'square' ? false
+               : t.size === 'wide';
+    var c = COLORS[t.color] || COLORS.primary;
+    var lead = isWide
+      ? '<span class="ic">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="' + c.fg + '" stroke-width="1.6" ' +
+          'stroke-linecap="round" stroke-linejoin="round">' + t.icon + '</svg></span>'
+      : '<span class="idx">' + num(i) + '</span>';
+    return '<button class="row' + (isWide ? ' wide' : '') + '">' +
+             lead +
+             '<span class="bd"><span class="nm">' + t.title + '</span>' +
+             '<span class="ds">' + t.desc + '</span></span>' +
+             '<span class="ar">›</span>' +
+           '</button>';
+  }).join('');
+}
+
+function renderSignin(){
+  var on = state.checked;
+  var d  = on ? 5 : 4;
+  daysEl.textContent = num(d);
+  l1El.textContent = '已连续签到 ' + d + ' 天';
+  l2El.textContent = on ? '明天记得来 · 别断了' : '再签 ' + (7 - d) + ' 天解锁专属头像框';
+  progEl.style.width = (d / 7 * 100).toFixed(1) + '%';
+
+  actEl.disabled = on;
+  actEl.querySelector('.t').innerHTML = on
+    ? '今日已签<span>已 +10</span>'
+    : '今日签到<span>+10</span>';
+  actEl.querySelector('.a').innerHTML = on ? '明日再来<i></i>' : '立即签到<i></i>';
+}
+
+function bindSeg(id, key, cast, after){
+  var seg = document.getElementById(id);
+  seg.addEventListener('click', function(e){
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+    var dk = Object.keys(b.dataset)[0];
+    state[key] = cast ? cast(b.dataset[dk]) : b.dataset[dk];
+    renderRows();
+    if (after) after();
+  });
+}
+
+bindSeg('seg-in',   'checked', function(v){ return v === '1' }, renderSignin);
+bindSeg('seg-size', 'sizeMode');
+bindSeg('seg-vis',  'hideInspiration', function(v){ return v === '0'; });;
+
+// 点击签到按钮切换状态（演示用）
+actEl.addEventListener('click', function(){
+  if (state.checked) return;
+  state.checked = true;
+  var seg = document.getElementById('seg-in');
+  Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){
+    x.setAttribute('aria-pressed', String(x.dataset.in === '1'));
+  });
+  renderSignin();
+});
+
+renderRows();
+renderSignin();
+</script>
+
+</body>
+</html>

@@ -185,7 +185,10 @@
         <text class="tier-name">7 天</text>
         <text class="tier-price">{{memberPrices.weekly}}</text>
         <text class="tier-unit">辣度值</text>
-        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashWeeklyYuan}}</text>
+        <view wx:if="{{cashProducts.length > 0}}" class="tier-cash">
+          <text wx:if="{{showStrike && cashWeeklyOldYuan}}" class="tier-cash-old">¥{{cashWeeklyOldYuan}}</text>
+          <text class="tier-cash-new">¥{{cashWeeklyYuan}}</text>
+        </view>
         <view class="tier-btn {{points < memberPrices.weekly && !cashProducts.length ? 'tier-btn-off' : ''}}">
           <text>{{points < memberPrices.weekly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
@@ -198,7 +201,10 @@
         <text class="tier-name">30 天</text>
         <text class="tier-price">{{memberPrices.monthly}}</text>
         <text class="tier-unit">辣度值</text>
-        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashMonthlyYuan}}</text>
+        <view wx:if="{{cashProducts.length > 0}}" class="tier-cash">
+          <text wx:if="{{showStrike && cashMonthlyOldYuan}}" class="tier-cash-old">¥{{cashMonthlyOldYuan}}</text>
+          <text class="tier-cash-new">¥{{cashMonthlyYuan}}</text>
+        </view>
         <view class="tier-btn tier-btn-on">
           <text>{{points < memberPrices.monthly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
@@ -210,7 +216,10 @@
         <text class="tier-name">90 天</text>
         <text class="tier-price">{{memberPrices.quarterly}}</text>
         <text class="tier-unit">辣度值</text>
-        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashQuarterlyYuan}}</text>
+        <view wx:if="{{cashProducts.length > 0}}" class="tier-cash">
+          <text wx:if="{{showStrike && cashQuarterlyOldYuan}}" class="tier-cash-old">¥{{cashQuarterlyOldYuan}}</text>
+          <text class="tier-cash-new">¥{{cashQuarterlyYuan}}</text>
+        </view>
         <view class="tier-btn {{points < memberPrices.quarterly && !cashProducts.length ? 'tier-btn-off' : ''}}">
           <text>{{points < memberPrices.quarterly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
@@ -222,7 +231,10 @@
         <text class="tier-name">365 天</text>
         <text class="tier-price">{{memberPrices.yearly}}</text>
         <text class="tier-unit">辣度值</text>
-        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashYearlyYuan}}</text>
+        <view wx:if="{{cashProducts.length > 0}}" class="tier-cash">
+          <text wx:if="{{showStrike && cashYearlyOldYuan}}" class="tier-cash-old">¥{{cashYearlyOldYuan}}</text>
+          <text class="tier-cash-new">¥{{cashYearlyYuan}}</text>
+        </view>
         <view class="tier-btn {{points < memberPrices.yearly && !cashProducts.length ? 'tier-btn-off' : ''}}">
           <text>{{points < memberPrices.yearly && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
@@ -234,7 +246,10 @@
         <text class="tier-name">永久</text>
         <text class="tier-price">{{memberPrices.lifetime}}</text>
         <text class="tier-unit">辣度值</text>
-        <text wx:if="{{cashProducts.length > 0}}" class="tier-cash">或 ¥{{cashLifetimeYuan}}</text>
+        <view wx:if="{{cashProducts.length > 0}}" class="tier-cash">
+          <text wx:if="{{showStrike && cashLifetimeOldYuan}}" class="tier-cash-old">¥{{cashLifetimeOldYuan}}</text>
+          <text class="tier-cash-new">¥{{cashLifetimeYuan}}</text>
+        </view>
         <view class="tier-btn {{points < memberPrices.lifetime && !cashProducts.length ? 'tier-btn-off' : ''}}">
           <text>{{points < memberPrices.lifetime && !cashProducts.length ? '辣度值不足' : '开通'}}</text>
         </view>
@@ -339,6 +354,10 @@
   <view class="modal-top">
     <text class="modal-title">{{cashModalProduct.name}}</text>
     <text class="modal-sub">选择支付方式</text>
+    <view wx:if="{{showStrike && cashModalProduct.originalYuan}}" class="cash-modal-price">
+      <text class="cash-modal-old">¥{{cashModalProduct.originalYuan}}</text>
+      <text class="cash-modal-new">¥{{cashModalProduct.priceYuan}}</text>
+    </view>
   </view>
 
   <!-- 现金购买（虚拟支付） -->
