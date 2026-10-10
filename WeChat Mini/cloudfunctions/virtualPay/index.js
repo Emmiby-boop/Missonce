@@ -148,8 +148,11 @@ function yuanOf(cent) {
   if (cent === undefined || cent === null || cent === '') return ''
   const n = Number(cent)
   if (Number.isNaN(n)) return ''
-  // 整数分（如 300/1000/6800/12800）→ 不带小数；非整数分（如 499）→ 保留两位
-  return n % 100 === 0 ? String(n / 100) : (n / 100).toFixed(2)
+  // 整数分（如 300/1000/6800/12800）→ 不带小数
+  if (n % 100 === 0) return String(n / 100)
+  // 非整数分：¥3.80 → "3.8"（去掉末尾一个 0），但 ¥3.05 → "3.05" 保留两位
+  const s = (n / 100).toFixed(2)
+  return s.endsWith('0') ? s.slice(0, -1) : s
 }
 
 // ─── 发货：开通会员（写 user_points，与 exchangeMember 同构） ──
